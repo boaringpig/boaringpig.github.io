@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Collaborative Task Manager</title>
+		<title>Advanced Task Manager</title>
 		<link rel="stylesheet" href="styles.css" />
 		<script src="config.js"></script>
 	</head>
@@ -56,14 +56,20 @@
 					<div class="demo-credentials">
 						<h3>Demo Accounts</h3>
 						<p>
-							<strong>Task Creator:</strong><br />
-							Username: <strong>creator</strong><br />
+							<strong>Admin/Creator:</strong><br />
+							Username: <strong>admin</strong><br />
 							Password: <strong>admin123</strong>
 						</p>
 
 						<p>
-							<strong>Task Checker:</strong><br />
-							Username: <strong>checker</strong><br />
+							<strong>User 1:</strong><br />
+							Username: <strong>user1</strong><br />
+							Password: <strong>user123</strong>
+						</p>
+
+						<p>
+							<strong>User 2:</strong><br />
+							Username: <strong>user2</strong><br />
 							Password: <strong>user123</strong>
 						</p>
 					</div>
@@ -74,11 +80,12 @@
 			<div id="mainApp" style="display: none">
 				<div class="header">
 					<div class="header-left">
-						<h1>Task Manager</h1>
-						<p>Collaborative task management</p>
+						<h1>Advanced Task Manager</h1>
+						<p>Collaborative task management with rewards</p>
 					</div>
 					<div class="user-info">
 						<div id="userBadge" class="user-badge"></div>
+						<div id="userPoints" class="points-badge">0 Points</div>
 						<button class="logout-btn" onclick="logout()">
 							Logout
 						</button>
@@ -91,73 +98,352 @@
 					</div>
 				</div>
 
-				<!-- Creator View -->
-				<div id="creatorView" style="display: none">
-					<div class="task-section">
-						<div class="section-header">
-							<h2 class="section-title">Create New Task</h2>
+				<!-- Navigation Tabs -->
+				<div class="nav-tabs">
+					<button class="nav-tab active" onclick="switchTab('tasks')">
+						Tasks
+					</button>
+					<button class="nav-tab" onclick="switchTab('calendar')">
+						Calendar
+					</button>
+					<button
+						class="nav-tab"
+						onclick="switchTab('dashboard')"
+						id="dashboardTab"
+						style="display: none"
+					>
+						Dashboard
+					</button>
+					<button class="nav-tab" onclick="switchTab('suggest')">
+						Suggest Task
+					</button>
+				</div>
+
+				<!-- Tasks View -->
+				<div id="tasksView" class="tab-content active">
+					<!-- Admin/Creator View -->
+					<div id="adminView" style="display: none">
+						<div class="task-section">
+							<div class="section-header">
+								<h2 class="section-title">Create New Task</h2>
+							</div>
+							<div class="task-creation-form">
+								<input
+									type="text"
+									id="taskInput"
+									class="form-input"
+									placeholder="Enter task description..."
+									maxlength="200"
+								/>
+
+								<div class="form-row">
+									<div class="form-group">
+										<label class="form-label"
+											>Assign to User</label
+										>
+										<select
+											id="assignedUser"
+											class="form-input"
+										>
+											<option value="">All Users</option>
+										</select>
+									</div>
+
+									<div class="form-group">
+										<label class="form-label"
+											>Points (Reward)</label
+										>
+										<input
+											type="number"
+											id="taskPoints"
+											class="form-input"
+											value="10"
+											min="1"
+											max="100"
+										/>
+									</div>
+								</div>
+
+								<div class="form-row">
+									<div class="form-group">
+										<label class="form-label"
+											>Penalty Points</label
+										>
+										<input
+											type="number"
+											id="penaltyPoints"
+											class="form-input"
+											value="5"
+											min="0"
+											max="50"
+										/>
+									</div>
+
+									<div class="form-group">
+										<label class="form-label"
+											>Due Date</label
+										>
+										<input
+											type="datetime-local"
+											id="taskDueDate"
+											class="form-input"
+										/>
+									</div>
+								</div>
+
+								<div class="form-row">
+									<div class="form-group">
+										<label class="form-label">
+											<input
+												type="checkbox"
+												id="isRepeating"
+											/>
+											Repeating Task
+										</label>
+									</div>
+
+									<div
+										class="form-group"
+										id="repeatOptions"
+										style="display: none"
+									>
+										<label class="form-label"
+											>Repeat Every</label
+										>
+										<select
+											id="repeatInterval"
+											class="form-input"
+										>
+											<option value="daily">Daily</option>
+											<option value="weekly">
+												Weekly
+											</option>
+											<option value="monthly">
+												Monthly
+											</option>
+										</select>
+									</div>
+								</div>
+
+								<button class="add-btn" onclick="createTask()">
+									Create Task
+								</button>
+							</div>
 						</div>
-						<div class="task-input-container">
-							<input
-								type="text"
-								id="taskInput"
-								class="task-input"
-								placeholder="Enter a new task..."
-								maxlength="200"
-							/>
-							<button class="add-btn" onclick="addTask()">
-								Add Task
-							</button>
+
+						<div class="task-section">
+							<div class="section-header">
+								<h2 class="section-title">
+									Suggested Tasks (Pending Approval)
+								</h2>
+							</div>
+							<div id="suggestedTasks" class="task-list"></div>
+						</div>
+
+						<div class="task-section">
+							<div class="section-header">
+								<h2 class="section-title">
+									Tasks Pending Approval
+								</h2>
+							</div>
+							<div id="pendingTasks" class="task-list"></div>
+						</div>
+
+						<div class="task-section">
+							<div class="section-header">
+								<h2 class="section-title">All Tasks</h2>
+							</div>
+							<div id="allTasksAdmin" class="task-list"></div>
 						</div>
 					</div>
 
-					<div class="task-section">
-						<div class="section-header">
-							<h2 class="section-title">
-								Tasks Pending Approval
-							</h2>
+					<!-- User View -->
+					<div id="userView" style="display: none">
+						<div class="task-section">
+							<div class="section-header">
+								<h2 class="section-title">My Tasks</h2>
+							</div>
+							<div id="myTasks" class="task-list"></div>
 						</div>
-						<div id="pendingTasks" class="task-list"></div>
-					</div>
 
-					<div class="task-section">
-						<div class="section-header">
-							<h2 class="section-title">All Tasks</h2>
+						<div class="task-section">
+							<div class="section-header">
+								<h2 class="section-title">Overdue Tasks</h2>
+							</div>
+							<div id="overdueTasks" class="task-list"></div>
 						</div>
-						<div id="allTasksCreator" class="task-list"></div>
+
+						<div class="task-section">
+							<div class="section-header">
+								<h2 class="section-title">Completed Tasks</h2>
+							</div>
+							<div id="completedTasks" class="task-list"></div>
+						</div>
 					</div>
 				</div>
 
-				<!-- Checker View -->
-				<div id="checkerView" style="display: none">
-					<div class="task-section">
-						<div class="section-header">
-							<h2 class="section-title">Tasks to Complete</h2>
+				<!-- Calendar View -->
+				<div id="calendarView" class="tab-content">
+					<div class="calendar-container">
+						<div class="calendar-header">
+							<button
+								class="calendar-nav"
+								onclick="changeMonth(-1)"
+							>
+								❮
+							</button>
+							<h2 id="calendarMonth"></h2>
+							<button
+								class="calendar-nav"
+								onclick="changeMonth(1)"
+							>
+								❯
+							</button>
 						</div>
-						<div id="tasksToCheck" class="task-list"></div>
+						<div class="calendar-grid" id="calendarGrid"></div>
+						<div class="calendar-legend">
+							<div class="legend-item">
+								<div class="legend-color due"></div>
+								<span>Due Today</span>
+							</div>
+							<div class="legend-item">
+								<div class="legend-color overdue"></div>
+								<span>Overdue</span>
+							</div>
+							<div class="legend-item">
+								<div class="legend-color upcoming"></div>
+								<span>Upcoming</span>
+							</div>
+						</div>
 					</div>
+				</div>
 
-					<div class="task-section">
-						<div class="section-header">
-							<h2 class="section-title">My Completed Tasks</h2>
+				<!-- Dashboard View (Admin Only) -->
+				<div id="dashboardView" class="tab-content">
+					<div class="dashboard-container">
+						<div class="dashboard-stats">
+							<div class="stat-card">
+								<h3>Total Users</h3>
+								<div class="stat-number" id="totalUsers">0</div>
+							</div>
+							<div class="stat-card">
+								<h3>Active Tasks</h3>
+								<div class="stat-number" id="activeTasks">
+									0
+								</div>
+							</div>
+							<div class="stat-card">
+								<h3>Completion Rate</h3>
+								<div class="stat-number" id="completionRate">
+									0%
+								</div>
+							</div>
 						</div>
-						<div id="completedTasks" class="task-list"></div>
+
+						<div class="user-progress">
+							<h2>User Progress</h2>
+							<div
+								id="userProgressList"
+								class="progress-list"
+							></div>
+						</div>
+
+						<div class="leaderboard">
+							<h2>Leaderboard</h2>
+							<div
+								id="leaderboardList"
+								class="leaderboard-list"
+							></div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Suggest Task View -->
+				<div id="suggestView" class="tab-content">
+					<div class="suggest-container">
+						<h2>Suggest a Task</h2>
+						<form id="suggestForm" class="suggest-form">
+							<div class="form-group">
+								<label class="form-label"
+									>Task Description</label
+								>
+								<textarea
+									id="suggestedTaskDescription"
+									class="form-input"
+									placeholder="Describe the task you'd like to suggest..."
+									rows="4"
+									required
+								></textarea>
+							</div>
+
+							<div class="form-group">
+								<label class="form-label">Justification</label>
+								<textarea
+									id="taskJustification"
+									class="form-input"
+									placeholder="Why is this task important or necessary?"
+									rows="3"
+								></textarea>
+							</div>
+
+							<div class="form-row">
+								<div class="form-group">
+									<label class="form-label"
+										>Suggested Points</label
+									>
+									<input
+										type="number"
+										id="suggestedPoints"
+										class="form-input"
+										value="10"
+										min="1"
+										max="100"
+									/>
+								</div>
+
+								<div class="form-group">
+									<label class="form-label"
+										>Suggested Due Date</label
+									>
+									<input
+										type="datetime-local"
+										id="suggestedDueDate"
+										class="form-input"
+									/>
+								</div>
+							</div>
+
+							<button type="submit" class="add-btn">
+								Submit Suggestion
+							</button>
+						</form>
+
+						<div class="my-suggestions">
+							<h3>My Suggestions</h3>
+							<div id="mySuggestions" class="task-list"></div>
+						</div>
 					</div>
 				</div>
 
 				<!-- Stats -->
 				<div class="stats">
 					<div class="stat-item">
-						<span id="totalTasks" class="stat-number">0</span>
+						<span id="totalTasksStat" class="stat-number">0</span>
 						<span class="stat-label">Total Tasks</span>
 					</div>
 					<div class="stat-item">
-						<span id="pendingCount" class="stat-number">0</span>
+						<span id="pendingCountStat" class="stat-number">0</span>
 						<span class="stat-label">Pending</span>
 					</div>
 					<div class="stat-item">
-						<span id="completedCount" class="stat-number">0</span>
+						<span id="completedCountStat" class="stat-number"
+							>0</span
+						>
 						<span class="stat-label">Completed</span>
+					</div>
+					<div class="stat-item">
+						<span id="myPointsStat" class="stat-number">0</span>
+						<span class="stat-label">My Points</span>
 					</div>
 				</div>
 			</div>
