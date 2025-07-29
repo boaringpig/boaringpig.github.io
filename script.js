@@ -32,40 +32,38 @@ let userActivityLog = []; // Still logs for 'user' and 'admin'
 let taskIdCounter = 1;
 let suggestionIdCounter = 1;
 let activityIdCounter = 1;
-let db = null;
-let unsubscribe = null;
+let supabase = null; // Changed from 'db' to 'supabase'
+let unsubscribe = null; // Will now hold Supabase channel subscriptions
 let overdueCheckIntervalId = null; // To store the interval ID for overdue task checks
 const OVERDUE_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes (in milliseconds)
 let currentDate = new Date();
 let activeTab = "tasks";
 
-// Initialize Firebase and load data on page load
+// Initialize Supabase and load data on page load
 window.addEventListener("load", function () {
-	initializeFirebase();
+	initializeSupabase(); // Renamed function
 });
 
-function initializeFirebase() {
+function initializeSupabase() { // Renamed function
 	try {
-		if (!window.firebaseConfig) {
-			throw new Error("Firebase configuration not found in config.js");
+		const supabaseUrl = window.supabaseConfig?.supabaseUrl;
+		const supabaseAnonKey = window.supabaseConfig?.supabaseAnonKey;
+
+		if (!supabaseUrl || !supabaseAnonKey) {
+			throw new Error("Supabase configuration (URL or Anon Key) not found in config.js");
 		}
 
-		if (!firebase.apps.length) {
-			firebase.initializeApp(window.firebaseConfig);
-			db = firebase.firestore();
-			db.settings({
-				experimentalForceLongPolling: true,
-			});
-		} else {
-			db = firebase.firestore();
+		if (!supabase) { // Check if client is already initialized
+			// Use window.supabase.createClient as the Supabase library exposes itself globally as 'supabase'
+			supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 		}
 
-		console.log("Firebase initialized successfully");
+		console.log("Supabase initialized successfully");
 		showLogin();
 	} catch (error) {
-		console.error("Firebase initialization error:", error);
+		console.error("Supabase initialization error:", error);
 		showError(
-			"Failed to connect to Firebase. Please check your configuration."
+			"Failed to connect to Supabase. Please check your configuration and ensure Supabase library is loaded."
 		);
 	}
 }
@@ -125,26 +123,18 @@ function showMainApp() {
 			const taskDueDateEl = document.getElementById("taskDueDate");
 
 			if (this.checked) {
-				if (taskPointsEl)
-					taskPointsEl.closest(".form-group").style.display = "none";
-				if (taskDueDateEl)
-					taskDueDateEl.closest(".form-group").style.display = "none";
-				if (penaltyPointsEl)
-					penaltyPointsEl.closest(".form-group").style.display =
-						"block";
+				if (taskPointsEl) taskPointsEl.closest('.form-group').style.display = 'none';
+				if (taskDueDateEl) taskDueDateEl.closest('.form-group').style.display = 'none';
+				if (penaltyPointsEl) penaltyPointsEl.closest('.form-group').style.display = 'block';
 			} else {
-				if (taskPointsEl)
-					taskPointsEl.closest(".form-group").style.display = "block";
-				if (taskDueDateEl)
-					taskDueDateEl.closest(".form-group").style.display =
-						"block";
+				if (taskPointsEl) taskPointsEl.closest('.form-group').style.display = 'block';
+				if (taskDueDateEl) taskDueDateEl.closest('.form-group').style.display = 'block';
 				// Make sure penalty points are visible for regular tasks too if needed, or hide if not
-				if (penaltyPointsEl)
-					penaltyPointsEl.closest(".form-group").style.display =
-						"block";
+				if (penaltyPointsEl) penaltyPointsEl.closest('.form-group').style.display = 'block';
 			}
 		});
 	}
+
 
 	loadData();
 	updateUserPoints();
@@ -154,10 +144,7 @@ function showMainApp() {
 	if (overdueCheckIntervalId) {
 		clearInterval(overdueCheckIntervalId); // Clear any existing interval
 	}
-	overdueCheckIntervalId = setInterval(
-		checkForOverdueTasks,
-		OVERDUE_CHECK_INTERVAL
-	);
+	overdueCheckIntervalId = setInterval(checkForOverdueTasks, OVERDUE_CHECK_INTERVAL);
 }
 
 // Login form handler
@@ -276,8 +263,12 @@ window.logout = function () {
 		logUserActivity("logout");
 	}
 
+	// Unsubscribe from all Supabase channels
 	if (unsubscribe) {
-		unsubscribe();
+		if (unsubscribe.tasks) supabase.removeChannel(unsubscribe.tasks);
+		if (unsubscribe.suggestions) supabase.removeChannel(unsubscribe.suggestions);
+		if (unsubscribe.activity) supabase.removeChannel(unsubscribe.activity);
+		if (unsubscribe.userProfiles) supabase.removeChannel(unsubscribe.userProfiles);
 		unsubscribe = null;
 	}
 	if (overdueCheckIntervalId) {
@@ -292,7 +283,7 @@ window.logout = function () {
 };
 
 // User activity logging
-function logUserActivity(action) {
+async function logUserActivity(action) { // Made async
 	const activity = {
 		id: activityIdCounter++,
 		user: currentUser,
@@ -308,18 +299,16 @@ function logUserActivity(action) {
 	}
 
 	// Save to database
-	if (db) {
-		db.collection("userActivity")
-			.doc(activity.id.toString())
-			.set(activity)
-			.catch((error) => {
-				console.error("Error logging activity:", error);
-			});
+	if (supabase) {
+		const { error } = await supabase.from('userActivity').insert([activity]);
+		if (error) {
+			console.error("Error logging activity:", error);
+		}
 	}
 }
 
 // Enhanced task creation
-window.createTask = function () {
+window.createTask = async function () { // Made async
 	if (!hasPermission("create_task")) {
 		showNotification("You do not have permission to create tasks", "error");
 		return;
@@ -370,7 +359,7 @@ window.createTask = function () {
 		};
 
 		// Immediately apply penalty points
-		updateUserPoints("user", penaltyPoints, "subtract");
+		await updateUserPoints("user", penaltyPoints, "subtract"); // Await for points update
 	} else {
 		// Create regular task
 		const points =
@@ -411,66 +400,62 @@ window.createTask = function () {
 		};
 	}
 
-	if (db) {
-		Promise.all([
-			db.collection("tasks").doc(task.id.toString()).set(task),
-			db
-				.collection("metadata")
-				.doc("counter")
-				.set({ taskIdCounter: taskIdCounter }),
-		])
-			.then(() => {
-				// Reset form
-				taskInput.value = "";
-				const taskPointsEl = document.getElementById("taskPoints");
-				const penaltyPointsEl =
-					document.getElementById("penaltyPoints");
-				const taskDueDateEl = document.getElementById("taskDueDate");
-				const isRepeatingEl = document.getElementById("isRepeating");
-				const isDemeritEl = document.getElementById("isDemerit");
-				const demeritWarningEl =
-					document.getElementById("demeritWarning");
-				const repeatOptionsEl =
-					document.getElementById("repeatOptions");
+	if (supabase) {
+		const { error: taskError } = await supabase.from('tasks').insert([task]);
+		const { error: metadataError } = await supabase
+			.from('metadata')
+			.upsert({ id: 'counters', taskIdCounter: taskIdCounter }, { onConflict: 'id' }); // Use upsert for counters
 
-				if (taskPointsEl) {
-					taskPointsEl.value = "10";
-					taskPointsEl.closest(".form-group").style.display = "block"; // Ensure visible for next regular task
-				}
-				if (penaltyPointsEl) penaltyPointsEl.value = "5";
-				if (taskDueDateEl) {
-					taskDueDateEl.value = "";
-					taskDueDateEl.closest(".form-group").style.display =
-						"block"; // Ensure visible for next regular task
-				}
-				if (isRepeatingEl) isRepeatingEl.checked = false;
-				if (isDemeritEl) isDemeritEl.checked = false;
-				if (demeritWarningEl) demeritWarningEl.style.display = "none";
-				if (repeatOptionsEl) repeatOptionsEl.style.display = "none";
+		if (taskError || metadataError) {
+			console.error("Error creating task:", taskError || metadataError);
+			showNotification(
+				"Failed to create task. Please try again.",
+				"error"
+			);
+			taskIdCounter--; // Rollback counter if error
+		} else {
+			// Reset form
+			taskInput.value = "";
+			const taskPointsEl = document.getElementById("taskPoints");
+			const penaltyPointsEl =
+				document.getElementById("penaltyPoints");
+			const taskDueDateEl = document.getElementById("taskDueDate");
+			const isRepeatingEl = document.getElementById("isRepeating");
+			const isDemeritEl = document.getElementById("isDemerit");
+			const demeritWarningEl =
+				document.getElementById("demeritWarning");
+			const repeatOptionsEl =
+				document.getElementById("repeatOptions");
 
-				if (isDemerit) {
-					showNotification(
-						`Demerit task issued to user. ${task.penaltyPoints} points deducted.`,
-						"warning"
-					);
-				} else {
-					showNotification("Task created successfully!");
-				}
-			})
-			.catch((error) => {
-				console.error("Error creating task:", error);
+			if (taskPointsEl) {
+				taskPointsEl.value = "10";
+				taskPointsEl.closest('.form-group').style.display = 'block'; // Ensure visible for next regular task
+			}
+			if (penaltyPointsEl) penaltyPointsEl.value = "5";
+			if (taskDueDateEl) {
+				taskDueDateEl.value = "";
+				taskDueDateEl.closest('.form-group').style.display = 'block'; // Ensure visible for next regular task
+			}
+			if (isRepeatingEl) isRepeatingEl.checked = false;
+			if (isDemeritEl) isDemeritEl.checked = false;
+			if (demeritWarningEl) demeritWarningEl.style.display = "none";
+			if (repeatOptionsEl) repeatOptionsEl.style.display = "none";
+
+			if (isDemerit) {
 				showNotification(
-					"Failed to create task. Please try again.",
-					"error"
+					`Demerit task issued to user. ${task.penaltyPoints} points deducted.`,
+					"warning"
 				);
-				taskIdCounter--;
-			});
+			} else {
+				showNotification("Task created successfully!");
+			}
+		}
 	} else {
 		showNotification("Database not connected", "error");
 	}
 };
 
-window.checkOffTask = function (taskId) {
+window.checkOffTask = async function (taskId) { // Made async
 	if (!hasPermission("check_task")) {
 		showNotification(
 			"You do not have permission to check off tasks",
@@ -484,10 +469,7 @@ window.checkOffTask = function (taskId) {
 
 	// User can only check off regular tasks, not demerits
 	if (task.type === "demerit") {
-		showNotification(
-			"Demerit tasks cannot be marked as complete.",
-			"error"
-		);
+		showNotification("Demerit tasks cannot be marked as complete.", "error");
 		return;
 	}
 
@@ -502,21 +484,18 @@ window.checkOffTask = function (taskId) {
 		completedBy: currentUser,
 	};
 
-	if (db) {
-		db.collection("tasks")
-			.doc(taskId.toString())
-			.update(updates)
-			.then(() => {
-				showNotification("Task marked as complete! Awaiting approval.");
-			})
-			.catch((error) => {
-				console.error("Error updating task:", error);
-				showNotification("Failed to update task", "error");
-			});
+	if (supabase) {
+		const { error } = await supabase.from('tasks').update(updates).eq('id', taskId);
+		if (error) {
+			console.error("Error updating task:", error);
+			showNotification("Failed to update task", "error");
+		} else {
+			showNotification("Task marked as complete! Awaiting approval.");
+		}
 	}
 };
 
-window.approveTask = function (taskId) {
+window.approveTask = async function (taskId) { // Made async
 	if (!hasPermission("approve_task")) {
 		showNotification(
 			"You do not have permission to approve tasks",
@@ -534,26 +513,25 @@ window.approveTask = function (taskId) {
 		approvedBy: currentUser,
 	};
 
-	if (db) {
-		Promise.all([
-			db.collection("tasks").doc(taskId.toString()).update(updates),
-			updateUserPoints(task.completedBy, task.points, "add"),
-		])
-			.then(() => {
-				showNotification(
-					`Task approved! ${task.points} points awarded to ${
-						users[task.completedBy]?.displayName
-					}`
-				);
+	if (supabase) {
+		const { error: taskError } = await supabase.from('tasks').update(updates).eq('id', taskId);
+		if (taskError) {
+			console.error("Error approving task:", taskError);
+			showNotification("Failed to approve task", "error");
+			return;
+		}
 
-				if (task.isRepeating && task.dueDate) {
-					createRepeatingTask(task);
-				}
-			})
-			.catch((error) => {
-				console.error("Error approving task:", error);
-				showNotification("Failed to approve task", "error");
-			});
+		await updateUserPoints(task.completedBy, task.points, "add");
+
+		showNotification(
+			`Task approved! ${task.points} points awarded to ${
+				users[task.completedBy]?.displayName
+			}`
+		);
+
+		if (task.isRepeating && task.dueDate) {
+			createRepeatingTask(task);
+		}
 	}
 };
 
@@ -568,8 +546,8 @@ window.rejectTask = function (taskId) {
 
 	// Use a custom modal or message box instead of confirm
 	const confirmReject = (message, onConfirm) => {
-		const modal = document.createElement("div");
-		modal.className = "modal-overlay";
+		const modal = document.createElement('div');
+		modal.className = 'modal-overlay';
 		modal.innerHTML = `
 			<div class="modal-content">
 				<p>${message}</p>
@@ -581,11 +559,11 @@ window.rejectTask = function (taskId) {
 		`;
 		document.body.appendChild(modal);
 
-		document.getElementById("modalConfirm").onclick = () => {
+		document.getElementById('modalConfirm').onclick = () => {
 			onConfirm(true);
 			document.body.removeChild(modal);
 		};
-		document.getElementById("modalCancel").onclick = () => {
+		document.getElementById('modalCancel').onclick = () => {
 			onConfirm(false);
 			document.body.removeChild(modal);
 		};
@@ -595,7 +573,7 @@ window.rejectTask = function (taskId) {
 		`Are you sure you want to reject this task? This will apply a ${
 			task.penaltyPoints
 		} point penalty to ${users[task.completedBy]?.displayName}.`,
-		(confirmed) => {
+		async (confirmed) => { // Made async
 			if (!confirmed) {
 				return;
 			}
@@ -606,32 +584,24 @@ window.rejectTask = function (taskId) {
 				rejectedBy: currentUser,
 			};
 
-			if (db) {
-				Promise.all([
-					db
-						.collection("tasks")
-						.doc(taskId.toString())
-						.update(updates),
-					updateUserPoints(
-						task.completedBy,
-						task.penaltyPoints,
-						"subtract"
-					),
-				])
-					.then(() => {
-						showNotification(
-							`Task rejected! ${
-								task.penaltyPoints
-							} penalty points applied to ${
-								users[task.completedBy]?.displayName
-							}`,
-							"warning"
-						);
-					})
-					.catch((error) => {
-						console.error("Error rejecting task:", error);
-						showNotification("Failed to reject task", "error");
-					});
+			if (supabase) {
+				const { error: taskError } = await supabase.from('tasks').update(updates).eq('id', taskId);
+				if (taskError) {
+					console.error("Error rejecting task:", taskError);
+					showNotification("Failed to reject task", "error");
+					return;
+				}
+
+				await updateUserPoints(task.completedBy, task.penaltyPoints, "subtract");
+
+				showNotification(
+					`Task rejected! ${
+						task.penaltyPoints
+					} penalty points applied to ${
+						users[task.completedBy]?.displayName
+					}`,
+					"warning"
+				);
 			}
 		}
 	);
@@ -645,8 +615,8 @@ window.deleteTask = function (taskId) {
 
 	// Use a custom modal or message box instead of confirm
 	const confirmDelete = (message, onConfirm) => {
-		const modal = document.createElement("div");
-		modal.className = "modal-overlay";
+		const modal = document.createElement('div');
+		modal.className = 'modal-overlay';
 		modal.innerHTML = `
 			<div class="modal-content">
 				<p>${message}</p>
@@ -658,37 +628,34 @@ window.deleteTask = function (taskId) {
 		`;
 		document.body.appendChild(modal);
 
-		document.getElementById("modalConfirm").onclick = () => {
+		document.getElementById('modalConfirm').onclick = () => {
 			onConfirm(true);
 			document.body.removeChild(modal);
 		};
-		document.getElementById("modalCancel").onclick = () => {
+		document.getElementById('modalCancel').onclick = () => {
 			onConfirm(false);
 			document.body.removeChild(modal);
 		};
 	};
 
-	confirmDelete("Are you sure you want to delete this task?", (confirmed) => {
+	confirmDelete("Are you sure you want to delete this task?", async (confirmed) => { // Made async
 		if (!confirmed) {
 			return;
 		}
 
-		if (db) {
-			db.collection("tasks")
-				.doc(taskId.toString())
-				.delete()
-				.then(() => {
-					showNotification("Task deleted successfully");
-				})
-				.catch((error) => {
-					console.error("Error deleting task:", error);
-					showNotification("Failed to delete task", "error");
-				});
+		if (supabase) {
+			const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+			if (error) {
+				console.error("Error deleting task:", error);
+				showNotification("Failed to delete task", "error");
+			} else {
+				showNotification("Task deleted successfully");
+			}
 		}
 	});
 };
 
-window.acceptDemerit = function (taskId) {
+window.acceptDemerit = async function (taskId) { // Made async
 	const task = tasks.find((t) => t.id === taskId);
 	if (!task || task.type !== "demerit") return;
 
@@ -697,19 +664,16 @@ window.acceptDemerit = function (taskId) {
 		status: "demerit_accepted",
 	};
 
-	if (db) {
-		db.collection("tasks")
-			.doc(taskId.toString())
-			.update(updates)
-			.then(() => {
-				showNotification(
-					"Demerit accepted. You can still appeal if you believe this is unfair."
-				);
-			})
-			.catch((error) => {
-				console.error("Error accepting demerit:", error);
-				showNotification("Failed to accept demerit", "error");
-			});
+	if (supabase) {
+		const { error } = await supabase.from('tasks').update(updates).eq('id', taskId);
+		if (error) {
+			console.error("Error accepting demerit:", error);
+			showNotification("Failed to accept demerit", "error");
+		} else {
+			showNotification(
+				"Demerit accepted. You can still appeal if you believe this is unfair."
+			);
+		}
 	}
 };
 
@@ -719,8 +683,8 @@ window.appealDemerit = function (taskId) {
 
 	// Custom modal for appeal with text input
 	const showAppealModal = (task, onSubmit) => {
-		const modal = document.createElement("div");
-		modal.className = "modal-overlay";
+		const modal = document.createElement('div');
+		modal.className = 'modal-overlay';
 		modal.innerHTML = `
 			<div class="modal-content">
 				<h3>Appeal Demerit Task</h3>
@@ -730,9 +694,7 @@ window.appealDemerit = function (taskId) {
 					<div class="warning-title">⚠️ Appeal Risk Warning</div>
 					<div>If approved: +${task.penaltyPoints} points restored</div>
 					<div>If denied: -${task.penaltyPoints} additional points (double penalty)</div>
-					<div><strong>Total risk if denied: ${
-						task.penaltyPoints * 2
-					} points</strong></div>
+					<div><strong>Total risk if denied: ${task.penaltyPoints * 2} points</strong></div>
 				</div>
 				<div class="form-group">
 					<label class="form-label" for="appealTextInput">Reason for Appeal (Required)</label>
@@ -747,52 +709,45 @@ window.appealDemerit = function (taskId) {
 		`;
 		document.body.appendChild(modal);
 
-		document.getElementById("modalSubmitAppeal").onclick = () => {
-			const appealText = document
-				.getElementById("appealTextInput")
-				.value.trim();
-			const appealError = document.getElementById("appealError");
-			if (appealText.length < 10) {
-				// Require at least 10 characters for appeal
-				appealError.textContent =
-					"Appeal text must be at least 10 characters long.";
-				appealError.style.display = "block";
+		document.getElementById('modalSubmitAppeal').onclick = () => {
+			const appealText = document.getElementById('appealTextInput').value.trim();
+			const appealError = document.getElementById('appealError');
+			if (appealText.length < 10) { // Require at least 10 characters for appeal
+				appealError.textContent = "Appeal text must be at least 10 characters long.";
+				appealError.style.display = 'block';
 			} else {
 				onSubmit(appealText);
 				document.body.removeChild(modal);
 			}
 		};
-		document.getElementById("modalCancelAppeal").onclick = () => {
+		document.getElementById('modalCancelAppeal').onclick = () => {
 			document.body.removeChild(modal);
 		};
 	};
 
-	showAppealModal(task, (appealText) => {
+	showAppealModal(task, async (appealText) => { // Made async
 		const updates = {
 			appealStatus: "pending",
 			appealedAt: new Date().toISOString(),
 			appealText: appealText, // Save the appeal text
 		};
 
-		if (db) {
-			db.collection("tasks")
-				.doc(taskId.toString())
-				.update(updates)
-				.then(() => {
-					showNotification(
-						"Appeal submitted. Awaiting admin review.",
-						"warning"
-					);
-				})
-				.catch((error) => {
-					console.error("Error submitting appeal:", error);
-					showNotification("Failed to submit appeal", "error");
-				});
+		if (supabase) {
+			const { error } = await supabase.from('tasks').update(updates).eq('id', taskId);
+			if (error) {
+				console.error("Error submitting appeal:", error);
+				showNotification("Failed to submit appeal", "error");
+			} else {
+				showNotification(
+					"Appeal submitted. Awaiting admin review.",
+					"warning"
+				);
+			}
 		}
 	});
 };
 
-window.approveAppeal = function (taskId) {
+window.approveAppeal = async function (taskId) { // Made async
 	if (!hasPermission("approve_task")) {
 		showNotification(
 			"You do not have permission to review appeals",
@@ -810,22 +765,21 @@ window.approveAppeal = function (taskId) {
 		appealReviewedBy: currentUser,
 	};
 
-	if (db) {
-		Promise.all([
-			db.collection("tasks").doc(taskId.toString()).update(updates),
-			updateUserPoints(task.assignedTo, task.penaltyPoints, "add"),
-		])
-			.then(() => {
-				showNotification(
-					`Appeal approved! ${
-						task.penaltyPoints
-					} points restored to ${users[task.assignedTo]?.displayName}`
-				);
-			})
-			.catch((error) => {
-				console.error("Error approving appeal:", error);
-				showNotification("Failed to approve appeal", "error");
-			});
+	if (supabase) {
+		const { error: taskError } = await supabase.from('tasks').update(updates).eq('id', taskId);
+		if (taskError) {
+			console.error("Error approving appeal:", taskError);
+			showNotification("Failed to approve appeal", "error");
+			return;
+		}
+
+		await updateUserPoints(task.assignedTo, task.penaltyPoints, "add");
+
+		showNotification(
+			`Appeal approved! ${
+				task.penaltyPoints
+			} points restored to ${users[task.assignedTo]?.displayName}`
+		);
 	}
 };
 
@@ -843,8 +797,8 @@ window.denyAppeal = function (taskId) {
 
 	// Use a custom modal or message box instead of confirm
 	const confirmDeny = (message, onConfirm) => {
-		const modal = document.createElement("div");
-		modal.className = "modal-overlay";
+		const modal = document.createElement('div');
+		modal.className = 'modal-overlay';
 		modal.innerHTML = `
 			<div class="modal-content">
 				<p>${message}</p>
@@ -856,11 +810,11 @@ window.denyAppeal = function (taskId) {
 		`;
 		document.body.appendChild(modal);
 
-		document.getElementById("modalConfirm").onclick = () => {
+		document.getElementById('modalConfirm').onclick = () => {
 			onConfirm(true);
 			document.body.removeChild(modal);
 		};
-		document.getElementById("modalCancel").onclick = () => {
+		document.getElementById('modalCancel').onclick = () => {
 			onConfirm(false);
 			document.body.removeChild(modal);
 		};
@@ -872,7 +826,7 @@ window.denyAppeal = function (taskId) {
 		} point penalty to ${
 			users[task.assignedTo]?.displayName
 		} (double penalty).`,
-		(confirmed) => {
+		async (confirmed) => { // Made async
 			if (!confirmed) {
 				return;
 			}
@@ -883,32 +837,24 @@ window.denyAppeal = function (taskId) {
 				appealReviewedBy: currentUser,
 			};
 
-			if (db) {
-				Promise.all([
-					db
-						.collection("tasks")
-						.doc(taskId.toString())
-						.update(updates),
-					updateUserPoints(
-						task.assignedTo,
-						task.penaltyPoints,
-						"subtract"
-					),
-				])
-					.then(() => {
-						showNotification(
-							`Appeal denied! Additional ${
-								task.penaltyPoints
-							} point penalty applied to ${
-								users[task.assignedTo]?.displayName
-							}`,
-							"warning"
-						);
-					})
-					.catch((error) => {
-						console.error("Error denying appeal:", error);
-						showNotification("Failed to deny appeal", "error");
-					});
+			if (supabase) {
+				const { error: taskError } = await supabase.from('tasks').update(updates).eq('id', taskId);
+				if (taskError) {
+					console.error("Error denying appeal:", taskError);
+					showNotification("Failed to deny appeal", "error");
+					return;
+				}
+
+				await updateUserPoints(task.assignedTo, task.penaltyPoints, "subtract");
+
+				showNotification(
+					`Appeal denied! Additional ${
+						task.penaltyPoints
+					} point penalty applied to ${
+						users[task.assignedTo]?.displayName
+					}`,
+					"warning"
+				);
 			}
 		}
 	);
@@ -925,8 +871,8 @@ window.rejectSuggestion = function (suggestionId) {
 
 	// Use a custom modal or message box instead of confirm
 	const confirmReject = (message, onConfirm) => {
-		const modal = document.createElement("div");
-		modal.className = "modal-overlay";
+		const modal = document.createElement('div');
+		modal.className = 'modal-overlay';
 		modal.innerHTML = `
 			<div class="modal-content">
 				<p>${message}</p>
@@ -938,49 +884,40 @@ window.rejectSuggestion = function (suggestionId) {
 		`;
 		document.body.appendChild(modal);
 
-		document.getElementById("modalConfirm").onclick = () => {
+		document.getElementById('modalConfirm').onclick = () => {
 			onConfirm(true);
 			document.body.removeChild(modal);
 		};
-		document.getElementById("modalCancel").onclick = () => {
+		document.getElementById('modalCancel').onclick = () => {
 			onConfirm(false);
 			document.body.removeChild(modal);
 		};
 	};
 
-	confirmReject(
-		"Are you sure you want to reject this suggestion?",
-		(confirmed) => {
-			if (!confirmed) {
-				return;
-			}
+	confirmReject("Are you sure you want to reject this suggestion?", async (confirmed) => { // Made async
+		if (!confirmed) {
+			return;
+		}
 
-			const suggestionUpdates = {
-				status: "rejected",
-				reviewedBy: currentUser,
-				reviewedAt: new Date().toISOString(),
-			};
+		const suggestionUpdates = {
+			status: "rejected",
+			reviewedBy: currentUser,
+			reviewedAt: new Date().toISOString(),
+		};
 
-			if (db) {
-				db.collection("suggestions")
-					.doc(suggestionId.toString())
-					.update(suggestionUpdates)
-					.then(() => {
-						showNotification("Suggestion rejected");
-					})
-					.catch((error) => {
-						console.error("Error rejecting suggestion:", error);
-						showNotification(
-							"Failed to reject suggestion",
-							"error"
-						);
-					});
+		if (supabase) {
+			const { error } = await supabase.from('suggestions').update(suggestionUpdates).eq('id', suggestionId);
+			if (error) {
+				console.error("Error rejecting suggestion:", error);
+				showNotification("Failed to reject suggestion", "error");
+			} else {
+				showNotification("Suggestion rejected");
 			}
 		}
-	);
+	});
 };
 
-function submitTaskSuggestion() {
+async function submitTaskSuggestion() { // Made async
 	const description = document.getElementById("suggestedTaskDescription");
 	const justification = document.getElementById("taskJustification");
 	const points = document.getElementById("suggestedPoints");
@@ -1004,32 +941,26 @@ function submitTaskSuggestion() {
 		reviewedAt: null,
 	};
 
-	if (db) {
-		Promise.all([
-			db
-				.collection("suggestions")
-				.doc(suggestion.id.toString())
-				.set(suggestion),
-			db
-				.collection("metadata")
-				.doc("suggestionCounter")
-				.set({ suggestionIdCounter: suggestionIdCounter }),
-		])
-			.then(() => {
-				const form = document.getElementById("suggestForm");
-				if (form) form.reset();
-				showNotification("Task suggestion submitted successfully!");
-				renderMySuggestions();
-			})
-			.catch((error) => {
-				console.error("Error submitting suggestion:", error);
-				showNotification("Failed to submit suggestion", "error");
-				suggestionIdCounter--;
-			});
+	if (supabase) {
+		const { error: suggestionError } = await supabase.from('suggestions').insert([suggestion]);
+		const { error: metadataError } = await supabase
+			.from('metadata')
+			.upsert({ id: 'counters', suggestionIdCounter: suggestionIdCounter }, { onConflict: 'id' });
+
+		if (suggestionError || metadataError) {
+			console.error("Error submitting suggestion:", suggestionError || metadataError);
+			showNotification("Failed to submit suggestion", "error");
+			suggestionIdCounter--;
+		} else {
+			const form = document.getElementById("suggestForm");
+			if (form) form.reset();
+			showNotification("Task suggestion submitted successfully!");
+			renderMySuggestions();
+		}
 	}
 }
 
-window.approveSuggestion = function (suggestionId) {
+window.approveSuggestion = async function (suggestionId) { // Made async
 	const suggestion = suggestions.find((s) => s.id === suggestionId);
 	if (!suggestion) return;
 
@@ -1053,31 +984,19 @@ window.approveSuggestion = function (suggestionId) {
 		isOverdue: false,
 	};
 
-	const suggestionUpdates = {
-		status: "approved",
-		reviewedBy: currentUser,
-		reviewedAt: new Date().toISOString(),
-	};
+	if (supabase) {
+		const { error: taskError } = await supabase.from('tasks').insert([task]);
+		const { error: suggestionError } = await supabase.from('suggestions').update(suggestionUpdates).eq('id', suggestionId);
+		const { error: metadataError } = await supabase
+			.from('metadata')
+			.upsert({ id: 'counters', taskIdCounter: taskIdCounter }, { onConflict: 'id' });
 
-	if (db) {
-		Promise.all([
-			db.collection("tasks").doc(task.id.toString()).set(task),
-			db
-				.collection("suggestions")
-				.doc(suggestionId.toString())
-				.update(suggestionUpdates),
-			db
-				.collection("metadata")
-				.doc("counter")
-				.set({ taskIdCounter: taskIdCounter }),
-		])
-			.then(() => {
-				showNotification(`Suggestion approved and converted to task!`);
-			})
-			.catch((error) => {
-				console.error("Error approving suggestion:", error);
-				showNotification("Failed to approve suggestion", "error");
-			});
+		if (taskError || suggestionError || metadataError) {
+			console.error("Error approving suggestion:", taskError || suggestionError || metadataError);
+			showNotification("Failed to approve suggestion", "error");
+		} else {
+			showNotification(`Suggestion approved and converted to task!`);
+		}
 	}
 };
 
@@ -1150,9 +1069,7 @@ function renderCalendar() {
 		}
 
 		// Filter tasks for the 'user' only for calendar view
-		const dayTasks = tasks.filter(
-			(t) => t.assignedTo === "user" && getTasksForDate(date).includes(t)
-		);
+		const dayTasks = tasks.filter(t => t.assignedTo === 'user' && getTasksForDate(date).includes(t));
 		if (dayTasks.length > 0) {
 			dayEl.classList.add("has-tasks");
 			const hasOverdue = dayTasks.some((task) => isTaskOverdue(task));
@@ -1207,17 +1124,10 @@ function renderDashboard() {
 	const isUserOnline = lastActivity && lastActivity.action === "login";
 
 	const activeTasks = tasks.filter(
-		(t) =>
-			t.status !== "completed" &&
-			t.type !== "demerit" &&
-			t.assignedTo === "user"
+		(t) => t.status !== "completed" && t.type !== "demerit" && t.assignedTo === 'user'
 	);
-	const completedTasks = tasks.filter(
-		(t) => t.status === "completed" && t.assignedTo === "user"
-	);
-	const allNonDemeritTasks = tasks.filter(
-		(t) => t.type !== "demerit" && t.assignedTo === "user"
-	);
+	const completedTasks = tasks.filter((t) => t.status === "completed" && t.assignedTo === 'user');
+	const allNonDemeritTasks = tasks.filter((t) => t.type !== "demerit" && t.assignedTo === 'user');
 	const completionRate =
 		allNonDemeritTasks.length > 0
 			? Math.round(
@@ -1245,9 +1155,7 @@ function renderUserActivityLog() {
 	if (!activityLogEl) return;
 
 	// Filter activity log to only show the 'user' and 'admin'
-	const filteredActivityLog = userActivityLog.filter(
-		(a) => a.user === "user" || a.user === "admin"
-	);
+	const filteredActivityLog = userActivityLog.filter(a => a.user === 'user' || a.user === 'admin');
 
 	if (filteredActivityLog.length === 0) {
 		activityLogEl.innerHTML =
@@ -1259,15 +1167,7 @@ function renderUserActivityLog() {
 				(activity) => `
 			<div class="activity-item">
 				<div class="activity-action activity-${activity.action}">
-					${
-						activity.user === "user"
-							? activity.action === "login"
-								? "🔓 User Logged In"
-								: "🔒 User Logged Out"
-							: activity.action === "login"
-							? "🔓 Admin Logged In"
-							: "🔒 Admin Logged Out"
-					}
+					${activity.user === 'user' ? (activity.action === "login" ? "🔓 User Logged In" : "🔒 User Logged Out") : (activity.action === "login" ? "🔓 Admin Logged In" : "🔒 Admin Logged Out")}
 				</div>
 				<div class="activity-time">${formatDate(activity.timestamp)}</div>
 			</div>
@@ -1320,127 +1220,263 @@ function renderUserProgress() {
 	`;
 }
 
-function loadData() {
-	if (db) {
-		if (unsubscribe) unsubscribe();
+async function loadData() { // Made async
+	if (!supabase) {
+		console.error("Supabase client not initialized.");
+		return;
+	}
 
-		unsubscribe = db.collection("tasks").onSnapshot((snapshot) => {
-			tasks = [];
-			snapshot.forEach((doc) => {
-				tasks.push({ id: parseInt(doc.id), ...doc.data() });
-			});
+	// Unsubscribe from previous channels if they exist
+	if (unsubscribe) {
+		if (unsubscribe.tasks) supabase.removeChannel(unsubscribe.tasks);
+		if (unsubscribe.suggestions) supabase.removeChannel(unsubscribe.suggestions);
+		if (unsubscribe.activity) supabase.removeChannel(unsubscribe.activity);
+		if (unsubscribe.userProfiles) supabase.removeChannel(unsubscribe.userProfiles);
+		unsubscribe = null;
+	}
+
+	// --- Load Metadata Counters and ensure they are up-to-date with max IDs ---
+	try {
+		// Fetch current counters from metadata
+		const { data: counterData, error: counterError } = await supabase
+			.from('metadata')
+			.select('taskIdCounter, suggestionIdCounter, activityIdCounter')
+			.eq('id', 'counters')
+			.single();
+
+		if (counterError && counterError.code !== 'PGRST116') {
+			console.error("Error fetching metadata:", counterError);
+		}
+
+		// Fetch max IDs from tables
+		const { data: maxTaskIdData, error: maxTaskError } = await supabase
+			.from('tasks')
+			.select('id')
+			.order('id', { ascending: false })
+			.limit(1)
+			.single();
+
+		const { data: maxSuggestionIdData, error: maxSuggestionError } = await supabase
+			.from('suggestions')
+			.select('id')
+			.order('id', { ascending: false })
+			.limit(1)
+			.single();
+
+		const { data: maxActivityIdData, error: maxActivityError } = await supabase
+			.from('userActivity')
+			.select('id')
+			.order('id', { ascending: false })
+			.limit(1)
+			.single();
+
+		if (maxTaskError && maxTaskError.code !== 'PGRST116') console.error("Error fetching max task ID:", maxTaskError);
+		if (maxSuggestionError && maxSuggestionError.code !== 'PGRST116') console.error("Error fetching max suggestion ID:", maxSuggestionError);
+		if (maxActivityError && maxActivityError.code !== 'PGRST116') console.error("Error fetching max activity ID:", maxActivityError);
+
+		// Initialize/update counters based on max of DB value and fetched max ID + 1
+		taskIdCounter = Math.max(counterData?.taskIdCounter || 1, (maxTaskIdData?.id || 0) + 1);
+		suggestionIdCounter = Math.max(counterData?.suggestionIdCounter || 1, (maxSuggestionIdData?.id || 0) + 1);
+		activityIdCounter = Math.max(counterData?.activityIdCounter || 1, (maxActivityIdData?.id || 0) + 1);
+
+		// Upsert updated counters back to metadata
+		const { error: upsertMetadataError } = await supabase.from('metadata').upsert({
+			id: 'counters',
+			taskIdCounter: taskIdCounter,
+			suggestionIdCounter: suggestionIdCounter,
+			activityIdCounter: activityIdCounter,
+		}, { onConflict: 'id' });
+
+		if (upsertMetadataError) {
+			console.error("Error updating metadata counters:", upsertMetadataError);
+		}
+
+	} catch (error) {
+		console.error("Error during metadata and ID initialization:", error);
+	}
+
+	// --- Initial Data Fetch (one-time) ---
+	await fetchTasksInitial();
+	await fetchSuggestionsInitial();
+	await fetchUserActivityInitial();
+	await fetchUserProfilesInitial();
+
+	// --- Real-time Listeners ---
+
+	// Tasks Listener
+	const tasksChannel = supabase.channel('tasks_channel')
+		.on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, payload => {
+			console.log('Task change received!', payload);
+			if (payload.eventType === 'INSERT') {
+				tasks.unshift(payload.new);
+			} else if (payload.eventType === 'UPDATE') {
+				const index = tasks.findIndex(t => t.id === payload.old.id);
+				if (index !== -1) {
+					tasks[index] = payload.new;
+				}
+			} else if (payload.eventType === 'DELETE') {
+				tasks = tasks.filter(t => t.id !== payload.old.id);
+			}
 			tasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-			// Removed checkForOverdueTasks() from here to reduce writes
 			renderTasks();
 			updateStats();
-		});
+		})
+		.subscribe();
 
-		db.collection("suggestions").onSnapshot((snapshot) => {
-			suggestions = [];
-			snapshot.forEach((doc) => {
-				suggestions.push({ id: parseInt(doc.id), ...doc.data() });
-			});
-			suggestions.sort(
-				(a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-			);
+	// Suggestions Listener
+	const suggestionsChannel = supabase.channel('suggestions_channel')
+		.on('postgres_changes', { event: '*', schema: 'public', table: 'suggestions' }, payload => {
+			console.log('Suggestion change received!', payload);
+			if (payload.eventType === 'INSERT') {
+				suggestions.unshift(payload.new);
+			} else if (payload.eventType === 'UPDATE') {
+				const index = suggestions.findIndex(s => s.id === payload.old.id);
+				if (index !== -1) {
+					suggestions[index] = payload.new;
+				}
+			} else if (payload.eventType === 'DELETE') {
+				suggestions = suggestions.filter(s => s.id !== payload.old.id);
+			}
+			suggestions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 			renderSuggestions();
-		});
+		})
+		.subscribe();
 
-		db.collection("userActivity").onSnapshot((snapshot) => {
-			userActivityLog = [];
-			snapshot.forEach((doc) => {
-				userActivityLog.push({ id: parseInt(doc.id), ...doc.data() });
-			});
-			userActivityLog.sort(
-				(a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-			);
-		});
-
-		db.collection("metadata")
-			.doc("counter")
-			.get()
-			.then((doc) => {
-				if (doc.exists) {
-					taskIdCounter = doc.data().taskIdCounter || 1;
+	// User Activity Listener
+	const activityChannel = supabase.channel('activity_channel')
+		.on('postgres_changes', { event: '*', schema: 'public', table: 'userActivity' }, payload => {
+			console.log('Activity change received!', payload);
+			if (payload.eventType === 'INSERT') {
+				userActivityLog.unshift(payload.new);
+				if (userActivityLog.length > 50) { // Keep only last 50 activities
+					userActivityLog = userActivityLog.slice(0, 50);
 				}
-			});
-
-		db.collection("metadata")
-			.doc("suggestionCounter")
-			.get()
-			.then((doc) => {
-				if (doc.exists) {
-					suggestionIdCounter = doc.data().suggestionIdCounter || 1;
+			} else if (payload.eventType === 'UPDATE') {
+				const index = userActivityLog.findIndex(a => a.id === payload.old.id);
+				if (index !== -1) {
+					userActivityLog[index] = payload.new;
 				}
-			});
+			} else if (payload.eventType === 'DELETE') {
+				userActivityLog = userActivityLog.filter(a => a.id !== payload.old.id);
+			}
+			userActivityLog.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+			renderDashboard();
+		})
+		.subscribe();
 
-		db.collection("metadata")
-			.doc("activityCounter")
-			.get()
-			.then((doc) => {
-				if (doc.exists) {
-					activityIdCounter = doc.data().activityIdCounter || 1;
-				}
-			});
-
-		db.collection("userProfiles").onSnapshot((snapshot) => {
-			snapshot.forEach((doc) => {
-				const username = doc.id;
-				const profileData = doc.data();
-				// Only update points for the existing 'user' and 'admin' objects
+	// User Profiles Listener (for points)
+	const userProfilesChannel = supabase.channel('user_profiles_channel')
+		.on('postgres_changes', { event: '*', schema: 'public', table: 'userProfiles' }, payload => {
+			console.log('User profile change received!', payload);
+			if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+				const profileData = payload.new;
+				const username = profileData.username;
 				if (users[username]) {
 					users[username].points = profileData.points || 0;
 				}
-			});
-			updateUserPoints();
-		});
-	}
+			}
+			updateUserPoints(); // Update UI
+			renderUserProgress(); // Re-render user progress on dashboard
+		})
+		.subscribe();
+
+	// Store the channel objects for unsubscribing later
+	unsubscribe = {
+		tasks: tasksChannel,
+		suggestions: suggestionsChannel,
+		activity: activityChannel,
+		userProfiles: userProfilesChannel
+	};
 }
+
+// Initial fetch functions (called once on load)
+async function fetchTasksInitial() {
+    const { data, error } = await supabase.from('tasks').select('*');
+    if (error) {
+        console.error("Error fetching tasks:", error);
+        showError("Failed to load tasks.");
+    } else {
+        tasks = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        renderTasks();
+        updateStats();
+    }
+}
+
+async function fetchSuggestionsInitial() {
+    const { data, error } = await supabase.from('suggestions').select('*');
+    if (error) {
+        console.error("Error fetching suggestions:", error);
+        showError("Failed to load suggestions.");
+    } else {
+        suggestions = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        renderSuggestions();
+    }
+}
+
+async function fetchUserActivityInitial() {
+    const { data, error } = await supabase.from('userActivity').select('*');
+    if (error) {
+        console.error("Error fetching user activity:", error);
+    } else {
+        userActivityLog = data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 50);
+        renderDashboard(); // Re-render dashboard as it depends on activity log
+    }
+}
+
+async function fetchUserProfilesInitial() {
+    const { data, error } = await supabase.from('userProfiles').select('*');
+    if (error) {
+        console.error("Error fetching user profiles:", error);
+    } else {
+        data.forEach((profileData) => {
+            const username = profileData.username; // Assuming a 'username' column in userProfiles
+            if (users[username]) {
+                users[username].points = profileData.points || 0;
+            }
+        });
+        updateUserPoints(); // Update UI
+        renderUserProgress(); // Re-render user progress on dashboard
+    }
+}
+
 
 function checkForOverdueTasks() {
 	console.log("Checking for overdue tasks...");
 	const now = new Date();
-	tasks.forEach((task) => {
+	tasks.forEach(async (task) => { // Made async to allow await for supabase update
 		if (
 			task.dueDate &&
 			task.status !== "completed" &&
 			task.type !== "demerit" &&
-			task.assignedTo === "user" // Only check overdue for the single user
+			task.assignedTo === 'user' // Only check overdue for the single user
 		) {
 			const wasOverdue = task.isOverdue;
 			const isNowOverdue = new Date(task.dueDate) < now;
 
 			if (isNowOverdue && !wasOverdue) {
-				console.log(
-					`Task ${task.id} is now overdue. Applying penalty.`
-				);
+				console.log(`Task ${task.id} is now overdue. Applying penalty.`);
 				task.isOverdue = true;
 				// Penalty is applied only once when it becomes overdue
-				updateUserPoints(
+				await updateUserPoints( // Await for points update
 					task.assignedTo,
 					task.penaltyPoints,
 					"subtract"
 				);
 
-				if (db) {
-					db.collection("tasks")
-						.doc(task.id.toString())
-						.update({
-							isOverdue: true,
-						})
-						.catch((error) => {
-							console.error(
-								"Error updating overdue status:",
-								error
-							);
-						});
+				if (supabase) {
+					const { error } = await supabase.from('tasks').update({
+						isOverdue: true,
+					}).eq('id', task.id);
+					if (error) {
+						console.error("Error updating overdue status:", error);
+					}
 				}
 			}
 		}
 	});
 }
 
-function createRepeatingTask(originalTask) {
+async function createRepeatingTask(originalTask) { // Made async
 	const nextDueDate = new Date(originalTask.dueDate);
 
 	switch (originalTask.repeatInterval) {
@@ -1475,27 +1511,26 @@ function createRepeatingTask(originalTask) {
 		isOverdue: false,
 	};
 
-	if (db) {
-		Promise.all([
-			db.collection("tasks").doc(newTask.id.toString()).set(newTask),
-			db
-				.collection("metadata")
-				.doc("counter")
-				.set({ taskIdCounter: taskIdCounter }),
-		]).catch((error) => {
-			console.error("Error creating repeating task:", error);
+	if (supabase) {
+		const { error: taskError } = await supabase.from('tasks').insert([newTask]);
+		const { error: metadataError } = await supabase
+			.from('metadata')
+			.upsert({ id: 'counters', taskIdCounter: taskIdCounter }, { onConflict: 'id' });
+
+		if (taskError || metadataError) {
+			console.error("Error creating repeating task:", taskError || metadataError);
 			taskIdCounter--;
-		});
+		}
 	}
 }
 
-function updateUserPoints(
+async function updateUserPoints( // Made async
 	username = currentUser,
 	points = 0,
 	operation = "set"
 ) {
 	// Ensure only 'user' and 'admin' points are updated
-	if (!username || !users[username]) return Promise.resolve();
+	if (!username || (!users[username])) return; // Return immediately if no valid user
 
 	if (operation === "set") {
 		users[username].points = points;
@@ -1508,11 +1543,14 @@ function updateUserPoints(
 		);
 	}
 
-	if (db && username) {
-		db.collection("userProfiles").doc(username).set({
-			points: users[username].points,
-			updatedAt: new Date().toISOString(),
-		});
+	if (supabase && username) {
+		const { error } = await supabase.from('userProfiles').upsert(
+			{ username: username, points: users[username].points, updatedAt: new Date().toISOString() },
+			{ onConflict: 'username' } // Upsert based on username
+		);
+		if (error) {
+			console.error("Error updating user profile points:", error);
+		}
 	}
 
 	// Update UI for the currently logged-in user
@@ -1529,8 +1567,6 @@ function updateUserPoints(
 			myPointsStat.textContent = users[currentUser].points || 0;
 		}
 	}
-
-	return Promise.resolve();
 }
 
 function renderTasks() {
@@ -1576,7 +1612,7 @@ function renderAdminView() {
 										  )}`
 										: "<br>Status: Not accepted"
 								}
-								${task.appealText ? `<br>Appeal Reason: ${escapeHtml(task.appealText)}` : ""}
+								${task.appealText ? `<br>Appeal Reason: ${escapeHtml(task.appealText)}` : ''}
 							</div>
 						</div>
 						<div class="task-actions">
@@ -1754,7 +1790,7 @@ function renderAdminView() {
 										  )}`
 										: ""
 								}
-								${task.appealText ? `<br>Appeal Reason: ${escapeHtml(task.appealText)}` : ""}
+								${task.appealText ? `<br>Appeal Reason: ${escapeHtml(task.appealText)}` : ''}
 							</div>
 						</div>
 						<div class="task-actions">
@@ -1787,11 +1823,7 @@ function renderUserView() {
 					task.type === "demerit" ? "demerit-task-user" : "" // New class for user demerit tasks
 				} ${task.isOverdue ? "overdue" : ""} ${
 						task.status === "completed" ? "completed" : ""
-					} ${
-						task.status === "pending_approval"
-							? "pending-approval"
-							: ""
-					} ${
+					} ${task.status === "pending_approval" ? "pending-approval" : ""} ${
 						task.appealStatus === "pending" ? "appeal-pending" : ""
 					}">
 					<div class="task-content">
@@ -1821,49 +1853,13 @@ function renderUserView() {
 									: ""
 							}
 							<div class="task-meta">
-								${
-									task.type === "demerit"
-										? `Issued by: ${
-												users[task.createdBy]
-													?.displayName ||
-												task.createdBy
-										  }`
-										: `Created by: ${
-												users[task.createdBy]
-													?.displayName ||
-												task.createdBy
-										  }`
-								}
+								${task.type === "demerit" ? `Issued by: ${users[task.createdBy]?.displayName || task.createdBy}` : `Created by: ${users[task.createdBy]?.displayName || task.createdBy}`}
 								${task.dueDate ? `<br>Due: ${formatDate(task.dueDate)}` : ""}
 								${task.isRepeating ? "<br>🔄 Repeating" : ""}
 								${task.type === "demerit" ? "<br>📋 Demerit Task" : ""}
-								${
-									task.completedBy
-										? `<br>Completed by: ${
-												users[task.completedBy]
-													?.displayName ||
-												task.completedBy
-										  }`
-										: ""
-								}
-								${
-									task.approvedBy
-										? `<br>Approved by: ${
-												users[task.approvedBy]
-													?.displayName ||
-												task.approvedBy
-										  }`
-										: ""
-								}
-								${
-									task.rejectedBy
-										? `<br>Rejected by: ${
-												users[task.rejectedBy]
-													?.displayName ||
-												task.rejectedBy
-										  }`
-										: ""
-								}
+								${task.completedBy ? `<br>Completed by: ${users[task.completedBy]?.displayName || task.completedBy}` : ""}
+								${task.approvedBy ? `<br>Approved by: ${users[task.approvedBy]?.displayName || task.approvedBy}` : ""}
+								${task.rejectedBy ? `<br>Rejected by: ${users[task.rejectedBy]?.displayName || task.rejectedBy}` : ""}
 								${task.acceptedAt ? `<br>Accepted: ${formatDate(task.acceptedAt)}` : ""}
 								${task.appealedAt ? `<br>Appealed: ${formatDate(task.appealedAt)}` : ""}
 								${
@@ -1876,12 +1872,10 @@ function renderUserView() {
 										  }`
 										: ""
 								}
-								${task.appealText ? `<br>Appeal Reason: ${escapeHtml(task.appealText)}` : ""}
+								${task.appealText ? `<br>Appeal Reason: ${escapeHtml(task.appealText)}` : ''}
 							</div>
 							${
-								task.type === "demerit" &&
-								!task.appealStatus &&
-								!task.acceptedAt
+								task.type === "demerit" && !task.appealStatus && !task.acceptedAt
 									? `
 								<div class="appeal-warning">
 									<div class="warning-title">⚠️ Appeal Risk Warning</div>
@@ -1895,30 +1889,23 @@ function renderUserView() {
 						</div>
 						<div class="task-actions">
 							${
-								task.type === "regular" &&
-								task.status === "todo" &&
-								!task.isOverdue
+								task.type === "regular" && task.status === "todo" && !task.isOverdue
 									? `<button class="action-btn check-btn" onclick="checkOffTask(${task.id})">Mark Complete</button>`
 									: ""
 							}
 							${
-								task.type === "regular" &&
-								task.isOverdue &&
-								task.status === "todo"
+								task.type === "regular" && task.isOverdue && task.status === "todo"
 									? `<button class="action-btn check-btn" onclick="checkOffTask(${task.id})">Mark Complete (Overdue)</button>`
 									: ""
 							}
 							${
-								task.type === "demerit" &&
-								!task.acceptedAt &&
-								!task.appealStatus
+								task.type === "demerit" && !task.acceptedAt && !task.appealStatus
 									? `<button class="action-btn accept-btn" onclick="acceptDemerit(${task.id})">Accept Demerit</button>`
 									: ""
 							}
 							${
 								task.type === "demerit" && !task.appealStatus
 									? `<button class="action-btn appeal-btn" onclick="appealDemerit(${task.id})">Appeal Demerit</button>`
-									: ""
 							}
 						</div>
 					</div>
@@ -1990,9 +1977,7 @@ function renderMySuggestions() {
 
 function updateStats() {
 	// Stats now only reflect tasks assigned to the current user (if user) or all tasks (if admin)
-	const relevantTasks = tasks.filter(
-		(t) => currentUser === "admin" || t.assignedTo === currentUser
-	);
+	const relevantTasks = tasks.filter(t => currentUser === 'admin' || t.assignedTo === currentUser);
 
 	const total = relevantTasks.filter((t) => t.type !== "demerit").length;
 	const pending = relevantTasks.filter(
@@ -2000,9 +1985,7 @@ function updateStats() {
 			(t.status === "todo" || t.status === "pending_approval") &&
 			t.type !== "demerit"
 	).length;
-	const completed = relevantTasks.filter(
-		(t) => t.status === "completed"
-	).length;
+	const completed = relevantTasks.filter((t) => t.status === "completed").length;
 
 	const totalTasksEl = document.getElementById("totalTasksStat");
 	const pendingCountEl = document.getElementById("pendingCountStat");
@@ -2018,7 +2001,8 @@ function updateStats() {
 function escapeHtml(text) {
 	const div = document.createElement("div");
 	div.textContent = text;
-	return div.innerHTML;
+	// Additionally replace backticks to prevent template literal issues
+	return div.innerHTML.replace(/`/g, '&#96;');
 }
 
 function formatDate(dateString) {
