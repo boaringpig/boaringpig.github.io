@@ -102,14 +102,38 @@ function showMainApp() {
 	}
 
 	// Setup repeating task checkbox listener
-	document
-		.getElementById("isRepeating")
-		.addEventListener("change", function () {
-			document.getElementById("repeatOptions").style.display = this
-				.checked
-				? "block"
-				: "none";
+	const isRepeatingCheckbox = document.getElementById("isRepeating");
+	if (isRepeatingCheckbox) {
+		isRepeatingCheckbox.addEventListener("change", function () {
+			const repeatGroup = document.getElementById("repeatIntervalGroup");
+			if (repeatGroup) {
+				repeatGroup.style.display = this.checked ? "block" : "none";
+			}
 		});
+	}
+
+	// Setup task type radio buttons
+	const taskTypeRadios = document.querySelectorAll('input[name="taskType"]');
+	taskTypeRadios.forEach((radio) => {
+		radio.addEventListener("change", function () {
+			const isRegular = this.value === "regular";
+			const regularOptions =
+				document.getElementById("regularTaskOptions");
+			const demeritOptions =
+				document.getElementById("demeritTaskOptions");
+			const regularExtras = document.getElementById("regularTaskExtras");
+			const repeatOptions = document.getElementById("repeatOptions");
+
+			if (regularOptions)
+				regularOptions.style.display = isRegular ? "block" : "none";
+			if (demeritOptions)
+				demeritOptions.style.display = isRegular ? "none" : "block";
+			if (regularExtras)
+				regularExtras.style.display = isRegular ? "block" : "none";
+			if (repeatOptions)
+				repeatOptions.style.display = isRegular ? "block" : "none";
+		});
+	});
 
 	loadData();
 	updateUserPoints();
@@ -182,7 +206,11 @@ function showNotification(message, type = "success") {
 	setTimeout(() => notification.classList.add("show"), 100);
 	setTimeout(() => {
 		notification.classList.remove("show");
-		setTimeout(() => document.body.removeChild(notification), 300);
+		setTimeout(() => {
+			if (document.body.contains(notification)) {
+				document.body.removeChild(notification);
+			}
+		}, 300);
 	}, 3000);
 }
 
@@ -192,13 +220,23 @@ window.switchTab = function (tabName) {
 	document.querySelectorAll(".nav-tab").forEach((tab) => {
 		tab.classList.remove("active");
 	});
-	event.target.classList.add("active");
+
+	// Find the clicked tab and make it active
+	const clickedTab = Array.from(document.querySelectorAll(".nav-tab")).find(
+		(tab) => tab.textContent.toLowerCase().includes(tabName.toLowerCase())
+	);
+	if (clickedTab) {
+		clickedTab.classList.add("active");
+	}
 
 	// Update tab content
 	document.querySelectorAll(".tab-content").forEach((content) => {
 		content.classList.remove("active");
 	});
-	document.getElementById(tabName + "View").classList.add("active");
+	const targetView = document.getElementById(tabName + "View");
+	if (targetView) {
+		targetView.classList.add("active");
+	}
 
 	activeTab = tabName;
 
@@ -233,42 +271,96 @@ window.createTask = function () {
 
 	const taskInput = document.getElementById("taskInput");
 	const taskText = taskInput.value.trim();
-	const assignedUser = document.getElementById("assignedUser").value;
-	const points = parseInt(document.getElementById("taskPoints").value) || 10;
-	const penaltyPoints =
-		parseInt(document.getElementById("penaltyPoints").value) || 5;
-	const dueDate = document.getElementById("taskDueDate").value;
-	const isRepeating = document.getElementById("isRepeating").checked;
-	const repeatInterval = document.getElementById("repeatInterval").value;
+	const taskTypeElement = document.querySelector(
+		'input[name="taskType"]:checked'
+	);
+	const taskType = taskTypeElement ? taskTypeElement.value : "regular";
 
 	if (taskText === "") {
 		showNotification("Please enter a task description", "error");
 		return;
 	}
 
-	if (dueDate && new Date(dueDate) < new Date()) {
-		showNotification("Due date cannot be in the past", "error");
-		return;
-	}
+	let task;
 
-	const task = {
-		id: taskIdCounter++,
-		text: taskText,
-		status: "todo",
-		createdAt: new Date().toISOString(),
-		createdBy: currentUser,
-		assignedTo: assignedUser || null,
-		points: points,
-		penaltyPoints: penaltyPoints,
-		dueDate: dueDate || null,
-		isRepeating: isRepeating,
-		repeatInterval: repeatInterval || null,
-		completedAt: null,
-		completedBy: null,
-		approvedAt: null,
-		approvedBy: null,
-		isOverdue: false,
-	};
+	if (taskType === "demerit") {
+		// Create demerit task
+		const assignedUser = document.getElementById(
+			"demeritAssignedUser"
+		).value;
+		const demeritPoints =
+			parseInt(document.getElementById("demeritPoints").value) || 10;
+
+		if (!assignedUser) {
+			showNotification(
+				"Please select a user for the demerit task",
+				"error"
+			);
+			return;
+		}
+
+		task = {
+			id: taskIdCounter++,
+			text: taskText,
+			status: "demerit",
+			type: "demerit",
+			createdAt: new Date().toISOString(),
+			createdBy: currentUser,
+			assignedTo: assignedUser,
+			points: 0,
+			penaltyPoints: demeritPoints,
+			dueDate: null,
+			isRepeating: false,
+			repeatInterval: null,
+			completedAt: null,
+			completedBy: null,
+			approvedAt: null,
+			approvedBy: null,
+			isOverdue: false,
+			appealStatus: null,
+			appealedAt: null,
+			appealReviewedAt: null,
+			appealReviewedBy: null,
+		};
+
+		// Immediately apply penalty points
+		updateUserPoints(assignedUser, demeritPoints, "subtract");
+	} else {
+		// Create regular task
+		const assignedUser = document.getElementById("assignedUser").value;
+		const points =
+			parseInt(document.getElementById("taskPoints").value) || 10;
+		const penaltyPoints =
+			parseInt(document.getElementById("penaltyPoints").value) || 5;
+		const dueDate = document.getElementById("taskDueDate").value;
+		const isRepeating = document.getElementById("isRepeating").checked;
+		const repeatInterval = document.getElementById("repeatInterval").value;
+
+		if (dueDate && new Date(dueDate) < new Date()) {
+			showNotification("Due date cannot be in the past", "error");
+			return;
+		}
+
+		task = {
+			id: taskIdCounter++,
+			text: taskText,
+			status: "todo",
+			type: "regular",
+			createdAt: new Date().toISOString(),
+			createdBy: currentUser,
+			assignedTo: assignedUser || null,
+			points: points,
+			penaltyPoints: penaltyPoints,
+			dueDate: dueDate || null,
+			isRepeating: isRepeating,
+			repeatInterval: repeatInterval || null,
+			completedAt: null,
+			completedBy: null,
+			approvedAt: null,
+			approvedBy: null,
+			isOverdue: false,
+		};
+	}
 
 	if (db) {
 		Promise.all([
@@ -279,14 +371,54 @@ window.createTask = function () {
 				.set({ taskIdCounter: taskIdCounter }),
 		])
 			.then(() => {
+				// Reset form
 				taskInput.value = "";
-				document.getElementById("taskPoints").value = "10";
-				document.getElementById("penaltyPoints").value = "5";
-				document.getElementById("taskDueDate").value = "";
-				document.getElementById("isRepeating").checked = false;
-				document.getElementById("repeatOptions").style.display = "none";
-				document.getElementById("assignedUser").value = "";
-				showNotification("Task created successfully!");
+				const taskPointsEl = document.getElementById("taskPoints");
+				const penaltyPointsEl =
+					document.getElementById("penaltyPoints");
+				const demeritPointsEl =
+					document.getElementById("demeritPoints");
+				const taskDueDateEl = document.getElementById("taskDueDate");
+				const isRepeatingEl = document.getElementById("isRepeating");
+				const assignedUserEl = document.getElementById("assignedUser");
+				const demeritAssignedUserEl = document.getElementById(
+					"demeritAssignedUser"
+				);
+
+				if (taskPointsEl) taskPointsEl.value = "10";
+				if (penaltyPointsEl) penaltyPointsEl.value = "5";
+				if (demeritPointsEl) demeritPointsEl.value = "10";
+				if (taskDueDateEl) taskDueDateEl.value = "";
+				if (isRepeatingEl) {
+					isRepeatingEl.checked = false;
+					const repeatGroup = document.getElementById(
+						"repeatIntervalGroup"
+					);
+					if (repeatGroup) repeatGroup.style.display = "none";
+				}
+				if (assignedUserEl) assignedUserEl.value = "";
+				if (demeritAssignedUserEl) demeritAssignedUserEl.value = "";
+
+				const regularRadio = document.querySelector(
+					'input[name="taskType"][value="regular"]'
+				);
+				if (regularRadio) {
+					regularRadio.checked = true;
+					// Trigger change event to reset visibility
+					const event = new Event("change");
+					regularRadio.dispatchEvent(event);
+				}
+
+				if (taskType === "demerit") {
+					showNotification(
+						`Demerit task issued to ${
+							users[task.assignedTo].displayName
+						}. ${task.penaltyPoints} points deducted.`,
+						"warning"
+					);
+				} else {
+					showNotification("Task created successfully!");
+				}
 			})
 			.catch((error) => {
 				console.error("Error creating task:", error);
@@ -381,30 +513,6 @@ window.approveTask = function (taskId) {
 	}
 };
 
-window.deleteTask = function (taskId) {
-	if (!hasPermission("delete_task")) {
-		showNotification("You do not have permission to delete tasks", "error");
-		return;
-	}
-
-	if (!confirm("Are you sure you want to delete this task?")) {
-		return;
-	}
-
-	if (db) {
-		db.collection("tasks")
-			.doc(taskId.toString())
-			.delete()
-			.then(() => {
-				showNotification("Task deleted successfully");
-			})
-			.catch((error) => {
-				console.error("Error deleting task:", error);
-				showNotification("Failed to delete task", "error");
-			});
-	}
-};
-
 window.rejectTask = function (taskId) {
 	if (!hasPermission("approve_task")) {
 		showNotification("You do not have permission to reject tasks", "error");
@@ -448,6 +556,165 @@ window.rejectTask = function (taskId) {
 			.catch((error) => {
 				console.error("Error rejecting task:", error);
 				showNotification("Failed to reject task", "error");
+			});
+	}
+};
+
+window.deleteTask = function (taskId) {
+	if (!hasPermission("delete_task")) {
+		showNotification("You do not have permission to delete tasks", "error");
+		return;
+	}
+
+	if (!confirm("Are you sure you want to delete this task?")) {
+		return;
+	}
+
+	if (db) {
+		db.collection("tasks")
+			.doc(taskId.toString())
+			.delete()
+			.then(() => {
+				showNotification("Task deleted successfully");
+			})
+			.catch((error) => {
+				console.error("Error deleting task:", error);
+				showNotification("Failed to delete task", "error");
+			});
+	}
+};
+
+// Appeal functions
+window.appealDemerit = function (taskId) {
+	const task = tasks.find((t) => t.id === taskId);
+	if (!task || task.type !== "demerit") return;
+
+	const appealWarning = `⚠️ APPEAL WARNING ⚠️
+
+If your appeal is APPROVED: The ${
+		task.penaltyPoints
+	} penalty points will be restored to your account.
+
+If your appeal is DENIED: You will lose an additional ${
+		task.penaltyPoints
+	} points (DOUBLE PENALTY).
+
+Current penalty: -${task.penaltyPoints} points
+Risk if denied: -${task.penaltyPoints * 2} points total
+
+Are you sure you want to appeal this demerit?`;
+
+	if (!confirm(appealWarning)) {
+		return;
+	}
+
+	const updates = {
+		appealStatus: "pending",
+		appealedAt: new Date().toISOString(),
+	};
+
+	if (db) {
+		db.collection("tasks")
+			.doc(taskId.toString())
+			.update(updates)
+			.then(() => {
+				showNotification(
+					"Appeal submitted. Awaiting admin review.",
+					"warning"
+				);
+			})
+			.catch((error) => {
+				console.error("Error submitting appeal:", error);
+				showNotification("Failed to submit appeal", "error");
+			});
+	}
+};
+
+window.approveAppeal = function (taskId) {
+	if (!hasPermission("approve_task")) {
+		showNotification(
+			"You do not have permission to review appeals",
+			"error"
+		);
+		return;
+	}
+
+	const task = tasks.find((t) => t.id === taskId);
+	if (!task) return;
+
+	const updates = {
+		appealStatus: "approved",
+		appealReviewedAt: new Date().toISOString(),
+		appealReviewedBy: currentUser,
+	};
+
+	if (db) {
+		Promise.all([
+			db.collection("tasks").doc(taskId.toString()).update(updates),
+			updateUserPoints(task.assignedTo, task.penaltyPoints, "add"), // Restore points
+		])
+			.then(() => {
+				showNotification(
+					`Appeal approved! ${
+						task.penaltyPoints
+					} points restored to ${users[task.assignedTo]?.displayName}`
+				);
+			})
+			.catch((error) => {
+				console.error("Error approving appeal:", error);
+				showNotification("Failed to approve appeal", "error");
+			});
+	}
+};
+
+window.denyAppeal = function (taskId) {
+	if (!hasPermission("approve_task")) {
+		showNotification(
+			"You do not have permission to review appeals",
+			"error"
+		);
+		return;
+	}
+
+	const task = tasks.find((t) => t.id === taskId);
+	if (!task) return;
+
+	if (
+		!confirm(
+			`Are you sure you want to deny this appeal? This will apply an additional ${
+				task.penaltyPoints
+			} point penalty to ${
+				users[task.assignedTo]?.displayName
+			} (double penalty).`
+		)
+	) {
+		return;
+	}
+
+	const updates = {
+		appealStatus: "denied",
+		appealReviewedAt: new Date().toISOString(),
+		appealReviewedBy: currentUser,
+	};
+
+	if (db) {
+		Promise.all([
+			db.collection("tasks").doc(taskId.toString()).update(updates),
+			updateUserPoints(task.assignedTo, task.penaltyPoints, "subtract"), // Additional penalty
+		])
+			.then(() => {
+				showNotification(
+					`Appeal denied! Additional ${
+						task.penaltyPoints
+					} point penalty applied to ${
+						users[task.assignedTo]?.displayName
+					}`,
+					"warning"
+				);
+			})
+			.catch((error) => {
+				console.error("Error denying appeal:", error);
+				showNotification("Failed to deny appeal", "error");
 			});
 	}
 };
@@ -510,7 +777,7 @@ function submitTaskSuggestion() {
 		suggestedDueDate: dueDate || null,
 		suggestedBy: currentUser,
 		createdAt: new Date().toISOString(),
-		status: "pending", // pending, approved, rejected
+		status: "pending",
 		reviewedBy: null,
 		reviewedAt: null,
 	};
@@ -548,6 +815,7 @@ window.approveSuggestion = function (suggestionId) {
 		id: taskIdCounter++,
 		text: suggestion.description,
 		status: "todo",
+		type: "regular",
 		createdAt: new Date().toISOString(),
 		createdBy: currentUser,
 		assignedTo: suggestion.suggestedBy,
@@ -591,27 +859,6 @@ window.approveSuggestion = function (suggestionId) {
 	}
 };
 
-window.rejectSuggestion = function (suggestionId) {
-	const suggestionUpdates = {
-		status: "rejected",
-		reviewedBy: currentUser,
-		reviewedAt: new Date().toISOString(),
-	};
-
-	if (db) {
-		db.collection("suggestions")
-			.doc(suggestionId.toString())
-			.update(suggestionUpdates)
-			.then(() => {
-				showNotification("Suggestion rejected");
-			})
-			.catch((error) => {
-				console.error("Error rejecting suggestion:", error);
-				showNotification("Failed to reject suggestion", "error");
-			});
-	}
-};
-
 // Calendar functions
 window.changeMonth = function (direction) {
 	currentDate.setMonth(currentDate.getMonth() + direction);
@@ -634,24 +881,24 @@ function renderCalendar() {
 		"December",
 	];
 
-	document.getElementById("calendarMonth").textContent = `${
-		monthNames[currentDate.getMonth()]
-	} ${currentDate.getFullYear()}`;
+	const calendarMonth = document.getElementById("calendarMonth");
+	if (calendarMonth) {
+		calendarMonth.textContent = `${
+			monthNames[currentDate.getMonth()]
+		} ${currentDate.getFullYear()}`;
+	}
 
 	const firstDay = new Date(
 		currentDate.getFullYear(),
 		currentDate.getMonth(),
 		1
 	);
-	const lastDay = new Date(
-		currentDate.getFullYear(),
-		currentDate.getMonth() + 1,
-		0
-	);
 	const startDate = new Date(firstDay);
 	startDate.setDate(startDate.getDate() - firstDay.getDay());
 
 	const calendarGrid = document.getElementById("calendarGrid");
+	if (!calendarGrid) return;
+
 	calendarGrid.innerHTML = "";
 
 	// Add header days
@@ -747,11 +994,13 @@ function renderDashboard() {
 			? Math.round((completedTasks.length / tasks.length) * 100)
 			: 0;
 
-	document.getElementById("totalUsers").textContent = activeUsers.length;
-	document.getElementById("activeTasks").textContent = activeTasks.length;
-	document.getElementById(
-		"completionRate"
-	).textContent = `${completionRate}%`;
+	const totalUsersEl = document.getElementById("totalUsers");
+	const activeTasksEl = document.getElementById("activeTasks");
+	const completionRateEl = document.getElementById("completionRate");
+
+	if (totalUsersEl) totalUsersEl.textContent = activeUsers.length;
+	if (activeTasksEl) activeTasksEl.textContent = activeTasks.length;
+	if (completionRateEl) completionRateEl.textContent = `${completionRate}%`;
 
 	// Render user progress
 	renderUserProgress();
@@ -957,6 +1206,7 @@ function createRepeatingTask(originalTask) {
 		id: taskIdCounter++,
 		text: originalTask.text,
 		status: "todo",
+		type: "regular",
 		createdAt: new Date().toISOString(),
 		createdBy: originalTask.createdBy,
 		assignedTo: originalTask.assignedTo,
@@ -987,16 +1237,27 @@ function createRepeatingTask(originalTask) {
 }
 
 function populateUserDropdown() {
-	const select = document.getElementById("assignedUser");
-	if (!select) return;
+	const regularSelect = document.getElementById("assignedUser");
+	const demeritSelect = document.getElementById("demeritAssignedUser");
 
-	select.innerHTML = '<option value="">All Users</option>';
+	if (!regularSelect || !demeritSelect) return;
+
+	regularSelect.innerHTML = '<option value="">All Users</option>';
+	demeritSelect.innerHTML = '<option value="">Select User</option>';
+
 	Object.keys(users).forEach((username) => {
 		if (users[username].role === "user") {
-			const option = document.createElement("option");
-			option.value = username;
-			option.textContent = users[username].displayName;
-			select.appendChild(option);
+			// Regular task dropdown
+			const option1 = document.createElement("option");
+			option1.value = username;
+			option1.textContent = users[username].displayName;
+			regularSelect.appendChild(option1);
+
+			// Demerit task dropdown
+			const option2 = document.createElement("option");
+			option2.value = username;
+			option2.textContent = users[username].displayName;
+			demeritSelect.appendChild(option2);
 		}
 	});
 }
@@ -1021,7 +1282,7 @@ function updateUserPoints(
 
 	// Update in database
 	if (db && username) {
-		return db.collection("userProfiles").doc(username).set({
+		db.collection("userProfiles").doc(username).set({
 			points: users[username].points,
 			updatedAt: new Date().toISOString(),
 		});
@@ -1041,6 +1302,8 @@ function updateUserPoints(
 			myPointsStat.textContent = users[currentUser].points || 0;
 		}
 	}
+
+	return Promise.resolve();
 }
 
 function renderTasks() {
@@ -1054,194 +1317,334 @@ function renderTasks() {
 }
 
 function renderAdminView() {
+	// Render appeals pending review
+	const pendingAppeals = tasks.filter(
+		(t) => t.type === "demerit" && t.appealStatus === "pending"
+	);
+	const appealsContainer = document.getElementById("pendingAppeals");
+
+	if (appealsContainer) {
+		if (pendingAppeals.length === 0) {
+			appealsContainer.innerHTML =
+				'<div class="empty-state">No appeals pending review</div>';
+		} else {
+			appealsContainer.innerHTML = pendingAppeals
+				.map(
+					(task) => `
+				<div class="task-item appeal-pending">
+					<div class="task-content">
+						<div>
+							<span class="status-badge status-pending">Appeal Pending</span>
+							<span class="task-text">${escapeHtml(task.text)}</span>
+							<span class="points-badge-small">-${task.penaltyPoints} pts (risk: -${
+						task.penaltyPoints * 2
+					})</span>
+							<div class="task-meta">
+								User: ${users[task.assignedTo]?.displayName || task.assignedTo}
+								<br>Appealed: ${formatDate(task.appealedAt)}
+								<br>Original demerit: ${formatDate(task.createdAt)}
+							</div>
+						</div>
+						<div class="task-actions">
+							<button class="action-btn approve-btn" onclick="approveAppeal(${
+								task.id
+							})">Approve Appeal</button>
+							<button class="action-btn reject-btn" onclick="denyAppeal(${
+								task.id
+							})">Deny Appeal (Double Penalty)</button>
+						</div>
+					</div>
+				</div>
+			`
+				)
+				.join("");
+		}
+	}
+
 	// Render suggested tasks
 	const suggestedTasksContainer = document.getElementById("suggestedTasks");
 	const pendingSuggestions = suggestions.filter(
 		(s) => s.status === "pending"
 	);
 
-	if (pendingSuggestions.length === 0) {
-		suggestedTasksContainer.innerHTML =
-			'<div class="empty-state">No task suggestions pending approval</div>';
-	} else {
-		suggestedTasksContainer.innerHTML = pendingSuggestions
-			.map(
-				(suggestion) => `
-			<div class="task-item">
-				<div class="task-content">
-					<div>
-						<span class="task-text">${escapeHtml(suggestion.description)}</span>
-						<div class="task-meta">
-							Suggested by: ${
-								users[suggestion.suggestedBy]?.displayName ||
-								suggestion.suggestedBy
-							}
-							<br>Points: ${suggestion.suggestedPoints}
-							${
-								suggestion.justification
-									? `<br>Reason: ${escapeHtml(
-											suggestion.justification
-									  )}`
-									: ""
-							}
-							${
-								suggestion.suggestedDueDate
-									? `<br>Due: ${formatDate(
-											suggestion.suggestedDueDate
-									  )}`
-									: ""
-							}
+	if (suggestedTasksContainer) {
+		if (pendingSuggestions.length === 0) {
+			suggestedTasksContainer.innerHTML =
+				'<div class="empty-state">No task suggestions pending approval</div>';
+		} else {
+			suggestedTasksContainer.innerHTML = pendingSuggestions
+				.map(
+					(suggestion) => `
+				<div class="task-item">
+					<div class="task-content">
+						<div>
+							<span class="task-text">${escapeHtml(suggestion.description)}</span>
+							<div class="task-meta">
+								Suggested by: ${
+									users[suggestion.suggestedBy]
+										?.displayName || suggestion.suggestedBy
+								}
+								<br>Points: ${suggestion.suggestedPoints}
+								${
+									suggestion.justification
+										? `<br>Reason: ${escapeHtml(
+												suggestion.justification
+										  )}`
+										: ""
+								}
+								${
+									suggestion.suggestedDueDate
+										? `<br>Due: ${formatDate(
+												suggestion.suggestedDueDate
+										  )}`
+										: ""
+								}
+							</div>
+						</div>
+						<div class="task-actions">
+							<button class="action-btn approve-btn" onclick="approveSuggestion(${
+								suggestion.id
+							})">Approve</button>
+							<button class="action-btn reject-btn" onclick="rejectSuggestion(${
+								suggestion.id
+							})">Reject</button>
 						</div>
 					</div>
-					<div class="task-actions">
-						<button class="action-btn approve-btn" onclick="approveSuggestion(${
-							suggestion.id
-						})">Approve</button>
-						<button class="action-btn reject-btn" onclick="rejectSuggestion(${
-							suggestion.id
-						})">Reject</button>
-					</div>
 				</div>
-			</div>
-		`
-			)
-			.join("");
+			`
+				)
+				.join("");
+		}
 	}
 
 	// Render pending tasks
 	const pendingTasks = tasks.filter((t) => t.status === "pending_approval");
 	const pendingContainer = document.getElementById("pendingTasks");
 
-	if (pendingTasks.length === 0) {
-		pendingContainer.innerHTML =
-			'<div class="empty-state">No tasks pending approval</div>';
-	} else {
-		pendingContainer.innerHTML = pendingTasks
-			.map(
-				(task) => `
-			<div class="task-item pending-approval ${task.isOverdue ? "overdue" : ""}">
-				<div class="task-content">
-					<div>
-						<span class="status-badge status-pending">Pending Approval</span>
-						<span class="task-text">${escapeHtml(task.text)}</span>
-						<span class="points-badge-small">+${task.points} pts</span>
-						<div class="task-meta">
-							Completed by: ${users[task.completedBy]?.displayName || task.completedBy}
-							${task.dueDate ? `<br>Due: ${formatDate(task.dueDate)}` : ""}
-							${task.isRepeating ? "<br>🔄 Repeating" : ""}
+	if (pendingContainer) {
+		if (pendingTasks.length === 0) {
+			pendingContainer.innerHTML =
+				'<div class="empty-state">No tasks pending approval</div>';
+		} else {
+			pendingContainer.innerHTML = pendingTasks
+				.map(
+					(task) => `
+				<div class="task-item pending-approval ${task.isOverdue ? "overdue" : ""}">
+					<div class="task-content">
+						<div>
+							<span class="status-badge status-pending">Pending Approval</span>
+							<span class="task-text">${escapeHtml(task.text)}</span>
+							<span class="points-badge-small">+${task.points} pts</span>
+							<div class="task-meta">
+								Completed by: ${users[task.completedBy]?.displayName || task.completedBy}
+								${task.dueDate ? `<br>Due: ${formatDate(task.dueDate)}` : ""}
+								${task.isRepeating ? "<br>🔄 Repeating" : ""}
+							</div>
+						</div>
+						<div class="task-actions">
+							<button class="action-btn approve-btn" onclick="approveTask(${
+								task.id
+							})">Approve</button>
+							<button class="action-btn reject-btn" onclick="rejectTask(${
+								task.id
+							})">Reject & Penalize</button>
+							<button class="action-btn delete-btn" onclick="deleteTask(${
+								task.id
+							})">Delete</button>
 						</div>
 					</div>
-					<div class="task-actions">
-						<button class="action-btn approve-btn" onclick="approveTask(${
-							task.id
-						})">Approve</button>
-						<button class="action-btn reject-btn" onclick="rejectTask(${
-							task.id
-						})">Reject & Penalize</button>
-						<button class="action-btn delete-btn" onclick="deleteTask(${
-							task.id
-						})">Delete</button>
-					</div>
 				</div>
-			</div>
-		`
-			)
-			.join("");
+			`
+				)
+				.join("");
+		}
 	}
 
 	// Render all tasks
 	const allTasksContainer = document.getElementById("allTasksAdmin");
 
-	if (tasks.length === 0) {
-		allTasksContainer.innerHTML =
-			'<div class="empty-state">No tasks created yet</div>';
-	} else {
-		allTasksContainer.innerHTML = tasks
-			.map(
-				(task) => `
-			<div class="task-item ${task.status === "completed" ? "completed" : ""} ${
-					task.isOverdue ? "overdue" : ""
-				}">
-				<div class="task-content">
-					<div>
-						<span class="status-badge ${getStatusClass(task.status, task.isOverdue)}">
-							${getStatusText(task.status, task.isOverdue)}
-						</span>
-						<span class="task-text">${escapeHtml(task.text)}</span>
-						<span class="points-badge-small">+${task.points} pts</span>
-						<div class="task-meta">
+	if (allTasksContainer) {
+		if (tasks.length === 0) {
+			allTasksContainer.innerHTML =
+				'<div class="empty-state">No tasks created yet</div>';
+		} else {
+			allTasksContainer.innerHTML = tasks
+				.map(
+					(task) => `
+				<div class="task-item ${task.status === "completed" ? "completed" : ""} ${
+						task.isOverdue ? "overdue" : ""
+					} ${task.type === "demerit" ? "demerit" : ""}">
+					<div class="task-content">
+						<div>
+							<span class="status-badge ${getStatusClass(
+								task.status,
+								task.isOverdue,
+								task.type
+							)}">
+								${getStatusText(task.status, task.isOverdue, task.type)}
+							</span>
+							<span class="task-text">${escapeHtml(task.text)}</span>
+							<span class="points-badge-small">${
+								task.type === "demerit"
+									? "-" + task.penaltyPoints
+									: "+" + task.points
+							} pts</span>
 							${
-								task.assignedTo
-									? `Assigned to: ${
-											users[task.assignedTo]
-												?.displayName || task.assignedTo
-									  }`
-									: "All users"
-							}
-							${
-								task.completedBy
-									? `<br>Completed by: ${
-											users[task.completedBy]
-												?.displayName ||
-											task.completedBy
-									  }`
+								task.type === "demerit" && task.appealStatus
+									? `<span class="points-badge-small appeal-status">${task.appealStatus}</span>`
 									: ""
 							}
-							${task.dueDate ? `<br>Due: ${formatDate(task.dueDate)}` : ""}
-							${task.isRepeating ? "<br>🔄 Repeating" : ""}
+							<div class="task-meta">
+								${
+									task.assignedTo
+										? `Assigned to: ${
+												users[task.assignedTo]
+													?.displayName ||
+												task.assignedTo
+										  }`
+										: "All users"
+								}
+								${
+									task.completedBy
+										? `<br>Completed by: ${
+												users[task.completedBy]
+													?.displayName ||
+												task.completedBy
+										  }`
+										: ""
+								}
+								${task.dueDate ? `<br>Due: ${formatDate(task.dueDate)}` : ""}
+								${task.isRepeating ? "<br>🔄 Repeating" : ""}
+								${task.type === "demerit" ? "<br>📋 Demerit Task" : ""}
+							</div>
+						</div>
+						<div class="task-actions">
+							<button class="action-btn delete-btn" onclick="deleteTask(${
+								task.id
+							})">Delete</button>
 						</div>
 					</div>
-					<div class="task-actions">
-						<button class="action-btn delete-btn" onclick="deleteTask(${
-							task.id
-						})">Delete</button>
-					</div>
 				</div>
-			</div>
-		`
-			)
-			.join("");
+			`
+				)
+				.join("");
+		}
 	}
 }
 
 function renderUserView() {
-	// My tasks (assigned to me or unassigned)
+	// Demerit tasks assigned to current user
+	const demeritTasks = tasks.filter(
+		(t) => t.type === "demerit" && t.assignedTo === currentUser
+	);
+	const demeritContainer = document.getElementById("demeritTasks");
+
+	if (demeritContainer) {
+		if (demeritTasks.length === 0) {
+			demeritContainer.innerHTML =
+				'<div class="empty-state">No demerit tasks</div>';
+		} else {
+			demeritContainer.innerHTML = demeritTasks
+				.map(
+					(task) => `
+				<div class="task-item demerit ${
+					task.appealStatus === "pending" ? "appeal-pending" : ""
+				}">
+					<div class="task-content">
+						<div>
+							<span class="status-badge status-overdue">Demerit</span>
+							<span class="task-text">${escapeHtml(task.text)}</span>
+							<span class="points-badge-small">-${task.penaltyPoints} pts${
+						task.appealStatus === "denied" ? " (doubled)" : ""
+					}</span>
+							${
+								task.appealStatus
+									? `<span class="points-badge-small appeal-status ${task.appealStatus}">${task.appealStatus}</span>`
+									: ""
+							}
+							<div class="task-meta">
+								Issued by: ${users[task.createdBy]?.displayName || task.createdBy}
+								<br>Date: ${formatDate(task.createdAt)}
+								${task.appealedAt ? `<br>Appealed: ${formatDate(task.appealedAt)}` : ""}
+								${
+									task.appealReviewedAt
+										? `<br>Reviewed: ${formatDate(
+												task.appealReviewedAt
+										  )} by ${
+												users[task.appealReviewedBy]
+													?.displayName
+										  }`
+										: ""
+								}
+							</div>
+							${
+								!task.appealStatus
+									? `
+								<div class="appeal-warning">
+									<div class="warning-title">⚠️ Appeal Risk Warning</div>
+									<div>If approved: +${task.penaltyPoints} points restored</div>
+									<div>If denied: -${task.penaltyPoints} additional points (double penalty)</div>
+									<div><strong>Total risk: ${task.penaltyPoints * 2} points</strong></div>
+								</div>
+							`
+									: ""
+							}
+						</div>
+						<div class="task-actions">
+							${
+								!task.appealStatus
+									? `<button class="action-btn appeal-btn" onclick="appealDemerit(${task.id})">Appeal (Risk: Double Penalty)</button>`
+									: ""
+							}
+						</div>
+					</div>
+				</div>
+			`
+				)
+				.join("");
+		}
+	}
+
+	// My tasks (assigned to me or unassigned, excluding demerit tasks)
 	const myTasks = tasks.filter(
 		(t) =>
 			(t.assignedTo === currentUser || !t.assignedTo) &&
 			t.status === "todo" &&
-			!t.isOverdue
+			!t.isOverdue &&
+			t.type !== "demerit"
 	);
 	const myTasksContainer = document.getElementById("myTasks");
 
-	if (myTasks.length === 0) {
-		myTasksContainer.innerHTML =
-			'<div class="empty-state">No tasks available</div>';
-	} else {
-		myTasksContainer.innerHTML = myTasks
-			.map(
-				(task) => `
-			<div class="task-item">
-				<div class="task-content">
-					<div>
-						<span class="task-text">${escapeHtml(task.text)}</span>
-						<span class="points-badge-small">+${task.points} pts</span>
-						<div class="task-meta">
-							Created by: ${users[task.createdBy]?.displayName || task.createdBy}
-							${task.dueDate ? `<br>Due: ${formatDate(task.dueDate)}` : ""}
-							${task.isRepeating ? "<br>🔄 Repeating" : ""}
+	if (myTasksContainer) {
+		if (myTasks.length === 0) {
+			myTasksContainer.innerHTML =
+				'<div class="empty-state">No tasks available</div>';
+		} else {
+			myTasksContainer.innerHTML = myTasks
+				.map(
+					(task) => `
+				<div class="task-item">
+					<div class="task-content">
+						<div>
+							<span class="task-text">${escapeHtml(task.text)}</span>
+							<span class="points-badge-small">+${task.points} pts</span>
+							<div class="task-meta">
+								Created by: ${users[task.createdBy]?.displayName || task.createdBy}
+								${task.dueDate ? `<br>Due: ${formatDate(task.dueDate)}` : ""}
+								${task.isRepeating ? "<br>🔄 Repeating" : ""}
+							</div>
+						</div>
+						<div class="task-actions">
+							<button class="action-btn check-btn" onclick="checkOffTask(${
+								task.id
+							})">Mark Complete</button>
 						</div>
 					</div>
-					<div class="task-actions">
-						<button class="action-btn check-btn" onclick="checkOffTask(${
-							task.id
-						})">Mark Complete</button>
-					</div>
 				</div>
-			</div>
-		`
-			)
-			.join("");
+			`
+				)
+				.join("");
+		}
 	}
 
 	// Overdue tasks
@@ -1249,80 +1652,88 @@ function renderUserView() {
 		(t) =>
 			(t.assignedTo === currentUser || !t.assignedTo) &&
 			t.status !== "completed" &&
-			t.isOverdue
+			t.isOverdue &&
+			t.type !== "demerit"
 	);
 	const overdueContainer = document.getElementById("overdueTasks");
 
-	if (overdueTasks.length === 0) {
-		overdueContainer.innerHTML =
-			'<div class="empty-state">No overdue tasks</div>';
-	} else {
-		overdueContainer.innerHTML = overdueTasks
-			.map(
-				(task) => `
-			<div class="task-item overdue">
-				<div class="task-content">
-					<div>
-						<span class="status-badge status-overdue">Overdue</span>
-						<span class="task-text">${escapeHtml(task.text)}</span>
-						<span class="points-badge-small">-${task.penaltyPoints} pts applied</span>
-						<div class="task-meta">
-							Created by: ${users[task.createdBy]?.displayName || task.createdBy}
-							<br>Due: ${formatDate(task.dueDate)}
-							${task.isRepeating ? "<br>🔄 Repeating" : ""}
+	if (overdueContainer) {
+		if (overdueTasks.length === 0) {
+			overdueContainer.innerHTML =
+				'<div class="empty-state">No overdue tasks</div>';
+		} else {
+			overdueContainer.innerHTML = overdueTasks
+				.map(
+					(task) => `
+				<div class="task-item overdue">
+					<div class="task-content">
+						<div>
+							<span class="status-badge status-overdue">Overdue</span>
+							<span class="task-text">${escapeHtml(task.text)}</span>
+							<span class="points-badge-small">-${task.penaltyPoints} pts applied</span>
+							<div class="task-meta">
+								Created by: ${users[task.createdBy]?.displayName || task.createdBy}
+								<br>Due: ${formatDate(task.dueDate)}
+								${task.isRepeating ? "<br>🔄 Repeating" : ""}
+							</div>
+						</div>
+						<div class="task-actions">
+							<button class="action-btn check-btn" onclick="checkOffTask(${
+								task.id
+							})">Mark Complete</button>
 						</div>
 					</div>
-					<div class="task-actions">
-						<button class="action-btn check-btn" onclick="checkOffTask(${
-							task.id
-						})">Mark Complete</button>
-					</div>
 				</div>
-			</div>
-		`
-			)
-			.join("");
+			`
+				)
+				.join("");
+		}
 	}
 
 	// Completed tasks by current user
 	const completedTasks = tasks.filter(
 		(t) =>
 			t.completedBy === currentUser &&
-			(t.status === "pending_approval" || t.status === "completed")
+			(t.status === "pending_approval" || t.status === "completed") &&
+			t.type !== "demerit"
 	);
 	const completedContainer = document.getElementById("completedTasks");
 
-	if (completedTasks.length === 0) {
-		completedContainer.innerHTML =
-			'<div class="empty-state">No completed tasks</div>';
-	} else {
-		completedContainer.innerHTML = completedTasks
-			.map(
-				(task) => `
-			<div class="task-item ${
-				task.status === "completed" ? "completed" : "pending-approval"
-			}">
-				<div class="task-content">
-					<div>
-						<span class="status-badge ${
-							task.status === "completed"
-								? "status-completed"
-								: "status-pending"
-						}">
-							${task.status === "completed" ? "Approved" : "Pending Approval"}
-						</span>
-						<span class="task-text">${escapeHtml(task.text)}</span>
-						<span class="points-badge-small">+${task.points} pts</span>
-						<div class="task-meta">
-							Created by: ${users[task.createdBy]?.displayName || task.createdBy}
-							${task.dueDate ? `<br>Due: ${formatDate(task.dueDate)}` : ""}
+	if (completedContainer) {
+		if (completedTasks.length === 0) {
+			completedContainer.innerHTML =
+				'<div class="empty-state">No completed tasks</div>';
+		} else {
+			completedContainer.innerHTML = completedTasks
+				.map(
+					(task) => `
+				<div class="task-item ${
+					task.status === "completed"
+						? "completed"
+						: "pending-approval"
+				}">
+					<div class="task-content">
+						<div>
+							<span class="status-badge ${
+								task.status === "completed"
+									? "status-completed"
+									: "status-pending"
+							}">
+								${task.status === "completed" ? "Approved" : "Pending Approval"}
+							</span>
+							<span class="task-text">${escapeHtml(task.text)}</span>
+							<span class="points-badge-small">+${task.points} pts</span>
+							<div class="task-meta">
+								Created by: ${users[task.createdBy]?.displayName || task.createdBy}
+								${task.dueDate ? `<br>Due: ${formatDate(task.dueDate)}` : ""}
+							</div>
 						</div>
 					</div>
 				</div>
-			</div>
-		`
-			)
-			.join("");
+			`
+				)
+				.join("");
+		}
 	}
 }
 
@@ -1392,11 +1803,15 @@ function updateStats() {
 	).length;
 	const completed = tasks.filter((t) => t.status === "completed").length;
 
-	document.getElementById("totalTasksStat").textContent = total;
-	document.getElementById("pendingCountStat").textContent = pending;
-	document.getElementById("completedCountStat").textContent = completed;
-	document.getElementById("myPointsStat").textContent =
-		users[currentUser]?.points || 0;
+	const totalTasksEl = document.getElementById("totalTasksStat");
+	const pendingCountEl = document.getElementById("pendingCountStat");
+	const completedCountEl = document.getElementById("completedCountStat");
+	const myPointsEl = document.getElementById("myPointsStat");
+
+	if (totalTasksEl) totalTasksEl.textContent = total;
+	if (pendingCountEl) pendingCountEl.textContent = pending;
+	if (completedCountEl) completedCountEl.textContent = completed;
+	if (myPointsEl) myPointsEl.textContent = users[currentUser]?.points || 0;
 }
 
 // Utility functions
@@ -1416,14 +1831,16 @@ function formatDate(dateString) {
 	);
 }
 
-function getStatusClass(status, isOverdue) {
+function getStatusClass(status, isOverdue, type) {
+	if (type === "demerit") return "status-overdue";
 	if (isOverdue) return "status-overdue";
 	if (status === "completed") return "status-completed";
 	if (status === "failed") return "status-overdue";
 	return "status-pending";
 }
 
-function getStatusText(status, isOverdue) {
+function getStatusText(status, isOverdue, type) {
+	if (type === "demerit") return "Demerit";
 	if (isOverdue) return "Overdue";
 	if (status === "completed") return "Completed";
 	if (status === "failed") return "Failed";
