@@ -85,15 +85,18 @@ function showMainApp() {
 	const user = users[currentUser];
 	document.getElementById("userBadge").textContent = user.displayName;
 
-	// Show dashboard tab only for admin
+	// Show dashboard tab only for admin, hide suggest tab for admin
 	const dashboardTab = document.getElementById("dashboardTab");
+	const suggestTab = document.getElementById("suggestTab");
 	if (user.role === "admin") {
 		dashboardTab.style.display = "block";
+		suggestTab.style.display = "none";
 		document.getElementById("adminView").style.display = "block";
 		document.getElementById("userView").style.display = "none";
 		populateUserDropdown();
 	} else {
 		dashboardTab.style.display = "none";
+		suggestTab.style.display = "block";
 		document.getElementById("adminView").style.display = "none";
 		document.getElementById("userView").style.display = "block";
 	}
@@ -398,6 +401,86 @@ window.deleteTask = function (taskId) {
 			.catch((error) => {
 				console.error("Error deleting task:", error);
 				showNotification("Failed to delete task", "error");
+			});
+	}
+};
+
+window.rejectTask = function (taskId) {
+	if (!hasPermission("approve_task")) {
+		showNotification("You do not have permission to reject tasks", "error");
+		return;
+	}
+
+	const task = tasks.find((t) => t.id === taskId);
+	if (!task) return;
+
+	if (
+		!confirm(
+			`Are you sure you want to reject this task? This will apply a ${
+				task.penaltyPoints
+			} point penalty to ${users[task.completedBy]?.displayName}.`
+		)
+	) {
+		return;
+	}
+
+	const updates = {
+		status: "failed",
+		rejectedAt: new Date().toISOString(),
+		rejectedBy: currentUser,
+	};
+
+	if (db) {
+		Promise.all([
+			db.collection("tasks").doc(taskId.toString()).update(updates),
+			updateUserPoints(task.completedBy, task.penaltyPoints, "subtract"),
+		])
+			.then(() => {
+				showNotification(
+					`Task rejected! ${
+						task.penaltyPoints
+					} penalty points applied to ${
+						users[task.completedBy]?.displayName
+					}`,
+					"warning"
+				);
+			})
+			.catch((error) => {
+				console.error("Error rejecting task:", error);
+				showNotification("Failed to reject task", "error");
+			});
+	}
+};
+
+window.rejectSuggestion = function (suggestionId) {
+	if (!hasPermission("approve_suggestions")) {
+		showNotification(
+			"You do not have permission to reject suggestions",
+			"error"
+		);
+		return;
+	}
+
+	if (!confirm("Are you sure you want to reject this suggestion?")) {
+		return;
+	}
+
+	const suggestionUpdates = {
+		status: "rejected",
+		reviewedBy: currentUser,
+		reviewedAt: new Date().toISOString(),
+	};
+
+	if (db) {
+		db.collection("suggestions")
+			.doc(suggestionId.toString())
+			.update(suggestionUpdates)
+			.then(() => {
+				showNotification("Suggestion rejected");
+			})
+			.catch((error) => {
+				console.error("Error rejecting suggestion:", error);
+				showNotification("Failed to reject suggestion", "error");
 			});
 	}
 };
@@ -1052,6 +1135,9 @@ function renderAdminView() {
 						<button class="action-btn approve-btn" onclick="approveTask(${
 							task.id
 						})">Approve</button>
+						<button class="action-btn reject-btn" onclick="rejectTask(${
+							task.id
+						})">Reject & Penalize</button>
 						<button class="action-btn delete-btn" onclick="deleteTask(${
 							task.id
 						})">Delete</button>
@@ -1333,12 +1419,14 @@ function formatDate(dateString) {
 function getStatusClass(status, isOverdue) {
 	if (isOverdue) return "status-overdue";
 	if (status === "completed") return "status-completed";
+	if (status === "failed") return "status-overdue";
 	return "status-pending";
 }
 
 function getStatusText(status, isOverdue) {
 	if (isOverdue) return "Overdue";
 	if (status === "completed") return "Completed";
+	if (status === "failed") return "Failed";
 	if (status === "pending_approval") return "Pending";
 	return "To Do";
 }
