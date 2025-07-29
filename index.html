@@ -56,20 +56,14 @@
 					<div class="demo-credentials">
 						<h3>Demo Accounts</h3>
 						<p>
-							<strong>Admin/Creator:</strong><br />
+							<strong>Administrator:</strong><br />
 							Username: <strong>admin</strong><br />
 							Password: <strong>admin123</strong>
 						</p>
 
 						<p>
-							<strong>User 1:</strong><br />
-							Username: <strong>user1</strong><br />
-							Password: <strong>user123</strong>
-						</p>
-
-						<p>
-							<strong>User 2:</strong><br />
-							Username: <strong>user2</strong><br />
+							<strong>User:</strong><br />
+							Username: <strong>user</strong><br />
 							Password: <strong>user123</strong>
 						</p>
 					</div>
@@ -343,8 +337,10 @@
 					<div class="dashboard-container">
 						<div class="dashboard-stats">
 							<div class="stat-card">
-								<h3>Total Users</h3>
-								<div class="stat-number" id="totalUsers">0</div>
+								<h3>User Login Status</h3>
+								<div class="stat-number" id="userStatus">
+									Offline
+								</div>
 							</div>
 							<div class="stat-card">
 								<h3>Active Tasks</h3>
@@ -361,18 +357,18 @@
 						</div>
 
 						<div class="user-progress">
+							<h2>User Activity Log</h2>
+							<div
+								id="userActivityLog"
+								class="activity-log"
+							></div>
+						</div>
+
+						<div class="user-progress">
 							<h2>User Progress</h2>
 							<div
 								id="userProgressList"
 								class="progress-list"
-							></div>
-						</div>
-
-						<div class="leaderboard">
-							<h2>Leaderboard</h2>
-							<div
-								id="leaderboardList"
-								class="leaderboard-list"
 							></div>
 						</div>
 					</div>
