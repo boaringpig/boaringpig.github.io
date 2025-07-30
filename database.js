@@ -5,12 +5,14 @@
 let supabase = null;
 
 // Global variables for local data storage and counters (defined in main.js)
+// NOTE: These are commented out here because they are declared and
+//       made global in main.js, and this file accesses them via window.
 // let tasks = [];
 // let suggestions = [];
 // let userActivityLog = [];
 // let taskIdCounter = 1;
 // let suggestionIdCounter = 1;
-// let activityIdCounter = 1;
+// let activityIdCounter = 1; // This counter is no longer used for userActivity table inserts as Supabase handles IDs.
 
 // Global unsubscribe object to hold Supabase channel subscriptions
 let unsubscribe = {};
@@ -83,7 +85,7 @@ window.loadData = async function () {
 		// Fetch current counters from metadata
 		const { data: counterData } = await supabase
 			.from("metadata")
-			.select("taskIdCounter, suggestionIdCounter, activityIdCounter")
+			.select("taskIdCounter, suggestionIdCounter") // Removed activityIdCounter from select
 			.eq("id", "counters")
 			.limit(1);
 
@@ -97,10 +99,7 @@ window.loadData = async function () {
 			counterData?.[0]?.suggestionIdCounter || 1,
 			await fetchMaxId("suggestions")
 		);
-		window.activityIdCounter = Math.max(
-			counterData?.[0]?.activityIdCounter || 1,
-			await fetchMaxId("userActivity")
-		);
+		// activityIdCounter is no longer needed as Supabase will handle IDs for userActivity.
 
 		// Upsert updated counters back to metadata
 		const { error: upsertMetadataError } = await supabase
@@ -110,7 +109,7 @@ window.loadData = async function () {
 					id: "counters",
 					taskIdCounter: window.taskIdCounter,
 					suggestionIdCounter: window.suggestionIdCounter,
-					activityIdCounter: window.activityIdCounter,
+					// activityIdCounter: window.activityIdCounter, // Removed activityIdCounter from upsert
 				},
 				{ onConflict: "id" }
 			);
@@ -318,6 +317,78 @@ window.fetchUserProfilesInitial = async function () {
 		window.updateUserPoints(); // Update UI
 		window.renderUserProgress(); // Re-render user progress on dashboard
 	}
+};
+
+// --- User Activity Logging (Moved from script.js) ---
+/**
+ * Logs user activity to the userActivityLog array and Supabase database.
+ * Only logs activity for the 'user' role.
+ * @param {string} action - The action performed (e.g., 'login', 'logout').
+ */
+window.logUserActivity = async function (action) {
+	// Only log activity for the 'user' role
+	if (window.currentUser !== "user") {
+		return;
+	}
+
+	const activity = {
+		// Removed client-side ID generation for userActivity. Supabase will auto-generate.
+		user: window.currentUser,
+		action: action,
+		timestamp: new Date().toISOString(),
+	};
+
+	// Add to local log
+	window.userActivityLog.unshift(activity);
+
+	// Keep only last 50 activities in local log
+	if (window.userActivityLog.length > 50) {
+		window.userActivityLog = window.userActivityLog.slice(0, 50);
+	}
+
+	// Save to database
+	if (supabase) {
+		const { error } = await supabase
+			.from("userActivity")
+			.insert([activity]); // Do not include 'id' in the insert payload
+		if (error) {
+			console.error("Error logging activity to Supabase:", error);
+		}
+	}
+};
+
+// --- Date Helper Functions (Moved from script.js) ---
+/**
+ * Checks if a task is overdue.
+ * @param {object} task - The task object.
+ * @returns {boolean} True if the task is overdue and not completed, false otherwise.
+ */
+window.isTaskOverdue = function (task) {
+	if (!task.dueDate || task.status === "completed") return false;
+	return new Date(task.dueDate) < new Date();
+};
+
+/**
+ * Checks if a given date is today's date.
+ * @param {Date} date - The date object to check.
+ * @returns {boolean} True if the date is today, false otherwise.
+ */
+window.isToday = function (date) {
+	const today = new Date();
+	return date.toDateString() === today.toDateString();
+};
+
+/**
+ * Retrieves tasks that are due on a specific date.
+ * @param {Date} date - The date to check for tasks.
+ * @returns {Array<object>} An array of task objects due on the given date.
+ */
+window.getTasksForDate = function (date) {
+	const dateStr = date.toDateString();
+	return window.tasks.filter((task) => {
+		if (!task.dueDate) return false;
+		return new Date(task.dueDate).toDateString() === dateStr;
+	});
 };
 
 // --- CRUD Operations ---
