@@ -13,7 +13,7 @@ const users = {
 			"view_dashboard",
 			"approve_suggestions",
 		],
-		points: 0,
+		points: 0, // Admin points should always remain 0 and not be tracked
 	},
 	user: {
 		password: "user123",
@@ -29,9 +29,11 @@ let tasks = [];
 let suggestions = [];
 let userProfiles = {}; // Still used for points, but only for 'user'
 let userActivityLog = []; // Still logs for 'user' and 'admin'
-let taskIdCounter = 1;
-let suggestionIdCounter = 1;
-let activityIdCounter = 1;
+let taskIdCounter = 1; // Will be initialized from DB max ID
+let suggestionIdCounter = 1; // Will be initialized from DB max ID
+// activityIdCounter is no longer needed for new inserts into userActivity,
+// as the database will handle ID generation for that table.
+// It will still be used for local array management and initial fetching of max ID if needed for other tables.
 let supabase = null; // Changed from 'db' to 'supabase'
 let unsubscribe = null; // Will now hold Supabase channel subscriptions
 let overdueCheckIntervalId = null; // To store the interval ID for overdue task checks
@@ -66,12 +68,26 @@ function initializeSupabase() {
 		}
 
 		console.log("Supabase initialized successfully");
-		showLogin();
+		attemptAutoLogin(); // Attempt to auto-login on initialization
 	} catch (error) {
 		console.error("Supabase initialization error:", error);
 		showError(
 			"Failed to connect to Supabase. Please check your configuration and ensure Supabase library is loaded."
 		);
+	}
+}
+
+async function attemptAutoLogin() {
+	const rememberedUser = localStorage.getItem("rememberedUser");
+	if (rememberedUser && users[rememberedUser]) {
+		// For security, we don't store passwords.
+		// We'll trust the rememberedUser for this simplified demo.
+		// In a real app, you'd use Supabase Auth sessions or refresh tokens here.
+		currentUser = rememberedUser;
+		console.log(`Auto-logging in as ${currentUser}`);
+		showMainApp();
+	} else {
+		showLogin();
 	}
 }
 
@@ -86,6 +102,18 @@ function showMainApp() {
 
 	const user = users[currentUser];
 	document.getElementById("userBadge").textContent = user.displayName;
+
+	// Get the userPoints element
+	const userPointsBadge = document.getElementById("userPoints");
+
+	// Hide userPoints badge for admin, show for user
+	if (userPointsBadge) {
+		if (user.role === "admin") {
+			userPointsBadge.style.display = "none"; // Hide for admin
+		} else {
+			userPointsBadge.style.display = "inline-block"; // Show for user
+		}
+	}
 
 	// Log login activity
 	logUserActivity("login");
@@ -169,13 +197,43 @@ function showMainApp() {
 document.addEventListener("DOMContentLoaded", function () {
 	const loginForm = document.getElementById("loginForm");
 	if (loginForm) {
-		loginForm.addEventListener("submit", function (e) {
+		loginForm.addEventListener("submit", async function (e) {
+			// Made async
 			e.preventDefault();
 			const username = document.getElementById("username").value.trim();
 			const password = document.getElementById("password").value;
+			const rememberMe = document.getElementById("rememberMe")
+				? document.getElementById("rememberMe").checked
+				: false;
 
-			if (users[username] && users[username].password === password) {
-				currentUser = username;
+			// Authenticate against Supabase 'users' table
+			const { data, error } = await supabase
+				.from("users")
+				.select("username, password, role")
+				.eq("username", username)
+				.eq("password", password) // IMPORTANT: In a real app, hash passwords!
+				.limit(1); // Use limit(1) instead of single() for robustness
+
+			if (error || !data || data.length === 0) {
+				// Check for error or no data
+				console.error("Supabase login error:", error);
+				showError("Invalid username or password");
+				return;
+			}
+
+			const userData = data[0]; // Get the single user object
+
+			if (
+				users[userData.username] &&
+				users[userData.username].password === userData.password
+			) {
+				// Double check against local users object for role/permissions
+				currentUser = userData.username;
+				if (rememberMe) {
+					localStorage.setItem("rememberedUser", currentUser);
+				} else {
+					localStorage.removeItem("rememberedUser");
+				}
 				showMainApp();
 				hideError();
 			} else {
@@ -281,6 +339,8 @@ window.logout = function () {
 		logUserActivity("logout");
 	}
 
+	localStorage.removeItem("rememberedUser"); // Clear remembered user on logout
+
 	// Unsubscribe from all Supabase channels
 	if (unsubscribe) {
 		if (unsubscribe.tasks) supabase.removeChannel(unsubscribe.tasks);
@@ -305,8 +365,13 @@ window.logout = function () {
 // User activity logging
 async function logUserActivity(action) {
 	// Made async
+	// Only log activity for the 'user' role
+	if (currentUser !== "user") {
+		return;
+	}
+
 	const activity = {
-		id: activityIdCounter++,
+		// Removed client-side ID generation for userActivity, let Supabase handle it
 		user: currentUser,
 		action: action,
 		timestamp: new Date().toISOString(),
@@ -321,6 +386,7 @@ async function logUserActivity(action) {
 
 	// Save to database
 	if (supabase) {
+		// Supabase will now auto-generate the ID for userActivity
 		const { error } = await supabase
 			.from("userActivity")
 			.insert([activity]);
@@ -475,6 +541,7 @@ window.createTask = async function () {
 			} else {
 				showNotification("Task created successfully!");
 			}
+			await fetchTasksInitial(); // Explicitly re-fetch and render tasks after creation
 		}
 	} else {
 		showNotification("Database not connected", "error");
@@ -524,6 +591,7 @@ window.checkOffTask = async function (taskId) {
 			showNotification("Failed to update task", "error");
 		} else {
 			showNotification("Task marked as complete! Awaiting approval.");
+			await fetchTasksInitial(); // Explicitly re-fetch and render tasks after update
 		}
 	}
 };
@@ -569,6 +637,7 @@ window.approveTask = async function (taskId) {
 		if (task.isRepeating && task.dueDate) {
 			createRepeatingTask(task);
 		}
+		await fetchTasksInitial(); // Explicitly re-fetch and render tasks after approval
 	}
 };
 
@@ -647,6 +716,7 @@ window.rejectTask = function (taskId) {
 					}`,
 					"warning"
 				);
+				await fetchTasksInitial(); // Explicitly re-fetch and render tasks after rejection
 			}
 		}
 	);
@@ -701,6 +771,7 @@ window.deleteTask = function (taskId) {
 					showNotification("Failed to delete task", "error");
 				} else {
 					showNotification("Task deleted successfully");
+					await fetchTasksInitial(); // Explicitly re-fetch and render tasks after deletion
 				}
 			}
 		}
@@ -729,6 +800,7 @@ window.acceptDemerit = async function (taskId) {
 			showNotification(
 				"Demerit accepted. You can still appeal if you believe this is unfair."
 			);
+			await fetchTasksInitial(); // Explicitly re-fetch and render tasks after acceptance
 		}
 	}
 };
@@ -787,6 +859,15 @@ window.appealDemerit = function (taskId) {
 		};
 	};
 
+	// Prevent appeal if already accepted
+	if (task.acceptedAt) {
+		showNotification(
+			"This demerit has already been accepted and cannot be appealed.",
+			"error"
+		);
+		return;
+	}
+
 	showAppealModal(task, async (appealText) => {
 		// Made async
 		const updates = {
@@ -808,6 +889,7 @@ window.appealDemerit = function (taskId) {
 					"Appeal submitted. Awaiting admin review.",
 					"warning"
 				);
+				await fetchTasksInitial(); // Explicitly re-fetch and render tasks after appeal
 			}
 		}
 	});
@@ -850,6 +932,7 @@ window.approveAppeal = async function (taskId) {
 				users[task.assignedTo]?.displayName
 			}`
 		);
+		await fetchTasksInitial(); // Explicitly re-fetch and render tasks after appeal approval
 	}
 };
 
@@ -933,6 +1016,7 @@ window.denyAppeal = function (taskId) {
 					}`,
 					"warning"
 				);
+				await fetchTasksInitial(); // Explicitly re-fetch and render tasks after appeal denial
 			}
 		}
 	);
@@ -996,6 +1080,7 @@ window.rejectSuggestion = function (suggestionId) {
 					showNotification("Failed to reject suggestion", "error");
 				} else {
 					showNotification("Suggestion rejected");
+					await fetchSuggestionsInitial(); // Explicitly re-fetch and render suggestions after rejection
 				}
 			}
 		}
@@ -1049,7 +1134,7 @@ async function submitTaskSuggestion() {
 			const form = document.getElementById("suggestForm");
 			if (form) form.reset();
 			showNotification("Task suggestion submitted successfully!");
-			renderMySuggestions();
+			await fetchSuggestionsInitial(); // Explicitly re-fetch and render suggestions after submission
 		}
 	}
 }
@@ -1102,6 +1187,8 @@ window.approveSuggestion = async function (suggestionId) {
 			showNotification("Failed to approve suggestion", "error");
 		} else {
 			showNotification(`Suggestion approved and converted to task!`);
+			await fetchTasksInitial(); // Re-fetch tasks as a new one was created
+			await fetchSuggestionsInitial(); // Re-fetch suggestions as one was approved
 		}
 	}
 };
@@ -1370,58 +1457,56 @@ async function loadData() {
 			.from("metadata")
 			.select("taskIdCounter, suggestionIdCounter, activityIdCounter")
 			.eq("id", "counters")
-			.single();
+			.limit(1); // Use limit(1) instead of single() for robustness
 
-		if (counterError && counterError.code !== "PGRST116") {
+		if (counterError) {
 			console.error("Error fetching metadata:", counterError);
 		}
 
-		// Fetch max IDs from tables
+		// Fetch max IDs from tables (using limit(1) instead of single())
 		const { data: maxTaskIdData, error: maxTaskError } = await supabase
 			.from("tasks")
 			.select("id")
 			.order("id", { ascending: false })
-			.limit(1)
-			.single();
+			.limit(1);
 
 		const { data: maxSuggestionIdData, error: maxSuggestionError } =
 			await supabase
 				.from("suggestions")
 				.select("id")
 				.order("id", { ascending: false })
-				.limit(1)
-				.single();
+				.limit(1);
 
 		const { data: maxActivityIdData, error: maxActivityError } =
 			await supabase
 				.from("userActivity")
 				.select("id")
 				.order("id", { ascending: false })
-				.limit(1)
-				.single();
+				.limit(1);
 
-		if (maxTaskError && maxTaskError.code !== "PGRST116")
+		if (maxTaskError)
 			console.error("Error fetching max task ID:", maxTaskError);
-		if (maxSuggestionError && maxSuggestionError.code !== "PGRST116")
+		if (maxSuggestionError)
 			console.error(
 				"Error fetching max suggestion ID:",
 				maxSuggestionError
 			);
-		if (maxActivityError && maxActivityError.code !== "PGRST116")
+		if (maxActivityError)
 			console.error("Error fetching max activity ID:", maxActivityError);
 
 		// Initialize/update counters based on max of DB value and fetched max ID + 1
+		// Safely access data[0]?.id for max IDs from arrays
 		taskIdCounter = Math.max(
-			counterData?.taskIdCounter || 1,
-			(maxTaskIdData?.id || 0) + 1
+			counterData?.[0]?.taskIdCounter || 1,
+			(maxTaskIdData?.[0]?.id || 0) + 1
 		);
 		suggestionIdCounter = Math.max(
-			counterData?.suggestionIdCounter || 1,
-			(maxSuggestionIdData?.id || 0) + 1
+			counterData?.[0]?.suggestionIdCounter || 1,
+			(maxSuggestionIdData?.[0]?.id || 0) + 1
 		);
 		activityIdCounter = Math.max(
-			counterData?.activityIdCounter || 1,
-			(maxActivityIdData?.id || 0) + 1
+			counterData?.[0]?.activityIdCounter || 1,
+			(maxActivityIdData?.[0]?.id || 0) + 1
 		);
 
 		// Upsert updated counters back to metadata
@@ -1742,9 +1827,40 @@ async function updateUserPoints( // Made async
 	points = 0,
 	operation = "set"
 ) {
-	// Ensure only 'user' and 'admin' points are updated
-	if (!username || !users[username]) return; // Return immediately if no valid user
+	console.log(
+		`updateUserPoints called for: ${username}, operation: ${operation}, points: ${points}`
+	);
 
+	// Admin points are not tracked in DB, only locally for display purposes if needed
+	if (username === "admin") {
+		if (operation === "set") {
+			users[username].points = points;
+		} else if (operation === "add") {
+			users[username].points = (users[username].points || 0) + points;
+		} else if (operation === "subtract") {
+			users[username].points = Math.max(
+				0,
+				(users[username].points || 0) - points
+			);
+		}
+		// Update UI for the currently logged-in user (admin)
+		const pointsBadge = document.getElementById("userPoints");
+		if (pointsBadge) {
+			pointsBadge.textContent = `${
+				users[currentUser].points || 0
+			} Points`;
+		}
+		const myPointsStat = document.getElementById("myPointsStat");
+		if (myPointsStat) {
+			myPointsStat.textContent = users[currentUser].points || 0;
+		}
+		console.log(
+			`Admin (${username}) local points after update: ${users[username].points}`
+		);
+		return; // Exit as admin points are not synced to DB
+	}
+
+	// Logic for 'user' profile - update local and then Supabase
 	if (operation === "set") {
 		users[username].points = points;
 	} else if (operation === "add") {
@@ -1755,6 +1871,9 @@ async function updateUserPoints( // Made async
 			(users[username].points || 0) - points
 		);
 	}
+	console.log(
+		`User (${username}) local points after update: ${users[username].points}`
+	);
 
 	if (supabase && username) {
 		const { error } = await supabase.from("userProfiles").upsert(
@@ -1766,11 +1885,18 @@ async function updateUserPoints( // Made async
 			{ onConflict: "username" } // Upsert based on username
 		);
 		if (error) {
-			console.error("Error updating user profile points:", error);
+			console.error(
+				"Error updating user profile points in Supabase:",
+				error
+			);
+		} else {
+			console.log(
+				`User (${username}) points successfully upserted to Supabase: ${users[username].points}`
+			);
 		}
 	}
 
-	// Update UI for the currently logged-in user
+	// Update UI for the currently logged-in user (if it's the user)
 	if (username === currentUser) {
 		const pointsBadge = document.getElementById("userPoints");
 		if (pointsBadge) {
@@ -2145,7 +2271,7 @@ function renderUserView() {
 								task.isOverdue &&
 								task.status === "todo"
 									? `<button class="action-btn check-btn" onclick="checkOffTask(${task.id})">Mark Complete (Overdue)</button>`
-									: "" // Added missing false value
+									: ""
 							}
 							${
 								task.type === "demerit" &&
@@ -2155,9 +2281,11 @@ function renderUserView() {
 									: ""
 							}
 							${
-								task.type === "demerit" && !task.appealStatus
+								task.type === "demerit" &&
+								!task.appealStatus &&
+								!task.acceptedAt // Only show appeal if not accepted and no appeal pending/denied
 									? `<button class="action-btn appeal-btn" onclick="appealDemerit(${task.id})">Appeal Demerit</button>`
-									: "" // Added missing false value
+									: ""
 							}
 						</div>
 					</div>
