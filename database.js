@@ -24,6 +24,7 @@ let unsubscribe = {};
 // function renderUserProgress() { ... }
 // function updateStats() { ... }
 // function updateUserPoints() { ... }
+// function renderCalendar() { ... } // Added for FullCalendar refresh
 
 /**
  * Initializes the Supabase client.
@@ -165,6 +166,10 @@ window.loadData = async function () {
 					);
 					window.renderTasks();
 					window.updateStats();
+					// Refresh FullCalendar when tasks change
+					if (window.activeTab === "calendar") {
+						window.renderCalendar();
+					}
 				} catch (error) {
 					console.error("Error in tasksChannel listener:", error);
 					window.showNotification(
@@ -326,6 +331,12 @@ window.fetchTasksInitial = async function () {
 		);
 		window.renderTasks();
 		window.updateStats();
+		// Also refresh calendar after tasks are fetched
+		if (window.activeTab === "calendar" && window.fullCalendarInstance) {
+			window.fullCalendarInstance.refetchEvents();
+		} else if (window.activeTab === "calendar") {
+			window.renderCalendar(); // Initialize if not already
+		}
 	}
 };
 
@@ -573,7 +584,7 @@ window.createTask = async function () {
 			penaltyPoints: penaltyPoints,
 			dueDate: dueDate || null,
 			isRepeating: isRepeating,
-			repeatInterval: repeatInterval,
+			repeatInterval: isRepeating ? repeatInterval : null, // Only set if repeating
 			completedAt: null,
 			completedBy: null,
 			approvedAt: null,

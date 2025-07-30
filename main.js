@@ -41,8 +41,8 @@ let suggestionIdCounter = 1;
 let overdueCheckIntervalId = null;
 const OVERDUE_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes (in milliseconds)
 
-// Current date for calendar view
-let currentDate = new Date();
+// Current date for calendar view - NO LONGER NEEDED WITH FULLCALENDAR
+// let currentDate = new Date();
 
 // Active tab state
 let activeTab = "tasks";
@@ -57,7 +57,7 @@ window.taskIdCounter = taskIdCounter;
 window.suggestionIdCounter = suggestionIdCounter;
 window.overdueCheckIntervalId = overdueCheckIntervalId;
 window.OVERDUE_CHECK_INTERVAL = OVERDUE_CHECK_INTERVAL; // Corrected typo here
-window.currentDate = currentDate;
+// window.currentDate = currentDate; // NO LONGER NEEDED
 window.activeTab = activeTab;
 
 // Initialize Supabase client and attempt auto-login on page load
@@ -144,8 +144,8 @@ window.hasPermission = function (permission) {
 	return user && user.permissions.includes(permission);
 };
 
-// Global function to change month in calendar (defined in ui.js, exposed globally)
-window.changeMonth = function (direction) {
-	window.currentDate.setMonth(window.currentDate.getMonth() + direction);
-	window.renderCalendar();
-};
+// window.changeMonth is no longer needed as FullCalendar handles navigation
+// window.changeMonth = function (direction) {
+// 	window.currentDate.setMonth(window.currentDate.getMonth() + direction);
+// 	window.renderCalendar();
+// };

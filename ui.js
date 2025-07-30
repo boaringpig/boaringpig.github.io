@@ -19,10 +19,9 @@
 // window.denyAppeal(taskId) { ... }
 // window.approveSuggestion(suggestionId) { ... }
 // window.rejectSuggestion(suggestionId) { ... }
-// window.changeMonth(direction) { ... }
-// window.isToday(date) { ... }
-// window.isTaskOverdue(task) { ... }
-// window.getTasksForDate(date) { ... }
+// window.isToday(date) { ... } // No longer needed for FullCalendar directly
+// window.isTaskOverdue(task) { ... } // No longer needed for FullCalendar directly
+// window.getTasksForDate(date) { ... } // No longer needed for FullCalendar directly
 // window.loadData() { ... }
 // window.updateUserPoints() { ... }
 // window.logUserActivity(action) { ... }
@@ -30,6 +29,9 @@
 
 // Global object to manage refresh button cooldown states
 window.refreshButtonStates = {};
+
+// Global FullCalendar instance
+let fullCalendarInstance = null;
 
 /**
  * Sets up a refresh button with a cooldown period.
@@ -897,111 +899,205 @@ window.renderMySuggestions = function () {
 };
 
 /**
- * Renders the calendar view, showing tasks due on each day.
+ * Renders the calendar view using FullCalendar.
  */
 window.renderCalendar = function () {
-	const monthNames = [
-		"January",
-		"February",
-		"March",
-		"April",
-		"May",
-		"June",
-		"July",
-		"August",
-		"September",
-		"October",
-		"November",
-		"December",
-	];
+	const calendarEl = document.getElementById("fullcalendar");
 
-	const calendarMonth = document.getElementById("calendarMonth");
-	if (calendarMonth) {
-		calendarMonth.textContent = `${
-			monthNames[window.currentDate.getMonth()]
-		} ${window.currentDate.getFullYear()}`;
+	// Destroy existing calendar instance if it exists to prevent duplicates
+	if (fullCalendarInstance) {
+		fullCalendarInstance.destroy();
 	}
 
-	const firstDay = new Date(
-		window.currentDate.getFullYear(),
-		window.currentDate.getMonth(),
-		1
-	);
-	const startDate = new Date(firstDay);
-	startDate.setDate(startDate.getDate() - firstDay.getDay()); // Adjust to start on Sunday
-
-	const calendarGrid = document.getElementById("calendarGrid");
-	if (!calendarGrid) return;
-
-	calendarGrid.innerHTML = ""; // Clear existing calendar days
-
-	// Create calendar header with day names
-	const headerDays = document.createElement("div");
-	headerDays.className = "calendar-header-days";
-	const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-	dayNames.forEach((day) => {
-		const dayEl = document.createElement("div");
-		dayEl.className = "calendar-header-day";
-		dayEl.textContent = day;
-		headerDays.appendChild(dayEl);
-	});
-	calendarGrid.appendChild(headerDays);
-
-	// Render 42 days (6 weeks) to cover the entire month
-	for (let i = 0; i < 42; i++) {
-		const date = new Date(startDate);
-		date.setDate(startDate.getDate() + i);
-
-		const dayEl = document.createElement("div");
-		dayEl.className = "calendar-day";
-		dayEl.textContent = date.getDate();
-
-		// Add classes for styling
-		if (date.getMonth() !== window.currentDate.getMonth()) {
-			dayEl.classList.add("other-month"); // Days from previous/next month
-		}
-
-		if (window.isToday(date)) {
-			dayEl.classList.add("today"); // Current day
-		}
-
-		// Get tasks for the current day, filtered by the current user
-		const dayTasks = window.tasks.filter(
-			(t) =>
-				t.assignedTo === window.currentUser && // Only show tasks assigned to the current user
-				window.getTasksForDate(date).some((dt) => dt.id === t.id) // Check if the task is due on this date
-		);
-
-		if (dayTasks.length > 0) {
-			dayEl.classList.add("has-tasks");
-			const hasOverdue = dayTasks.some((task) =>
-				window.isTaskOverdue(task)
-			);
-			if (hasOverdue) {
-				dayEl.classList.add("has-overdue");
-			}
-
-			// Add task indicators (up to 3)
-			dayTasks.forEach((task, index) => {
-				if (index < 3) {
-					// Limit to 3 indicators per day
-					const indicator = document.createElement("div");
-					indicator.className = "task-indicator";
-					if (window.isTaskOverdue(task)) {
-						indicator.classList.add("overdue");
-					} else if (window.isToday(new Date(task.dueDate))) {
-						indicator.classList.add("due");
-					} else {
-						indicator.classList.add("upcoming");
-					}
-					dayEl.appendChild(indicator);
+	// Map tasks to FullCalendar event format
+	const calendarEvents = window.tasks
+		.filter((task) => task.assignedTo === window.currentUser) // Only show tasks assigned to the current user
+		.map((task) => {
+			if (task.isRepeating && task.repeatInterval && task.dueDate) {
+				// For repeating tasks, use rrule
+				let rruleFreq;
+				// Use the globally available RRule object directly
+				switch (task.repeatInterval) {
+					case "daily":
+						rruleFreq = RRule.DAILY;
+						break;
+					case "weekly":
+						rruleFreq = RRule.WEEKLY;
+						break;
+					case "monthly":
+						rruleFreq = RRule.MONTHLY;
+						break;
+					default:
+						rruleFreq = RRule.DAILY; // Default to daily if unknown
 				}
-			});
-		}
 
-		calendarGrid.appendChild(dayEl);
-	}
+				// Ensure dtstart is a valid ISO string for rrule
+				const dtstart = task.dueDate; // Use dueDate as the start for recurrence
+
+				return {
+					id: task.id,
+					title: task.text,
+					rrule: {
+						freq: rruleFreq,
+						dtstart: dtstart,
+						// If you want an end date for recurrence, add 'until' here
+						// until: 'YYYY-MM-DDTHH:mm:ssZ'
+					},
+					duration:
+						task.dueDate && task.endDateTime
+							? calculateDuration(task.dueDate, task.endDateTime)
+							: "01:00", // Assuming 1 hour if no end time, or calculate from task properties
+					description: task.text, // Use task text as description for modal
+					classNames: ["fc-event-repeating"], // Custom class for repeating events
+					extendedProps: {
+						originalTask: task, // Store original task data for eventClick
+					},
+				};
+			} else {
+				// For normal (non-repeating) tasks
+				return {
+					id: task.id,
+					title: task.text,
+					start: task.dueDate,
+					end: task.endDateTime || null, // Assuming endDateTime field if available
+					allDay: !task.dueDate || task.dueDate.length === 10, // If only date, it's all day
+					description: task.text, // Use task text as description for modal
+					classNames: ["fc-event-normal"], // Custom class for normal events
+					extendedProps: {
+						originalTask: task, // Store original task data for eventClick
+					},
+				};
+			}
+		});
+
+	fullCalendarInstance = new FullCalendar.Calendar(calendarEl, {
+		plugins: [
+			FullCalendar.dayGrid,
+			FullCalendar.timeGrid,
+			FullCalendar.list,
+			FullCalendarRRule,
+		],
+		initialView: "dayGridMonth",
+		headerToolbar: {
+			left: "prev,next today",
+			center: "title",
+			right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+		},
+		height: "auto",
+		contentHeight: "auto",
+		aspectRatio: 1.8,
+		events: calendarEvents, // Pass the mapped events here
+		eventClick: function (info) {
+			const task = info.event.extendedProps.originalTask; // Retrieve original task data
+
+			let start = task.dueDate ? window.formatDate(task.dueDate) : "N/A";
+			let end = task.endDateTime
+				? window.formatDate(task.endDateTime)
+				: "N/A"; // Assuming endDateTime
+			let allDay =
+				task.dueDate && task.dueDate.length === 10 ? "Yes" : "No"; // Check if only date provided
+			let description = task.text || "No description available.";
+
+			let eventType = task.isRepeating
+				? "Repeating Task"
+				: "One-time Task";
+			let statusText = window.getStatusText(
+				task.status,
+				window.isTaskOverdue(task),
+				task.type,
+				task.appealStatus
+			);
+
+			const modalHtml = `
+                <h3 class="text-xl font-semibold mb-2 text-gray-900">${window.escapeHtml(
+					task.text
+				)}</h3>
+                <p class="text-gray-700 mb-1"><strong>Type:</strong> ${eventType}</p>
+                <p class="text-gray-700 mb-1"><strong>Status:</strong> ${statusText}</p>
+                <p class="text-gray-700 mb-1"><strong>Start:</strong> ${start}</p>
+                ${
+					task.endDateTime
+						? `<p class="text-gray-700 mb-1"><strong>End:</strong> ${end}</p>`
+						: ""
+				}
+                <p class="text-gray-700 mb-1"><strong>All Day:</strong> ${allDay}</p>
+                <p class="text-gray-700 mt-3"><strong>Description:</strong> ${window.escapeHtml(
+					description
+				)}</p>
+                ${
+					task.points
+						? `<p class="text-gray-700 mb-1"><strong>Points:</strong> ${task.points}</p>`
+						: ""
+				}
+                ${
+					task.penaltyPoints
+						? `<p class="text-gray-700 mb-1"><strong>Penalty:</strong> ${task.penaltyPoints}</p>`
+						: ""
+				}
+                ${
+					task.createdBy
+						? `<p class="text-gray-700 mb-1"><strong>Created By:</strong> ${
+								window.users[task.createdBy]?.displayName ||
+								task.createdBy
+						  }</p>`
+						: ""
+				}
+                ${
+					task.completedBy
+						? `<p class="text-gray-700 mb-1"><strong>Completed By:</strong> ${
+								window.users[task.completedBy]?.displayName ||
+								task.completedBy
+						  }</p>`
+						: ""
+				}
+                ${
+					task.approvedBy
+						? `<p class="text-gray-700 mb-1"><strong>Approved By:</strong> ${
+								window.users[task.approvedBy]?.displayName ||
+								task.approvedBy
+						  }</p>`
+						: ""
+				}
+                ${
+					task.appealText
+						? `<p class="text-gray-700 mb-1"><strong>Appeal Reason:</strong> ${window.escapeHtml(
+								task.appealText
+						  )}</p>`
+						: ""
+				}
+            `;
+			window.showModal(modalHtml);
+		},
+		// Optional: eventContent for custom rendering within the event block
+		eventContent: function (arg) {
+			// You can customize how events are displayed here if needed
+			// For now, default rendering with classNames is sufficient
+			return {
+				html: `<div class='fc-event-main-frame'>${arg.event.title}</div>`,
+			};
+		},
+	});
+
+	fullCalendarInstance.render();
 };
+
+/**
+ * Helper function to calculate duration for rrule events.
+ * Assumes start and end are ISO strings.
+ */
+function calculateDuration(startStr, endStr) {
+	if (!startStr || !endStr) return "01:00"; // Default to 1 hour
+
+	const start = new Date(startStr);
+	const end = new Date(endStr);
+	const diffMs = end.getTime() - start.getTime();
+
+	const hours = Math.floor(diffMs / (1000 * 60 * 60));
+	const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+	const pad = (num) => (num < 10 ? "0" + num : num);
+	return `${pad(hours)}:${pad(minutes)}`;
+}
 
 /**
  * Renders the dashboard view with user stats and activity log.
