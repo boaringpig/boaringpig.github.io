@@ -1,25 +1,32 @@
 // ui.js
 // This file contains functions responsible for rendering the user interface.
 
-// Global variables from main.js or database.js
-// let currentUser = null;
-// let tasks = [];
-// let suggestions = [];
-// let users = {}; // For display names
+// Global variables from main.js or database.js (accessed via window)
+// window.currentUser = null;
+// window.tasks = [];
+// window.suggestions = [];
+// window.users = {}; // For display names
 
-// Global functions from main.js or database.js
-// function hasPermission(permission) { ... }
-// function checkOffTask(taskId) { ... }
-// function approveTask(taskId) { ... }
-// function rejectTask(taskId) { ... }
-// function deleteTask(taskId) { ... }
-// function acceptDemerit(taskId) { ... }
-// function appealDemerit(taskId) { ... }
-// function approveAppeal(taskId) { ... }
-// function denyAppeal(taskId) { ... }
-// function approveSuggestion(suggestionId) { ... }
-// function rejectSuggestion(suggestionId) { ... }
-// function changeMonth(direction) { ... }
+// Global functions from main.js or database.js (accessed via window)
+// window.hasPermission(permission) { ... }
+// window.checkOffTask(taskId) { ... }
+// window.approveTask(taskId) { ... }
+// window.rejectTask(taskId) { ... }
+// window.deleteTask(taskId) { ... }
+// window.acceptDemerit(taskId) { ... }
+// window.appealDemerit(taskId) { ... }
+// window.approveAppeal(taskId) { ... }
+// window.denyAppeal(taskId) { ... }
+// window.approveSuggestion(suggestionId) { ... }
+// window.rejectSuggestion(suggestionId) { ... }
+// window.changeMonth(direction) { ... }
+// window.isToday(date) { ... }
+// window.isTaskOverdue(task) { ... }
+// window.getTasksForDate(date) { ... }
+// window.loadData() { ... }
+// window.updateUserPoints() { ... }
+// window.logUserActivity(action) { ... }
+// window.checkForOverdueTasks() { ... }
 
 /**
  * Displays an error message on the login screen.
@@ -82,10 +89,12 @@ window.showNotification = function (message, type = "success") {
  * @param {string} tabName - The name of the tab to switch to (e.g., 'tasks', 'calendar').
  */
 window.switchTab = function (tabName) {
+	// Remove 'active' class from all navigation tabs
 	document.querySelectorAll(".nav-tab").forEach((tab) => {
 		tab.classList.remove("active");
 	});
 
+	// Find the clicked tab and add 'active' class
 	const clickedTab = Array.from(document.querySelectorAll(".nav-tab")).find(
 		(tab) => tab.textContent.toLowerCase().includes(tabName.toLowerCase())
 	);
@@ -93,16 +102,20 @@ window.switchTab = function (tabName) {
 		clickedTab.classList.add("active");
 	}
 
+	// Hide all tab content sections
 	document.querySelectorAll(".tab-content").forEach((content) => {
 		content.classList.remove("active");
 	});
+	// Show the target tab content section
 	const targetView = document.getElementById(tabName + "View");
 	if (targetView) {
 		targetView.classList.add("active");
 	}
 
+	// Update the global active tab state
 	window.activeTab = tabName;
 
+	// Trigger specific rendering functions based on the active tab
 	if (tabName === "calendar") {
 		window.renderCalendar();
 	} else if (
@@ -125,6 +138,7 @@ window.showLogin = function () {
 
 /**
  * Displays the main application interface.
+ * Also handles initial data loading and sets up periodic checks.
  */
 window.showMainApp = function () {
 	document.getElementById("loginScreen").style.display = "none";
@@ -136,14 +150,16 @@ window.showMainApp = function () {
 	const userPointsBadge = document.getElementById("userPoints");
 	if (userPointsBadge) {
 		if (user.role === "admin") {
-			userPointsBadge.style.display = "none"; // Hide for admin
+			userPointsBadge.style.display = "none"; // Hide points for admin
 		} else {
-			userPointsBadge.style.display = "inline-block"; // Show for user
+			userPointsBadge.style.display = "inline-block"; // Show points for user
 		}
 	}
 
+	// Log user login activity
 	window.logUserActivity("login");
 
+	// Adjust visibility of dashboard and suggest tabs based on user role
 	const dashboardTab = document.getElementById("dashboardTab");
 	const suggestTab = document.getElementById("suggestTab");
 	if (user.role === "admin") {
@@ -158,6 +174,7 @@ window.showMainApp = function () {
 		document.getElementById("userView").style.display = "block";
 	}
 
+	// Event listeners for task creation form elements
 	const isRepeatingCheckbox = document.getElementById("isRepeating");
 	if (isRepeatingCheckbox) {
 		isRepeatingCheckbox.addEventListener("change", function () {
@@ -179,6 +196,7 @@ window.showMainApp = function () {
 			const penaltyPointsEl = document.getElementById("penaltyPoints");
 			const taskDueDateEl = document.getElementById("taskDueDate");
 
+			// Toggle visibility of fields based on demerit status
 			if (this.checked) {
 				if (taskPointsEl)
 					taskPointsEl.closest(".form-group").style.display = "none";
@@ -200,10 +218,14 @@ window.showMainApp = function () {
 		});
 	}
 
+	// Load initial data from Supabase and set up real-time listeners
 	window.loadData();
+	// Update user points display
 	window.updateUserPoints();
+	// Render the calendar
 	window.renderCalendar();
 
+	// Clear any existing overdue check interval and start a new one
 	if (window.overdueCheckIntervalId) {
 		clearInterval(window.overdueCheckIntervalId);
 	}
@@ -214,7 +236,7 @@ window.showMainApp = function () {
 };
 
 /**
- * Renders tasks in the appropriate view (admin or user).
+ * Renders tasks in the appropriate view (admin or user) based on current user's role.
  */
 window.renderTasks = function () {
 	const user = window.users[window.currentUser];
@@ -226,9 +248,11 @@ window.renderTasks = function () {
 };
 
 /**
- * Renders the admin view with pending appeals, suggested tasks, pending approvals, and all tasks.
+ * Renders the admin view with sections for pending appeals, suggested tasks,
+ * tasks pending approval, and all tasks.
  */
 window.renderAdminView = function () {
+	// Filter tasks for pending appeals (demerit tasks with pending appeal status)
 	const pendingAppeals = window.tasks.filter(
 		(t) => t.type === "demerit" && t.appealStatus === "pending"
 	);
@@ -295,6 +319,7 @@ window.renderAdminView = function () {
 		}
 	}
 
+	// Filter and render suggested tasks pending approval
 	const suggestedTasksContainer = document.getElementById("suggestedTasks");
 	const pendingSuggestions = window.suggestions.filter(
 		(s) => s.status === "pending"
@@ -352,6 +377,7 @@ window.renderAdminView = function () {
 		}
 	}
 
+	// Filter and render tasks pending approval (regular tasks)
 	const pendingTasks = window.tasks.filter(
 		(t) => t.status === "pending_approval" && t.type !== "demerit"
 	);
@@ -411,6 +437,7 @@ window.renderAdminView = function () {
 		}
 	}
 
+	// Render all tasks for the admin view
 	const allTasksContainer = document.getElementById("allTasksAdmin");
 
 	if (allTasksContainer) {
@@ -517,9 +544,10 @@ window.renderAdminView = function () {
 };
 
 /**
- * Renders the user's view of tasks.
+ * Renders the user's view of tasks, including regular tasks and demerit tasks.
  */
 window.renderUserView = function () {
+	// Filter tasks assigned to the current user
 	const userTasks = window.tasks.filter(
 		(t) => t.assignedTo === window.currentUser
 	);
@@ -705,7 +733,7 @@ window.renderUserView = function () {
 };
 
 /**
- * Renders the user's suggestions.
+ * Renders suggestions. This function primarily acts as a dispatcher to `renderMySuggestions`.
  */
 window.renderSuggestions = function () {
 	if (window.activeTab === "suggest") {
@@ -780,7 +808,7 @@ window.renderMySuggestions = function () {
 };
 
 /**
- * Renders the calendar view.
+ * Renders the calendar view, showing tasks due on each day.
  */
 window.renderCalendar = function () {
 	const monthNames = [
@@ -811,13 +839,14 @@ window.renderCalendar = function () {
 		1
 	);
 	const startDate = new Date(firstDay);
-	startDate.setDate(startDate.getDate() - firstDay.getDay());
+	startDate.setDate(startDate.getDate() - firstDay.getDay()); // Adjust to start on Sunday
 
 	const calendarGrid = document.getElementById("calendarGrid");
 	if (!calendarGrid) return;
 
-	calendarGrid.innerHTML = "";
+	calendarGrid.innerHTML = ""; // Clear existing calendar days
 
+	// Create calendar header with day names
 	const headerDays = document.createElement("div");
 	headerDays.className = "calendar-header-days";
 	const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -829,6 +858,7 @@ window.renderCalendar = function () {
 	});
 	calendarGrid.appendChild(headerDays);
 
+	// Render 42 days (6 weeks) to cover the entire month
 	for (let i = 0; i < 42; i++) {
 		const date = new Date(startDate);
 		date.setDate(startDate.getDate() + i);
@@ -837,19 +867,22 @@ window.renderCalendar = function () {
 		dayEl.className = "calendar-day";
 		dayEl.textContent = date.getDate();
 
+		// Add classes for styling
 		if (date.getMonth() !== window.currentDate.getMonth()) {
-			dayEl.classList.add("other-month");
+			dayEl.classList.add("other-month"); // Days from previous/next month
 		}
 
 		if (window.isToday(date)) {
-			dayEl.classList.add("today");
+			dayEl.classList.add("today"); // Current day
 		}
 
+		// Get tasks for the current day, filtered by the current user
 		const dayTasks = window.tasks.filter(
 			(t) =>
-				t.assignedTo === "user" &&
-				window.getTasksForDate(date).includes(t)
+				t.assignedTo === window.currentUser && // Only show tasks assigned to the current user
+				window.getTasksForDate(date).some((dt) => dt.id === t.id) // Check if the task is due on this date
 		);
+
 		if (dayTasks.length > 0) {
 			dayEl.classList.add("has-tasks");
 			const hasOverdue = dayTasks.some((task) =>
@@ -859,8 +892,10 @@ window.renderCalendar = function () {
 				dayEl.classList.add("has-overdue");
 			}
 
+			// Add task indicators (up to 3)
 			dayTasks.forEach((task, index) => {
 				if (index < 3) {
+					// Limit to 3 indicators per day
 					const indicator = document.createElement("div");
 					indicator.className = "task-indicator";
 					if (window.isTaskOverdue(task)) {
@@ -881,16 +916,19 @@ window.renderCalendar = function () {
 
 /**
  * Renders the dashboard view with user stats and activity log.
+ * This view is typically for admin users.
  */
 window.renderDashboard = function () {
 	if (!window.hasPermission("view_dashboard")) return;
 
+	// Filter activity log to show only 'user' activity for status
 	const userActivity = window.userActivityLog.filter(
 		(a) => a.user === "user"
 	);
 	const lastActivity = userActivity[0];
 	const isUserOnline = lastActivity && lastActivity.action === "login";
 
+	// Calculate task statistics for the 'user'
 	const activeTasks = window.tasks.filter(
 		(t) =>
 			t.status !== "completed" &&
@@ -910,6 +948,7 @@ window.renderDashboard = function () {
 			  )
 			: 0;
 
+	// Update UI elements
 	const userStatusEl = document.getElementById("userStatus");
 	const activeTasksEl = document.getElementById("activeTasks");
 	const completionRateEl = document.getElementById("completionRate");
@@ -921,6 +960,7 @@ window.renderDashboard = function () {
 	if (activeTasksEl) activeTasksEl.textContent = activeTasks.length;
 	if (completionRateEl) completionRateEl.textContent = `${completionRate}%`;
 
+	// Render detailed activity log and user progress
 	window.renderUserActivityLog();
 	window.renderUserProgress();
 };
@@ -932,6 +972,7 @@ window.renderUserActivityLog = function () {
 	const activityLogEl = document.getElementById("userActivityLog");
 	if (!activityLogEl) return;
 
+	// Filter activity log to only show activity for 'user' and 'admin'
 	const filteredActivityLog = window.userActivityLog.filter(
 		(a) => a.user === "user" || a.user === "admin"
 	);
@@ -941,7 +982,7 @@ window.renderUserActivityLog = function () {
 			'<div class="empty-state">No user activity recorded</div>';
 	} else {
 		activityLogEl.innerHTML = filteredActivityLog
-			.slice(0, 20)
+			.slice(0, 20) // Display up to 20 recent activities
 			.map(
 				(activity) => `
             <div class="activity-item">
@@ -973,7 +1014,7 @@ window.renderUserProgress = function () {
 	const progressList = document.getElementById("userProgressList");
 	if (!progressList) return;
 
-	const user = window.users["user"];
+	const user = window.users["user"]; // Always target the 'user' profile for progress
 	const userTasks = window.tasks.filter(
 		(t) => t.assignedTo === "user" && t.type !== "demerit"
 	);
@@ -1013,15 +1054,17 @@ window.renderUserProgress = function () {
 };
 
 /**
- * Updates the overall statistics displayed in the footer.
+ * Updates the overall statistics displayed in the footer (Total Tasks, Pending, Completed, My Points).
  */
 window.updateStats = function () {
+	// Filter tasks relevant to the current user (all for admin, assigned for user)
 	const relevantTasks = window.tasks.filter(
 		(t) =>
 			window.currentUser === "admin" ||
 			t.assignedTo === window.currentUser
 	);
 
+	// Calculate statistics, excluding demerit tasks from total/pending/completed counts
 	const total = relevantTasks.filter((t) => t.type !== "demerit").length;
 	const pending = relevantTasks.filter(
 		(t) =>
@@ -1032,11 +1075,13 @@ window.updateStats = function () {
 		(t) => t.status === "completed"
 	).length;
 
+	// Get references to the stat elements
 	const totalTasksEl = document.getElementById("totalTasksStat");
 	const pendingCountEl = document.getElementById("pendingCountStat");
 	const completedCountEl = document.getElementById("completedCountStat");
 	const myPointsEl = document.getElementById("myPointsStat");
 
+	// Update text content of stat elements
 	if (totalTasksEl) totalTasksEl.textContent = total;
 	if (pendingCountEl) pendingCountEl.textContent = pending;
 	if (completedCountEl) completedCountEl.textContent = completed;
@@ -1045,20 +1090,21 @@ window.updateStats = function () {
 };
 
 /**
- * Escapes HTML characters in a string to prevent XSS.
+ * Escapes HTML characters in a string to prevent XSS (Cross-Site Scripting) vulnerabilities.
  * @param {string} text - The text to escape.
  * @returns {string} The escaped HTML string.
  */
 window.escapeHtml = function (text) {
 	const div = document.createElement("div");
 	div.textContent = text;
-	return div.innerHTML.replace(/`/g, "&#96;"); // Additionally replace backticks
+	// Additionally replace backticks to prevent template literal issues in generated HTML
+	return div.innerHTML.replace(/`/g, "&#96;");
 };
 
 /**
- * Formats a date string into a localized date and time string.
- * @param {string} dateString - The date string to format.
- * @returns {string} The formatted date and time string.
+ * Formats an ISO date string into a localized date and time string (e.g., "M/D/YYYY HH:MM AM/PM").
+ * @param {string} dateString - The ISO date string to format.
+ * @returns {string} The formatted date and time string, or an empty string if input is null/empty.
  */
 window.formatDate = function (dateString) {
 	if (!dateString) return "";
@@ -1071,33 +1117,36 @@ window.formatDate = function (dateString) {
 };
 
 /**
- * Returns the CSS class for a task status badge.
- * @param {string} status - The task status.
- * @param {boolean} isOverdue - Whether the task is overdue.
+ * Returns the appropriate CSS class for a task status badge based on its status,
+ * overdue status, type (regular/demerit), and appeal status.
+ * @param {string} status - The primary status of the task (e.g., 'todo', 'completed', 'pending_approval').
+ * @param {boolean} isOverdue - True if the task is overdue.
  * @param {string} type - The type of task ('regular' or 'demerit').
- * @param {string} appealStatus - The appeal status of a demerit task.
- * @returns {string} The CSS class name.
+ * @param {string} appealStatus - The appeal status of a demerit task ('pending', 'approved', 'denied', or null).
+ * @returns {string} The CSS class name for the status badge.
  */
 window.getStatusClass = function (status, isOverdue, type, appealStatus) {
 	if (type === "demerit") {
 		if (appealStatus === "pending") return "status-pending-appeal";
-		if (appealStatus === "approved") return "status-completed";
-		if (appealStatus === "denied") return "status-overdue";
-		return "status-demerit";
+		if (appealStatus === "approved") return "status-completed"; // Appeal approved, effectively completed
+		if (appealStatus === "denied") return "status-overdue"; // Appeal denied, remains a negative status
+		if (status === "demerit_accepted") return "status-demerit-accepted"; // User accepted demerit
+		return "status-demerit"; // Default for issued demerit
 	}
+	// For regular tasks
 	if (isOverdue) return "status-overdue";
 	if (status === "completed") return "status-completed";
-	if (status === "failed") return "status-overdue";
-	return "status-pending";
+	if (status === "failed") return "status-overdue"; // Failed tasks are similar to overdue in negative connotation
+	return "status-pending"; // Default for 'todo' or 'pending_approval'
 };
 
 /**
- * Returns the display text for a task status.
- * @param {string} status - The task status.
- * @param {boolean} isOverdue - Whether the task is overdue.
+ * Returns the human-readable text for a task status, considering its type and appeal status.
+ * @param {string} status - The primary status of the task.
+ * @param {boolean} isOverdue - True if the task is overdue.
  * @param {string} type - The type of task ('regular' or 'demerit').
  * @param {string} appealStatus - The appeal status of a demerit task.
- * @returns {string} The status text.
+ * @returns {string} The display text for the task status.
  */
 window.getStatusText = function (status, isOverdue, type, appealStatus) {
 	if (type === "demerit") {
@@ -1107,6 +1156,7 @@ window.getStatusText = function (status, isOverdue, type, appealStatus) {
 		if (status === "demerit_accepted") return "Demerit Accepted";
 		return "Demerit Issued";
 	}
+	// For regular tasks
 	if (isOverdue) return "Overdue";
 	if (status === "completed") return "Completed";
 	if (status === "failed") return "Failed";
@@ -1115,8 +1165,8 @@ window.getStatusText = function (status, isOverdue, type, appealStatus) {
 };
 
 /**
- * Returns the CSS class for a suggestion status badge.
- * @param {string} status - The suggestion status.
+ * Returns the appropriate CSS class for a suggestion status badge.
+ * @param {string} status - The status of the suggestion ('pending', 'approved', 'rejected').
  * @returns {string} The CSS class name.
  */
 window.getSuggestionStatusClass = function (status) {
@@ -1130,16 +1180,17 @@ window.getSuggestionStatusClass = function (status) {
 	}
 };
 
-// --- Modal Helpers (moved from script.js) ---
+// --- Modal Helpers ---
+// These functions provide custom modal dialogs, replacing native browser `alert()` and `confirm()`.
 
 /**
- * Displays a generic confirmation modal.
+ * Displays a generic confirmation modal with "Confirm" and "Cancel" buttons.
  * @param {string} message - The message to display in the modal.
- * @param {function(boolean): void} onConfirm - Callback function when user confirms or cancels.
+ * @param {function(boolean): void} onConfirm - Callback function invoked with `true` if confirmed, `false` if canceled.
  */
 window.showConfirmModal = function (message, onConfirm) {
 	const modal = document.createElement("div");
-	modal.className = "modal-overlay";
+	modal.className = "modal-overlay"; // Covers the entire screen
 	modal.innerHTML = `
         <div class="modal-content">
             <p>${message}</p>
@@ -1149,22 +1200,23 @@ window.showConfirmModal = function (message, onConfirm) {
             </div>
         </div>
     `;
-	document.body.appendChild(modal);
+	document.body.appendChild(modal); // Add modal to the DOM
 
+	// Attach event listeners to modal buttons
 	document.getElementById("modalConfirm").onclick = () => {
-		onConfirm(true);
-		document.body.removeChild(modal);
+		onConfirm(true); // Call callback with true for confirmation
+		document.body.removeChild(modal); // Remove modal from DOM
 	};
 	document.getElementById("modalCancel").onclick = () => {
-		onConfirm(false);
-		document.body.removeChild(modal);
+		onConfirm(false); // Call callback with false for cancellation
+		document.body.removeChild(modal); // Remove modal from DOM
 	};
 };
 
 /**
- * Displays a modal for appealing a demerit, including a text input.
- * @param {object} task - The demerit task object.
- * @param {function(string): void} onSubmit - Callback function when appeal is submitted.
+ * Displays a modal specifically for appealing a demerit task, including a text input for the reason.
+ * @param {object} task - The demerit task object being appealed.
+ * @param {function(string): void} onSubmit - Callback function invoked with the appeal text when submitted.
  */
 window.showAppealModal = function (task, onSubmit) {
 	const modal = document.createElement("div");
@@ -1197,20 +1249,23 @@ window.showAppealModal = function (task, onSubmit) {
     `;
 	document.body.appendChild(modal);
 
+	// Event listener for submitting the appeal
 	document.getElementById("modalSubmitAppeal").onclick = () => {
 		const appealText = document
 			.getElementById("appealTextInput")
 			.value.trim();
 		const appealError = document.getElementById("appealError");
 		if (appealText.length < 10) {
+			// Basic validation: require at least 10 characters for appeal reason
 			appealError.textContent =
 				"Appeal text must be at least 10 characters long.";
 			appealError.style.display = "block";
 		} else {
-			onSubmit(appealText);
+			onSubmit(appealText); // Call callback with the appeal text
 			document.body.removeChild(modal);
 		}
 	};
+	// Event listener for canceling the appeal
 	document.getElementById("modalCancelAppeal").onclick = () => {
 		document.body.removeChild(modal);
 	};

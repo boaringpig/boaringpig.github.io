@@ -5,19 +5,17 @@
 let supabase = null;
 
 // Global variables for local data storage and counters (defined in main.js)
-// NOTE: These are commented out here because they are declared and
-//       made global in main.js, and this file accesses them via window.
+// These are accessed via window.
 // let tasks = [];
 // let suggestions = [];
 // let userActivityLog = [];
 // let taskIdCounter = 1;
 // let suggestionIdCounter = 1;
-// let activityIdCounter = 1; // This counter is no longer used for userActivity table inserts as Supabase handles IDs.
 
 // Global unsubscribe object to hold Supabase channel subscriptions
 let unsubscribe = {};
 
-// Global functions from ui.js
+// Global functions from ui.js (referenced here for clarity)
 // function showError(message) { ... }
 // function showNotification(message, type) { ... }
 // function renderTasks() { ... }
@@ -25,7 +23,7 @@ let unsubscribe = {};
 // function renderDashboard() { ... }
 // function renderUserProgress() { ... }
 // function updateStats() { ... }
-// function updateUserPoints() { ... } // defined here, but needs to be accessible globally
+// function updateUserPoints() { ... }
 
 /**
  * Initializes the Supabase client.
@@ -42,6 +40,8 @@ window.initializeSupabaseClient = function (url, anonKey) {
 
 /**
  * Fetches the maximum ID from a given table to ensure unique client-side IDs.
+ * This is used for tables where IDs are client-generated (tasks, suggestions)
+ * and not auto-incremented by Supabase.
  * @param {string} tableName - The name of the table.
  * @returns {Promise<number>} The maximum ID + 1, or 1 if the table is empty.
  */
@@ -69,28 +69,30 @@ window.loadData = async function () {
 		return;
 	}
 
-	// Unsubscribe from previous channels if they exist
-	if (unsubscribe) {
-		if (unsubscribe.tasks) supabase.removeChannel(unsubscribe.tasks);
-		if (unsubscribe.suggestions)
-			supabase.removeChannel(unsubscribe.suggestions);
-		if (unsubscribe.activity) supabase.removeChannel(unsubscribe.activity);
-		if (unsubscribe.userProfiles)
-			supabase.removeChannel(unsubscribe.userProfiles);
-		unsubscribe = null;
+	// Unsubscribe from previous channels if they exist to prevent duplicate listeners
+	if (window.unsubscribe) {
+		if (window.unsubscribe.tasks)
+			supabase.removeChannel(window.unsubscribe.tasks);
+		if (window.unsubscribe.suggestions)
+			supabase.removeChannel(window.unsubscribe.suggestions);
+		if (window.unsubscribe.activity)
+			supabase.removeChannel(window.unsubscribe.activity);
+		if (window.unsubscribe.userProfiles)
+			supabase.removeChannel(window.unsubscribe.userProfiles);
+		window.unsubscribe = null; // Clear the unsubscribe object
 	}
 
 	// --- Load Metadata Counters and ensure they are up-to-date with max IDs ---
 	try {
-		// Fetch current counters from metadata
+		// Fetch current counters from metadata table
 		const { data: counterData } = await supabase
 			.from("metadata")
-			.select("taskIdCounter, suggestionIdCounter") // Removed activityIdCounter from select
+			.select("taskIdCounter, suggestionIdCounter")
 			.eq("id", "counters")
 			.limit(1);
 
-		// Initialize/update counters based on max of DB value and fetched max ID + 1
-		// Safely access data[0]?.id for max IDs from arrays
+		// Initialize/update client-side counters based on max of DB value and fetched max ID + 1
+		// This ensures client-side IDs don't conflict with existing DB IDs for tasks/suggestions.
 		window.taskIdCounter = Math.max(
 			counterData?.[0]?.taskIdCounter || 1,
 			await fetchMaxId("tasks")
@@ -99,9 +101,9 @@ window.loadData = async function () {
 			counterData?.[0]?.suggestionIdCounter || 1,
 			await fetchMaxId("suggestions")
 		);
-		// activityIdCounter is no longer needed as Supabase will handle IDs for userActivity.
+		// activityIdCounter is no longer needed as UUIDs will be used for userActivity.
 
-		// Upsert updated counters back to metadata
+		// Upsert updated counters back to metadata table
 		const { error: upsertMetadataError } = await supabase
 			.from("metadata")
 			.upsert(
@@ -109,9 +111,8 @@ window.loadData = async function () {
 					id: "counters",
 					taskIdCounter: window.taskIdCounter,
 					suggestionIdCounter: window.suggestionIdCounter,
-					// activityIdCounter: window.activityIdCounter, // Removed activityIdCounter from upsert
 				},
-				{ onConflict: "id" }
+				{ onConflict: "id" } // Conflict resolution for upsert
 			);
 
 		if (upsertMetadataError) {
@@ -125,14 +126,16 @@ window.loadData = async function () {
 	}
 
 	// --- Initial Data Fetch (one-time) ---
+	// Fetch all necessary data to populate the UI initially
 	await window.fetchTasksInitial();
 	await window.fetchSuggestionsInitial();
 	await window.fetchUserActivityInitial();
 	await window.fetchUserProfilesInitial();
 
 	// --- Real-time Listeners ---
+	// Set up real-time subscriptions for immediate UI updates on data changes.
 
-	// Tasks Listener
+	// Tasks Listener: Listens for changes in the 'tasks' table
 	const tasksChannel = supabase
 		.channel("tasks_channel")
 		.on(
@@ -141,19 +144,20 @@ window.loadData = async function () {
 			(payload) => {
 				console.log("Task change received!", payload);
 				if (payload.eventType === "INSERT") {
-					window.tasks.unshift(payload.new);
+					window.tasks.unshift(payload.new); // Add new task to the beginning of the array
 				} else if (payload.eventType === "UPDATE") {
 					const index = window.tasks.findIndex(
 						(t) => t.id === payload.old.id
 					);
 					if (index !== -1) {
-						window.tasks[index] = payload.new;
+						window.tasks[index] = payload.new; // Update existing task
 					}
 				} else if (payload.eventType === "DELETE") {
 					window.tasks = window.tasks.filter(
 						(t) => t.id !== payload.old.id
-					);
+					); // Remove deleted task
 				}
+				// Re-sort tasks and re-render UI components that depend on tasks
 				window.tasks.sort(
 					(a, b) => new Date(b.createdAt) - new Date(a.createdAt)
 				);
@@ -161,9 +165,9 @@ window.loadData = async function () {
 				window.updateStats();
 			}
 		)
-		.subscribe();
+		.subscribe(); // Subscribe to activate the listener
 
-	// Suggestions Listener
+	// Suggestions Listener: Listens for changes in the 'suggestions' table
 	const suggestionsChannel = supabase
 		.channel("suggestions_channel")
 		.on(
@@ -185,6 +189,7 @@ window.loadData = async function () {
 						(s) => s.id !== payload.old.id
 					);
 				}
+				// Re-sort suggestions and re-render UI components
 				window.suggestions.sort(
 					(a, b) => new Date(b.createdAt) - new Date(a.createdAt)
 				);
@@ -193,7 +198,7 @@ window.loadData = async function () {
 		)
 		.subscribe();
 
-	// User Activity Listener
+	// User Activity Listener: Listens for changes in the 'userActivity' table
 	const activityChannel = supabase
 		.channel("activity_channel")
 		.on(
@@ -204,7 +209,7 @@ window.loadData = async function () {
 				if (payload.eventType === "INSERT") {
 					window.userActivityLog.unshift(payload.new);
 					if (window.userActivityLog.length > 50) {
-						// Keep only last 50 activities
+						// Keep only last 50 activities in local log for performance
 						window.userActivityLog = window.userActivityLog.slice(
 							0,
 							50
@@ -222,6 +227,7 @@ window.loadData = async function () {
 						(a) => a.id !== payload.old.id
 					);
 				}
+				// Re-sort activity log and re-render dashboard
 				window.userActivityLog.sort(
 					(a, b) => new Date(b.timestamp) - new Date(a.timestamp)
 				);
@@ -230,7 +236,7 @@ window.loadData = async function () {
 		)
 		.subscribe();
 
-	// User Profiles Listener (for points)
+	// User Profiles Listener: Listens for changes in 'userProfiles' (e.g., points updates)
 	const userProfilesChannel = supabase
 		.channel("user_profiles_channel")
 		.on(
@@ -244,17 +250,18 @@ window.loadData = async function () {
 				) {
 					const profileData = payload.new;
 					const username = profileData.username;
+					// Update the local 'users' object with the latest points
 					if (window.users[username]) {
 						window.users[username].points = profileData.points || 0;
 					}
 				}
-				window.updateUserPoints(); // Update UI
+				window.updateUserPoints(); // Update UI elements displaying points
 				window.renderUserProgress(); // Re-render user progress on dashboard
 			}
 		)
 		.subscribe();
 
-	// Store the channel objects for unsubscribing later
+	// Store the channel objects for unsubscribing later (e.g., on logout)
 	window.unsubscribe = {
 		tasks: tasksChannel,
 		suggestions: suggestionsChannel,
@@ -263,7 +270,10 @@ window.loadData = async function () {
 	};
 };
 
-// Initial fetch functions (called once on load)
+// Initial fetch functions (called once on load to populate data)
+/**
+ * Fetches all tasks from Supabase.
+ */
 window.fetchTasksInitial = async function () {
 	const { data, error } = await supabase.from("tasks").select("*");
 	if (error) {
@@ -278,6 +288,9 @@ window.fetchTasksInitial = async function () {
 	}
 };
 
+/**
+ * Fetches all suggestions from Supabase.
+ */
 window.fetchSuggestionsInitial = async function () {
 	const { data, error } = await supabase.from("suggestions").select("*");
 	if (error) {
@@ -291,25 +304,34 @@ window.fetchSuggestionsInitial = async function () {
 	}
 };
 
+/**
+ * Fetches user activity log from Supabase.
+ */
 window.fetchUserActivityInitial = async function () {
-	const { data, error } = await supabase.from("userActivity").select("*");
+	// Fetch the latest 50 activities, ordered by timestamp descending
+	const { data, error } = await supabase
+		.from("userActivity")
+		.select("*")
+		.order("timestamp", { ascending: false })
+		.limit(50);
 	if (error) {
 		console.error("Error fetching user activity:", error);
 	} else {
-		window.userActivityLog = data
-			.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-			.slice(0, 50);
+		window.userActivityLog = data; // Already limited and sorted by the query
 		window.renderDashboard(); // Re-render dashboard as it depends on activity log
 	}
 };
 
+/**
+ * Fetches all user profiles (for points) from Supabase.
+ */
 window.fetchUserProfilesInitial = async function () {
 	const { data, error } = await supabase.from("userProfiles").select("*");
 	if (error) {
 		console.error("Error fetching user profiles:", error);
 	} else {
 		data.forEach((profileData) => {
-			const username = profileData.username; // Assuming a 'username' column in userProfiles
+			const username = profileData.username;
 			if (window.users[username]) {
 				window.users[username].points = profileData.points || 0;
 			}
@@ -319,10 +341,15 @@ window.fetchUserProfilesInitial = async function () {
 	}
 };
 
-// --- User Activity Logging (Moved from script.js) ---
+// To prevent duplicate 'login' activity logs within a short time frame
+let lastLoginAttemptTimestamp = 0;
+const LOGIN_DEBOUNCE_TIME = 5000; // 5 seconds
+
+// --- User Activity Logging ---
 /**
  * Logs user activity to the userActivityLog array and Supabase database.
  * Only logs activity for the 'user' role.
+ * Supabase will auto-generate the ID for the 'userActivity' table.
  * @param {string} action - The action performed (e.g., 'login', 'logout').
  */
 window.logUserActivity = async function (action) {
@@ -331,33 +358,54 @@ window.logUserActivity = async function (action) {
 		return;
 	}
 
+	// Debounce for 'login' action to prevent duplicate logs from rapid triggers
+	if (action === "login") {
+		const now = Date.now();
+		if (now - lastLoginAttemptTimestamp < LOGIN_DEBOUNCE_TIME) {
+			console.warn(
+				`[logUserActivity] Debouncing 'login' action for user '${window.currentUser}'. Too soon after last attempt.`
+			);
+			return; // Skip logging if too soon
+		}
+		lastLoginAttemptTimestamp = now; // Update last attempt timestamp
+	}
+
+	// Create the activity object. DO NOT include an 'id' field here.
+	// Supabase should be configured to auto-generate the primary key for 'userActivity'.
 	const activity = {
-		// Removed client-side ID generation for userActivity. Supabase will auto-generate.
 		user: window.currentUser,
 		action: action,
-		timestamp: new Date().toISOString(),
+		timestamp: new Date().toISOString(), // Use current timestamp
 	};
 
-	// Add to local log
+	console.log(`[logUserActivity] Attempting to insert activity:`, activity);
+
+	// Add to local log (real-time listener will also add it, but this ensures immediate UI update)
 	window.userActivityLog.unshift(activity);
 
-	// Keep only last 50 activities in local log
+	// Keep only last 50 activities in local log (this will be reinforced by the real-time listener)
 	if (window.userActivityLog.length > 50) {
 		window.userActivityLog = window.userActivityLog.slice(0, 50);
 	}
 
-	// Save to database
+	// Save to database.
 	if (supabase) {
 		const { error } = await supabase
 			.from("userActivity")
-			.insert([activity]); // Do not include 'id' in the insert payload
+			.insert([activity]); // Ensure 'activity' object does NOT contain 'id'
 		if (error) {
 			console.error("Error logging activity to Supabase:", error);
+			// Revert local log if there's a database error to keep sync
+			window.userActivityLog.shift();
+		} else {
+			console.log(
+				`[logUserActivity] Activity logged successfully for user: ${activity.user}, action: ${activity.action}`
+			);
 		}
 	}
 };
 
-// --- Date Helper Functions (Moved from script.js) ---
+// --- Date Helper Functions ---
 /**
  * Checks if a task is overdue.
  * @param {object} task - The task object.
@@ -379,20 +427,25 @@ window.isToday = function (date) {
 };
 
 /**
- * Retrieves tasks that are due on a specific date.
+ * Retrieves tasks that are due on a specific date for the current user.
  * @param {Date} date - The date to check for tasks.
  * @returns {Array<object>} An array of task objects due on the given date.
  */
 window.getTasksForDate = function (date) {
 	const dateStr = date.toDateString();
+	// Filter tasks assigned to the current user that match the date
 	return window.tasks.filter((task) => {
-		if (!task.dueDate) return false;
+		if (!task.dueDate || task.assignedTo !== window.currentUser)
+			return false;
 		return new Date(task.dueDate).toDateString() === dateStr;
 	});
 };
 
 // --- CRUD Operations ---
 
+/**
+ * Creates a new task (regular or demerit) and saves it to Supabase.
+ */
 window.createTask = async function () {
 	if (!window.hasPermission("create_task")) {
 		window.showNotification(
@@ -420,14 +473,14 @@ window.createTask = async function () {
 			parseInt(document.getElementById("penaltyPoints").value) || 5;
 
 		task = {
-			id: window.taskIdCounter++,
+			id: window.taskIdCounter++, // Client-generated ID
 			text: taskText,
 			status: "demerit_issued",
 			type: "demerit",
 			createdAt: new Date().toISOString(),
 			createdBy: window.currentUser,
-			assignedTo: "user",
-			points: 0,
+			assignedTo: "user", // Demerits are always assigned to 'user'
+			points: 0, // Demerits have no reward points
 			penaltyPoints: penaltyPoints,
 			dueDate: null,
 			isRepeating: false,
@@ -445,6 +498,7 @@ window.createTask = async function () {
 			appealText: null,
 		};
 
+		// Immediately apply penalty points for demerit tasks
 		await window.updateUserPoints("user", penaltyPoints, "subtract");
 	} else {
 		const points =
@@ -465,13 +519,13 @@ window.createTask = async function () {
 		}
 
 		task = {
-			id: window.taskIdCounter++,
+			id: window.taskIdCounter++, // Client-generated ID
 			text: taskText,
 			status: "todo",
 			type: "regular",
 			createdAt: new Date().toISOString(),
 			createdBy: window.currentUser,
-			assignedTo: "user",
+			assignedTo: "user", // Regular tasks are always assigned to 'user'
 			points: points,
 			penaltyPoints: penaltyPoints,
 			dueDate: dueDate || null,
@@ -485,7 +539,9 @@ window.createTask = async function () {
 		};
 	}
 
+	// Insert the new task into the 'tasks' table
 	const { error: taskError } = await supabase.from("tasks").insert([task]);
+	// Update the taskIdCounter in the 'metadata' table
 	const { error: metadataError } = await supabase
 		.from("metadata")
 		.upsert(
@@ -499,8 +555,9 @@ window.createTask = async function () {
 			"Failed to create task. Please try again.",
 			"error"
 		);
-		window.taskIdCounter--;
+		window.taskIdCounter--; // Rollback counter if there was an error
 	} else {
+		// Reset form fields after successful creation
 		taskInput.value = "";
 		const taskPointsEl = document.getElementById("taskPoints");
 		const penaltyPointsEl = document.getElementById("penaltyPoints");
@@ -532,10 +589,15 @@ window.createTask = async function () {
 		} else {
 			window.showNotification("Task created successfully!");
 		}
+		// Re-fetch tasks to ensure UI is in sync (real-time listener will also update)
 		await window.fetchTasksInitial();
 	}
 };
 
+/**
+ * Marks a task as complete and sets its status to 'pending_approval'.
+ * @param {number} taskId - The ID of the task to check off.
+ */
 window.checkOffTask = async function (taskId) {
 	if (!window.hasPermission("check_task")) {
 		window.showNotification(
@@ -548,6 +610,7 @@ window.checkOffTask = async function (taskId) {
 	const task = window.tasks.find((t) => t.id === taskId);
 	if (!task) return;
 
+	// Prevent checking off demerit tasks
 	if (task.type === "demerit") {
 		window.showNotification(
 			"Demerit tasks cannot be marked as complete.",
@@ -556,6 +619,7 @@ window.checkOffTask = async function (taskId) {
 		return;
 	}
 
+	// Ensure the task is assigned to the current user
 	if (task.assignedTo && task.assignedTo !== window.currentUser) {
 		window.showNotification("This task is not assigned to you", "error");
 		return;
@@ -576,10 +640,14 @@ window.checkOffTask = async function (taskId) {
 		window.showNotification("Failed to update task", "error");
 	} else {
 		window.showNotification("Task marked as complete! Awaiting approval.");
-		await window.fetchTasksInitial();
+		await window.fetchTasksInitial(); // Re-fetch tasks to update UI
 	}
 };
 
+/**
+ * Approves a completed task, changing its status to 'completed' and awarding points.
+ * @param {number} taskId - The ID of the task to approve.
+ */
 window.approveTask = async function (taskId) {
 	if (!window.hasPermission("approve_task")) {
 		window.showNotification(
@@ -608,6 +676,7 @@ window.approveTask = async function (taskId) {
 		return;
 	}
 
+	// Award points to the user who completed the task
 	await window.updateUserPoints(task.completedBy, task.points, "add");
 
 	window.showNotification(
@@ -616,12 +685,18 @@ window.approveTask = async function (taskId) {
 		}`
 	);
 
+	// If the task is repeating, create the next instance
 	if (task.isRepeating && task.dueDate) {
 		window.createRepeatingTask(task);
 	}
-	await window.fetchTasksInitial();
+	await window.fetchTasksInitial(); // Re-fetch tasks to update UI
 };
 
+/**
+ * Rejects a task, setting its status to 'failed' and applying a penalty.
+ * Uses a custom confirmation modal instead of `confirm()`.
+ * @param {number} taskId - The ID of the task to reject.
+ */
 window.rejectTask = function (taskId) {
 	if (!window.hasPermission("approve_task")) {
 		window.showNotification(
@@ -634,31 +709,8 @@ window.rejectTask = function (taskId) {
 	const task = window.tasks.find((t) => t.id === taskId);
 	if (!task) return;
 
-	const confirmReject = (message, onConfirm) => {
-		const modal = document.createElement("div");
-		modal.className = "modal-overlay";
-		modal.innerHTML = `
-            <div class="modal-content">
-                <p>${message}</p>
-                <div class="modal-actions">
-                    <button id="modalConfirm" class="action-btn approve-btn">Confirm</button>
-                    <button id="modalCancel" class="action-btn delete-btn">Cancel</button>
-                </div>
-            </div>
-        `;
-		document.body.appendChild(modal);
-
-		document.getElementById("modalConfirm").onclick = () => {
-			onConfirm(true);
-			document.body.removeChild(modal);
-		};
-		document.getElementById("modalCancel").onclick = () => {
-			onConfirm(false);
-			document.body.removeChild(modal);
-		};
-	};
-
-	confirmReject(
+	// Use custom modal for confirmation
+	window.showConfirmModal(
 		`Are you sure you want to reject this task? This will apply a ${
 			task.penaltyPoints
 		} point penalty to ${window.users[task.completedBy]?.displayName}.`,
@@ -683,6 +735,7 @@ window.rejectTask = function (taskId) {
 				return;
 			}
 
+			// Apply penalty points to the user who completed the task
 			await window.updateUserPoints(
 				task.completedBy,
 				task.penaltyPoints,
@@ -697,11 +750,16 @@ window.rejectTask = function (taskId) {
 				}`,
 				"warning"
 			);
-			await window.fetchTasksInitial();
+			await window.fetchTasksInitial(); // Re-fetch tasks to update UI
 		}
 	);
 };
 
+/**
+ * Deletes a task.
+ * Uses a custom confirmation modal instead of `confirm()`.
+ * @param {number} taskId - The ID of the task to delete.
+ */
 window.deleteTask = function (taskId) {
 	if (!window.hasPermission("delete_task")) {
 		window.showNotification(
@@ -711,31 +769,8 @@ window.deleteTask = function (taskId) {
 		return;
 	}
 
-	const confirmDelete = (message, onConfirm) => {
-		const modal = document.createElement("div");
-		modal.className = "modal-overlay";
-		modal.innerHTML = `
-            <div class="modal-content">
-                <p>${message}</p>
-                <div class="modal-actions">
-                    <button id="modalConfirm" class="action-btn approve-btn">Confirm</button>
-                    <button id="modalCancel" class="action-btn delete-btn">Cancel</button>
-                </div>
-            </div>
-        `;
-		document.body.appendChild(modal);
-
-		document.getElementById("modalConfirm").onclick = () => {
-			onConfirm(true);
-			document.body.removeChild(modal);
-		};
-		document.getElementById("modalCancel").onclick = () => {
-			onConfirm(false);
-			document.body.removeChild(modal);
-		};
-	};
-
-	confirmDelete(
+	// Use custom modal for confirmation
+	window.showConfirmModal(
 		"Are you sure you want to delete this task?",
 		async (confirmed) => {
 			if (!confirmed) {
@@ -751,12 +786,16 @@ window.deleteTask = function (taskId) {
 				window.showNotification("Failed to delete task", "error");
 			} else {
 				window.showNotification("Task deleted successfully");
-				await window.fetchTasksInitial();
+				await window.fetchTasksInitial(); // Re-fetch tasks to update UI
 			}
 		}
 	);
 };
 
+/**
+ * Allows a user to accept a demerit task.
+ * @param {number} taskId - The ID of the demerit task to accept.
+ */
 window.acceptDemerit = async function (taskId) {
 	const task = window.tasks.find((t) => t.id === taskId);
 	if (!task || task.type !== "demerit") return;
@@ -777,66 +816,20 @@ window.acceptDemerit = async function (taskId) {
 		window.showNotification(
 			"Demerit accepted. You can still appeal if you believe this is unfair."
 		);
-		await window.fetchTasksInitial();
+		await window.fetchTasksInitial(); // Re-fetch tasks to update UI
 	}
 };
 
+/**
+ * Allows a user to appeal a demerit task.
+ * Uses a custom modal with a text input for the appeal reason.
+ * @param {number} taskId - The ID of the demerit task to appeal.
+ */
 window.appealDemerit = function (taskId) {
 	const task = window.tasks.find((t) => t.id === taskId);
 	if (!task || task.type !== "demerit") return;
 
-	const showAppealModal = (task, onSubmit) => {
-		const modal = document.createElement("div");
-		modal.className = "modal-overlay";
-		modal.innerHTML = `
-            <div class="modal-content">
-                <h3>Appeal Demerit Task</h3>
-                <p><strong>Task:</strong> ${window.escapeHtml(task.text)}</p>
-                <p><strong>Penalty:</strong> -${task.penaltyPoints} points</p>
-                <div class="appeal-warning">
-                    <div class="warning-title">⚠️ Appeal Risk Warning</div>
-                    <div>If approved: +${
-						task.penaltyPoints
-					} points restored</div>
-                    <div>If denied: -${
-						task.penaltyPoints
-					} additional points (double penalty)</div>
-                    <div><strong>Total risk if denied: ${
-						task.penaltyPoints * 2
-					} points</strong></div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="appealTextInput">Reason for Appeal (Required)</label>
-                    <textarea id="appealTextInput" class="form-input" rows="4" placeholder="Explain why you are appealing this demerit..."></textarea>
-                </div>
-                <div id="appealError" class="error-message" style="display:none; margin-top: 10px;"></div>
-                <div class="modal-actions">
-                    <button id="modalSubmitAppeal" class="action-btn approve-btn">Submit Appeal</button>
-                    <button id="modalCancelAppeal" class="action-btn delete-btn">Cancel</button>
-                </div>
-            </div>
-        `;
-		document.body.appendChild(modal);
-
-		document.getElementById("modalSubmitAppeal").onclick = () => {
-			const appealText = document
-				.getElementById("appealTextInput")
-				.value.trim();
-			const appealError = document.getElementById("appealError");
-			if (appealText.length < 10) {
-				appealError.textContent =
-					"Appeal text must be at least 10 characters long.";
-				appealError.style.display = "block";
-			} else {
-				onSubmit(appealText);
-				document.body.removeChild(modal);
-			}
-		};
-		document.getElementById("modalCancelAppeal").onclick = () => {
-			document.body.removeChild(modal);
-		};
-	};
-
+	// Prevent appeal if already accepted
 	if (task.acceptedAt) {
 		window.showNotification(
 			"This demerit has already been accepted and cannot be appealed.",
@@ -845,11 +838,12 @@ window.appealDemerit = function (taskId) {
 		return;
 	}
 
-	showAppealModal(task, async (appealText) => {
+	// Use custom modal for appeal submission
+	window.showAppealModal(task, async (appealText) => {
 		const updates = {
 			appealStatus: "pending",
 			appealedAt: new Date().toISOString(),
-			appealText: appealText,
+			appealText: appealText, // Save the appeal text
 		};
 
 		const { error } = await supabase
@@ -864,11 +858,15 @@ window.appealDemerit = function (taskId) {
 				"Appeal submitted. Awaiting admin review.",
 				"warning"
 			);
-			await window.fetchTasksInitial();
+			await window.fetchTasksInitial(); // Re-fetch tasks to update UI
 		}
 	});
 };
 
+/**
+ * Approves a demerit appeal, restoring points to the user.
+ * @param {number} taskId - The ID of the task whose appeal is to be approved.
+ */
 window.approveAppeal = async function (taskId) {
 	if (!window.hasPermission("approve_task")) {
 		window.showNotification(
@@ -897,6 +895,7 @@ window.approveAppeal = async function (taskId) {
 		return;
 	}
 
+	// Restore penalty points to the user
 	await window.updateUserPoints(task.assignedTo, task.penaltyPoints, "add");
 
 	window.showNotification(
@@ -904,9 +903,14 @@ window.approveAppeal = async function (taskId) {
 			window.users[task.assignedTo]?.displayName
 		}`
 	);
-	await window.fetchTasksInitial();
+	await window.fetchTasksInitial(); // Re-fetch tasks to update UI
 };
 
+/**
+ * Denies a demerit appeal, applying an additional penalty to the user.
+ * Uses a custom confirmation modal instead of `confirm()`.
+ * @param {number} taskId - The ID of the task whose appeal is to be denied.
+ */
 window.denyAppeal = function (taskId) {
 	if (!window.hasPermission("approve_task")) {
 		window.showNotification(
@@ -919,31 +923,8 @@ window.denyAppeal = function (taskId) {
 	const task = window.tasks.find((t) => t.id === taskId);
 	if (!task) return;
 
-	const confirmDeny = (message, onConfirm) => {
-		const modal = document.createElement("div");
-		modal.className = "modal-overlay";
-		modal.innerHTML = `
-            <div class="modal-content">
-                <p>${message}</p>
-                <div class="modal-actions">
-                    <button id="modalConfirm" class="action-btn approve-btn">Confirm</button>
-                    <button id="modalCancel" class="action-btn delete-btn">Cancel</button>
-                </div>
-            </div>
-        `;
-		document.body.appendChild(modal);
-
-		document.getElementById("modalConfirm").onclick = () => {
-			onConfirm(true);
-			document.body.removeChild(modal);
-		};
-		document.getElementById("modalCancel").onclick = () => {
-			onConfirm(false);
-			document.body.removeChild(modal);
-		};
-	};
-
-	confirmDeny(
+	// Use custom modal for confirmation
+	window.showConfirmModal(
 		`Are you sure you want to deny this appeal? This will apply an additional ${
 			task.penaltyPoints
 		} point penalty to ${
@@ -976,12 +957,17 @@ window.denyAppeal = function (taskId) {
 					}`,
 					"warning"
 				);
-				await window.fetchTasksInitial();
+				await window.fetchTasksInitial(); // Re-fetch tasks to update UI
 			}
 		}
 	);
 };
 
+/**
+ * Rejects a task suggestion.
+ * Uses a custom confirmation modal instead of `confirm()`.
+ * @param {number} suggestionId - The ID of the suggestion to reject.
+ */
 window.rejectSuggestion = function (suggestionId) {
 	if (!window.hasPermission("approve_suggestions")) {
 		window.showNotification(
@@ -991,31 +977,8 @@ window.rejectSuggestion = function (suggestionId) {
 		return;
 	}
 
-	const confirmReject = (message, onConfirm) => {
-		const modal = document.createElement("div");
-		modal.className = "modal-overlay";
-		modal.innerHTML = `
-            <div class="modal-content">
-                <p>${message}</p>
-                <div class="modal-actions">
-                    <button id="modalConfirm" class="action-btn approve-btn">Confirm</button>
-                    <button id="modalCancel" class="action-btn delete-btn">Cancel</button>
-                </div>
-            </div>
-        `;
-		document.body.appendChild(modal);
-
-		document.getElementById("modalConfirm").onclick = () => {
-			onConfirm(true);
-			document.body.removeChild(modal);
-		};
-		document.getElementById("modalCancel").onclick = () => {
-			onConfirm(false);
-			document.body.removeChild(modal);
-		};
-	};
-
-	confirmReject(
+	// Use custom modal for confirmation
+	window.showConfirmModal(
 		"Are you sure you want to reject this suggestion?",
 		async (confirmed) => {
 			if (!confirmed) {
@@ -1037,12 +1000,15 @@ window.rejectSuggestion = function (suggestionId) {
 				window.showNotification("Failed to reject suggestion", "error");
 			} else {
 				window.showNotification("Suggestion rejected");
-				await window.fetchSuggestionsInitial();
+				await window.fetchSuggestionsInitial(); // Re-fetch suggestions to update UI
 			}
 		}
 	);
 };
 
+/**
+ * Submits a new task suggestion to Supabase.
+ */
 window.submitTaskSuggestion = async function () {
 	const description = document.getElementById("suggestedTaskDescription");
 	const justification = document.getElementById("taskJustification");
@@ -1055,7 +1021,7 @@ window.submitTaskSuggestion = async function () {
 	}
 
 	const suggestion = {
-		id: window.suggestionIdCounter++,
+		id: window.suggestionIdCounter++, // Client-generated ID
 		description: description.value.trim(),
 		justification: justification ? justification.value.trim() : "",
 		suggestedPoints: points ? parseInt(points.value) || 10 : 10,
@@ -1067,9 +1033,11 @@ window.submitTaskSuggestion = async function () {
 		reviewedAt: null,
 	};
 
+	// Insert new suggestion into 'suggestions' table
 	const { error: suggestionError } = await supabase
 		.from("suggestions")
 		.insert([suggestion]);
+	// Update suggestionIdCounter in 'metadata' table
 	const { error: metadataError } = await supabase
 		.from("metadata")
 		.upsert(
@@ -1083,29 +1051,34 @@ window.submitTaskSuggestion = async function () {
 			suggestionError || metadataError
 		);
 		window.showNotification("Failed to submit suggestion", "error");
-		window.suggestionIdCounter--;
+		window.suggestionIdCounter--; // Rollback counter if error
 	} else {
 		const form = document.getElementById("suggestForm");
-		if (form) form.reset();
+		if (form) form.reset(); // Reset the suggestion form
 		window.showNotification("Task suggestion submitted successfully!");
-		await window.fetchSuggestionsInitial();
+		await window.fetchSuggestionsInitial(); // Re-fetch suggestions to update UI
 	}
 };
 
+/**
+ * Approves a task suggestion and converts it into a new task.
+ * @param {number} suggestionId - The ID of the suggestion to approve.
+ */
 window.approveSuggestion = async function (suggestionId) {
 	const suggestion = window.suggestions.find((s) => s.id === suggestionId);
 	if (!suggestion) return;
 
+	// Create a new task based on the approved suggestion
 	const task = {
-		id: window.taskIdCounter++,
+		id: window.taskIdCounter++, // Client-generated ID for the new task
 		text: suggestion.description,
 		status: "todo",
 		type: "regular",
 		createdAt: new Date().toISOString(),
-		createdBy: window.currentUser,
-		assignedTo: "user",
+		createdBy: window.currentUser, // Admin approves, so admin created
+		assignedTo: "user", // Suggestions are for the 'user'
 		points: suggestion.suggestedPoints,
-		penaltyPoints: Math.floor(suggestion.suggestedPoints / 2),
+		penaltyPoints: Math.floor(suggestion.suggestedPoints / 2), // Default penalty
 		dueDate: suggestion.suggestedDueDate,
 		isRepeating: false,
 		repeatInterval: null,
@@ -1116,17 +1089,20 @@ window.approveSuggestion = async function (suggestionId) {
 		isOverdue: false,
 	};
 
+	// Update the suggestion's status to 'approved'
 	const suggestionUpdates = {
 		status: "approved",
 		reviewedBy: window.currentUser,
 		reviewedAt: new Date().toISOString(),
 	};
 
+	// Perform database operations
 	const { error: taskError } = await supabase.from("tasks").insert([task]);
 	const { error: suggestionError } = await supabase
 		.from("suggestions")
 		.update(suggestionUpdates)
 		.eq("id", suggestionId);
+	// Update taskIdCounter in metadata
 	const { error: metadataError } = await supabase
 		.from("metadata")
 		.upsert(
@@ -1142,14 +1118,19 @@ window.approveSuggestion = async function (suggestionId) {
 		window.showNotification("Failed to approve suggestion", "error");
 	} else {
 		window.showNotification(`Suggestion approved and converted to task!`);
-		await window.fetchTasksInitial();
-		await window.fetchSuggestionsInitial();
+		await window.fetchTasksInitial(); // Re-fetch tasks
+		await window.fetchSuggestionsInitial(); // Re-fetch suggestions
 	}
 };
 
+/**
+ * Creates a new instance of a repeating task.
+ * @param {object} originalTask - The original task object that is repeating.
+ */
 window.createRepeatingTask = async function (originalTask) {
 	const nextDueDate = new Date(originalTask.dueDate);
 
+	// Calculate the next due date based on the repeat interval
 	switch (originalTask.repeatInterval) {
 		case "daily":
 			nextDueDate.setDate(nextDueDate.getDate() + 1);
@@ -1162,8 +1143,9 @@ window.createRepeatingTask = async function (originalTask) {
 			break;
 	}
 
+	// Create a new task object for the next repetition
 	const newTask = {
-		id: window.taskIdCounter++,
+		id: window.taskIdCounter++, // Client-generated ID
 		text: originalTask.text,
 		status: "todo",
 		type: "regular",
@@ -1182,7 +1164,9 @@ window.createRepeatingTask = async function (originalTask) {
 		isOverdue: false,
 	};
 
+	// Insert the new repeating task into the 'tasks' table
 	const { error: taskError } = await supabase.from("tasks").insert([newTask]);
+	// Update taskIdCounter in 'metadata' table
 	const { error: metadataError } = await supabase
 		.from("metadata")
 		.upsert(
@@ -1195,10 +1179,16 @@ window.createRepeatingTask = async function (originalTask) {
 			"Error creating repeating task:",
 			taskError || metadataError
 		);
-		window.taskIdCounter--;
+		window.taskIdCounter--; // Rollback counter if error
 	}
 };
 
+/**
+ * Updates a user's points in the local 'users' object and in the Supabase 'userProfiles' table.
+ * @param {string} username - The username whose points are to be updated.
+ * @param {number} points - The amount of points to add, subtract, or set.
+ * @param {string} operation - The operation to perform ('add', 'subtract', 'set').
+ */
 window.updateUserPoints = async function (
 	username = window.currentUser,
 	points = 0,
@@ -1208,7 +1198,7 @@ window.updateUserPoints = async function (
 		`updateUserPoints called for: ${username}, operation: ${operation}, points: ${points}`
 	);
 
-	// Admin points are not tracked in DB, only locally for display purposes if needed
+	// Admin points are managed locally only and not persisted to DB
 	if (username === "admin") {
 		if (operation === "set") {
 			window.users[username].points = points;
@@ -1255,13 +1245,14 @@ window.updateUserPoints = async function (
 		`User (${username}) local points after update: ${window.users[username].points}`
 	);
 
+	// Upsert user profile points to Supabase
 	const { error } = await supabase.from("userProfiles").upsert(
 		{
 			username: username,
 			points: window.users[username].points,
 			updatedAt: new Date().toISOString(),
 		},
-		{ onConflict: "username" }
+		{ onConflict: "username" } // Upsert based on username
 	);
 	if (error) {
 		console.error("Error updating user profile points in Supabase:", error);
@@ -1288,6 +1279,9 @@ window.updateUserPoints = async function (
 	}
 };
 
+/**
+ * Periodically checks for overdue tasks and applies penalties.
+ */
 window.checkForOverdueTasks = function () {
 	console.log("Checking for overdue tasks...");
 	const now = new Date();
@@ -1296,7 +1290,7 @@ window.checkForOverdueTasks = function () {
 			task.dueDate &&
 			task.status !== "completed" &&
 			task.type !== "demerit" &&
-			task.assignedTo === "user"
+			task.assignedTo === "user" // Only check overdue for the single 'user'
 		) {
 			const wasOverdue = task.isOverdue;
 			const isNowOverdue = new Date(task.dueDate) < now;
@@ -1305,13 +1299,15 @@ window.checkForOverdueTasks = function () {
 				console.log(
 					`Task ${task.id} is now overdue. Applying penalty.`
 				);
-				task.isOverdue = true;
+				task.isOverdue = true; // Update local state
+				// Apply penalty points to the assigned user
 				await window.updateUserPoints(
 					task.assignedTo,
 					task.penaltyPoints,
 					"subtract"
 				);
 
+				// Update the task's overdue status in Supabase
 				const { error } = await supabase
 					.from("tasks")
 					.update({ isOverdue: true })
