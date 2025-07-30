@@ -19,9 +19,9 @@
 // window.denyAppeal(taskId) { ... }
 // window.approveSuggestion(suggestionId) { ... }
 // window.rejectSuggestion(suggestionId) { ... }
-// window.isToday(date) { ... } // No longer needed for FullCalendar directly
-// window.isTaskOverdue(task) { ... } // No longer needed for FullCalendar directly
-// window.getTasksForDate(date) { ... } // No longer needed for FullCalendar directly
+// window.isToday(date) { ... }
+// window.isTaskOverdue(task) { ... }
+// window.getTasksForDate(date) { ... }
 // window.loadData() { ... }
 // window.updateUserPoints() { ... }
 // window.logUserActivity(action) { ... }
@@ -31,7 +31,7 @@
 window.refreshButtonStates = {};
 
 // Global FullCalendar instance
-let fullCalendarInstance = null;
+var fullCalendarInstance = null;
 
 /**
  * Sets up a refresh button with a cooldown period.
@@ -39,9 +39,9 @@ let fullCalendarInstance = null;
  * @param {number} cooldownSeconds - The cooldown duration in seconds.
  */
 window.setupRefreshButton = function (buttonId, cooldownSeconds) {
-	const button = document.getElementById(buttonId);
+	var button = document.getElementById(buttonId);
 	if (!button) {
-		console.warn(`Refresh button with ID '${buttonId}' not found.`);
+		console.warn("Refresh button with ID '" + buttonId + "' not found.");
 		return;
 	}
 
@@ -54,17 +54,17 @@ window.setupRefreshButton = function (buttonId, cooldownSeconds) {
 		};
 	}
 
-	const state = window.refreshButtonStates[buttonId];
+	var state = window.refreshButtonStates[buttonId];
 
-	const updateButtonState = () => {
-		const now = Date.now();
-		const elapsedTime = now - state.lastClickTime;
-		const remainingTime = cooldownSeconds * 1000 - elapsedTime;
+	var updateButtonState = function () {
+		var now = Date.now();
+		var elapsedTime = now - state.lastClickTime;
+		var remainingTime = cooldownSeconds * 1000 - elapsedTime;
 
 		if (remainingTime > 0) {
 			button.disabled = true;
-			const secondsLeft = Math.ceil(remainingTime / 1000);
-			button.textContent = `Refreshing (${secondsLeft}s)`;
+			var secondsLeft = Math.ceil(remainingTime / 1000);
+			button.textContent = "Refreshing (" + secondsLeft + "s)";
 			if (state.cooldownTimerId) {
 				clearTimeout(state.cooldownTimerId);
 			}
@@ -82,15 +82,15 @@ window.setupRefreshButton = function (buttonId, cooldownSeconds) {
 	// Initial state update when function is called
 	updateButtonState();
 
-	button.onclick = async () => {
-		const now = Date.now();
-		const elapsedTime = now - state.lastClickTime;
+	button.onclick = function () {
+		var now = Date.now();
+		var elapsedTime = now - state.lastClickTime;
 
 		if (elapsedTime < cooldownSeconds * 1000) {
 			window.showNotification(
-				`Please wait ${Math.ceil(
-					(cooldownSeconds * 1000 - elapsedTime) / 1000
-				)} seconds before refreshing again.`,
+				"Please wait " +
+					Math.ceil((cooldownSeconds * 1000 - elapsedTime) / 1000) +
+					" seconds before refreshing again.",
 				"warning"
 			);
 			return;
@@ -101,14 +101,28 @@ window.setupRefreshButton = function (buttonId, cooldownSeconds) {
 		button.textContent = "Refreshing...";
 		window.showNotification("Refreshing data...", "info");
 
-		try {
-			await window.loadData(); // Call the data loading function
-			window.showNotification("Data refreshed successfully!", "success");
-		} catch (error) {
-			console.error("Error refreshing data:", error);
-			window.showNotification("Failed to refresh data.", "error");
-		} finally {
-			updateButtonState(); // Re-enable button or start countdown
+		// Use Promise-based approach instead of async/await
+		if (window.loadData && typeof window.loadData === "function") {
+			window
+				.loadData()
+				.then(function () {
+					window.showNotification(
+						"Data refreshed successfully!",
+						"success"
+					);
+					updateButtonState(); // Re-enable button or start countdown
+				})
+				.catch(function (error) {
+					console.error("Error refreshing data:", error);
+					window.showNotification("Failed to refresh data.", "error");
+					updateButtonState(); // Re-enable button or start countdown
+				});
+		} else {
+			window.showNotification(
+				"Refresh function not available.",
+				"warning"
+			);
+			updateButtonState();
 		}
 	};
 };
@@ -118,7 +132,7 @@ window.setupRefreshButton = function (buttonId, cooldownSeconds) {
  * @param {string} message - The error message to display.
  */
 window.showError = function (message) {
-	const errorDiv = document.getElementById("errorMessage");
+	var errorDiv = document.getElementById("errorMessage");
 	if (errorDiv) {
 		errorDiv.textContent = message;
 		errorDiv.style.display = "block";
@@ -130,7 +144,7 @@ window.showError = function (message) {
  * @param {string} message - The success message to display.
  */
 window.showSuccess = function (message) {
-	const successDiv = document.getElementById("successMessage");
+	var successDiv = document.getElementById("successMessage");
 	if (successDiv) {
 		successDiv.textContent = message;
 		successDiv.style.display = "block";
@@ -141,8 +155,8 @@ window.showSuccess = function (message) {
  * Hides both error and success messages on the login screen.
  */
 window.hideError = function () {
-	const errorDiv = document.getElementById("errorMessage");
-	const successDiv = document.getElementById("successMessage");
+	var errorDiv = document.getElementById("errorMessage");
+	var successDiv = document.getElementById("successMessage");
 	if (errorDiv) errorDiv.style.display = "none";
 	if (successDiv) successDiv.style.display = "none";
 };
@@ -152,16 +166,21 @@ window.hideError = function () {
  * @param {string} message - The message to display.
  * @param {string} type - The type of notification (e.g., 'success', 'error', 'warning').
  */
-window.showNotification = function (message, type = "success") {
-	const notification = document.createElement("div");
-	notification.className = `notification ${type}`;
+window.showNotification = function (message, type) {
+	if (typeof type === "undefined") type = "success";
+
+	var notification = document.createElement("div");
+	notification.className = "notification " + type;
 	notification.textContent = message;
 	document.body.appendChild(notification);
 
-	setTimeout(() => notification.classList.add("show"), 100);
-	setTimeout(() => {
+	setTimeout(function () {
+		notification.classList.add("show");
+	}, 100);
+
+	setTimeout(function () {
 		notification.classList.remove("show");
-		setTimeout(() => {
+		setTimeout(function () {
 			if (document.body.contains(notification)) {
 				document.body.removeChild(notification);
 			}
@@ -175,24 +194,30 @@ window.showNotification = function (message, type = "success") {
  */
 window.switchTab = function (tabName) {
 	// Remove 'active' class from all navigation tabs
-	document.querySelectorAll(".nav-tab").forEach((tab) => {
-		tab.classList.remove("active");
-	});
+	var tabs = document.querySelectorAll(".nav-tab");
+	for (var i = 0; i < tabs.length; i++) {
+		tabs[i].classList.remove("active");
+	}
 
 	// Find the clicked tab and add 'active' class
-	const clickedTab = Array.from(document.querySelectorAll(".nav-tab")).find(
-		(tab) => tab.textContent.toLowerCase().includes(tabName.toLowerCase())
-	);
+	var allTabs = Array.from(document.querySelectorAll(".nav-tab"));
+	var clickedTab = allTabs.find(function (tab) {
+		return (
+			tab.textContent.toLowerCase().indexOf(tabName.toLowerCase()) !== -1
+		);
+	});
 	if (clickedTab) {
 		clickedTab.classList.add("active");
 	}
 
 	// Hide all tab content sections
-	document.querySelectorAll(".tab-content").forEach((content) => {
-		content.classList.remove("active");
-	});
+	var contents = document.querySelectorAll(".tab-content");
+	for (var i = 0; i < contents.length; i++) {
+		contents[i].classList.remove("active");
+	}
+
 	// Show the target tab content section
-	const targetView = document.getElementById(tabName + "View");
+	var targetView = document.getElementById(tabName + "View");
 	if (targetView) {
 		targetView.classList.add("active");
 	}
@@ -217,6 +242,7 @@ window.switchTab = function (tabName) {
  * Displays the login screen.
  */
 window.showLogin = function () {
+	console.log("showLogin called");
 	document.getElementById("loginScreen").style.display = "block";
 	document.getElementById("mainApp").style.display = "none";
 };
@@ -225,112 +251,158 @@ window.showLogin = function () {
  * Displays the main application interface.
  * Also handles initial data loading and sets up periodic checks.
  */
-window.showMainApp = async function () {
-	// Made async
-	document.getElementById("loginScreen").style.display = "none";
-	document.getElementById("mainApp").style.display = "block";
+window.showMainApp = function () {
+	console.log("showMainApp called");
+	return new Promise(function (resolve, reject) {
+		try {
+			document.getElementById("loginScreen").style.display = "none";
+			document.getElementById("mainApp").style.display = "block";
 
-	const user = window.users[window.currentUser];
-	document.getElementById("userBadge").textContent = user.displayName;
+			var user = window.users[window.currentUser];
+			document.getElementById("userBadge").textContent = user.displayName;
 
-	const userPointsBadge = document.getElementById("userPoints");
-	if (userPointsBadge) {
-		if (user.role === "admin") {
-			userPointsBadge.style.display = "none"; // Hide points for admin
-		} else {
-			userPointsBadge.style.display = "inline-block"; // Show points for user
-		}
-	}
-
-	// Log user login activity
-	window.logUserActivity("login");
-
-	// Adjust visibility of dashboard and suggest tabs based on user role
-	const dashboardTab = document.getElementById("dashboardTab");
-	const suggestTab = document.getElementById("suggestTab");
-	if (user.role === "admin") {
-		if (dashboardTab) dashboardTab.style.display = "block";
-		if (suggestTab) suggestTab.style.display = "none";
-		document.getElementById("adminView").style.display = "block";
-		document.getElementById("userView").style.display = "none";
-	} else {
-		if (dashboardTab) dashboardTab.style.display = "none";
-		if (suggestTab) suggestTab.style.display = "block";
-		document.getElementById("adminView").style.display = "none";
-		document.getElementById("userView").style.display = "block";
-	}
-
-	// Event listeners for task creation form elements
-	const isRepeatingCheckbox = document.getElementById("isRepeating");
-	if (isRepeatingCheckbox) {
-		isRepeatingCheckbox.addEventListener("change", function () {
-			const repeatOptions = document.getElementById("repeatOptions");
-			if (repeatOptions) {
-				repeatOptions.style.display = this.checked ? "block" : "none";
+			var userPointsBadge = document.getElementById("userPoints");
+			if (userPointsBadge) {
+				if (user.role === "admin") {
+					userPointsBadge.style.display = "none"; // Hide points for admin
+				} else {
+					userPointsBadge.style.display = "inline-block"; // Show points for user
+				}
 			}
-		});
-	}
 
-	const isDemeritCheckbox = document.getElementById("isDemerit");
-	if (isDemeritCheckbox) {
-		isDemeritCheckbox.addEventListener("change", function () {
-			const demeritWarning = document.getElementById("demeritWarning");
-			if (demeritWarning) {
-				demeritWarning.style.display = this.checked ? "block" : "none";
-			}
-			const taskPointsEl = document.getElementById("taskPoints");
-			const penaltyPointsEl = document.getElementById("penaltyPoints");
-			const taskDueDateEl = document.getElementById("taskDueDate");
+			// Log user login activity
+			window.logUserActivity("login");
 
-			// Toggle visibility of fields based on demerit status
-			if (this.checked) {
-				if (taskPointsEl)
-					taskPointsEl.closest(".form-group").style.display = "none";
-				if (taskDueDateEl)
-					taskDueDateEl.closest(".form-group").style.display = "none";
-				if (penaltyPointsEl)
-					penaltyPointsEl.closest(".form-group").style.display =
-						"block";
+			// Adjust visibility of dashboard and suggest tabs based on user role
+			var dashboardTab = document.getElementById("dashboardTab");
+			var suggestTab = document.getElementById("suggestTab");
+			if (user.role === "admin") {
+				if (dashboardTab) dashboardTab.style.display = "block";
+				if (suggestTab) suggestTab.style.display = "none";
+				document.getElementById("adminView").style.display = "block";
+				document.getElementById("userView").style.display = "none";
 			} else {
-				if (taskPointsEl)
-					taskPointsEl.closest(".form-group").style.display = "block";
-				if (taskDueDateEl)
-					taskDueDateEl.closest(".form-group").style.display =
-						"block";
-				if (penaltyPointsEl)
-					penaltyPointsEl.closest(".form-group").style.display =
-						"block";
+				if (dashboardTab) dashboardTab.style.display = "none";
+				if (suggestTab) suggestTab.style.display = "block";
+				document.getElementById("adminView").style.display = "none";
+				document.getElementById("userView").style.display = "block";
 			}
-		});
-	}
 
-	// Load initial data from Supabase and set up real-time listeners
-	await window.loadData(); // AWAIT this call
+			// Event listeners for task creation form elements
+			var isRepeatingCheckbox = document.getElementById("isRepeating");
+			if (isRepeatingCheckbox) {
+				isRepeatingCheckbox.addEventListener("change", function () {
+					var repeatOptions =
+						document.getElementById("repeatOptions");
+					if (repeatOptions) {
+						repeatOptions.style.display = this.checked
+							? "block"
+							: "none";
+					}
+				});
+			}
 
-	// Update user points display AFTER data is loaded
-	window.updateUserPoints();
-	// Render the calendar
-	window.renderCalendar();
+			var isDemeritCheckbox = document.getElementById("isDemerit");
+			if (isDemeritCheckbox) {
+				isDemeritCheckbox.addEventListener("change", function () {
+					var demeritWarning =
+						document.getElementById("demeritWarning");
+					if (demeritWarning) {
+						demeritWarning.style.display = this.checked
+							? "block"
+							: "none";
+					}
+					var taskPointsEl = document.getElementById("taskPoints");
+					var penaltyPointsEl =
+						document.getElementById("penaltyPoints");
+					var taskDueDateEl = document.getElementById("taskDueDate");
 
-	// Setup refresh buttons
-	window.setupRefreshButton("refreshDataBtnUser", 30); // User refresh button
-	window.setupRefreshButton("refreshDataBtnAdmin", 30); // Admin refresh button
+					// Toggle visibility of fields based on demerit status
+					if (this.checked) {
+						if (taskPointsEl)
+							taskPointsEl.closest(".form-group").style.display =
+								"none";
+						if (taskDueDateEl)
+							taskDueDateEl.closest(".form-group").style.display =
+								"none";
+						if (penaltyPointsEl)
+							penaltyPointsEl.closest(
+								".form-group"
+							).style.display = "block";
+					} else {
+						if (taskPointsEl)
+							taskPointsEl.closest(".form-group").style.display =
+								"block";
+						if (taskDueDateEl)
+							taskDueDateEl.closest(".form-group").style.display =
+								"block";
+						if (penaltyPointsEl)
+							penaltyPointsEl.closest(
+								".form-group"
+							).style.display = "block";
+					}
+				});
+			}
 
-	// Clear any existing overdue check interval and start a new one
-	if (window.overdueCheckIntervalId) {
-		clearInterval(window.overdueCheckIntervalId);
-	}
-	window.overdueCheckIntervalId = setInterval(
-		window.checkForOverdueTasks,
-		window.OVERDUE_CHECK_INTERVAL
-	);
+			// Load initial data from Supabase and set up real-time listeners
+			if (window.loadData && typeof window.loadData === "function") {
+				window
+					.loadData()
+					.then(function () {
+						// Update user points display AFTER data is loaded
+						if (
+							window.updateUserPoints &&
+							typeof window.updateUserPoints === "function"
+						) {
+							window.updateUserPoints();
+						}
+						// Render the calendar
+						window.renderCalendar();
+
+						// Setup refresh buttons
+						window.setupRefreshButton("refreshDataBtnUser", 30); // User refresh button
+						window.setupRefreshButton("refreshDataBtnAdmin", 30); // Admin refresh button
+
+						// Clear any existing overdue check interval and start a new one
+						if (window.overdueCheckIntervalId) {
+							clearInterval(window.overdueCheckIntervalId);
+						}
+						if (
+							window.checkForOverdueTasks &&
+							window.OVERDUE_CHECK_INTERVAL
+						) {
+							window.overdueCheckIntervalId = setInterval(
+								window.checkForOverdueTasks,
+								window.OVERDUE_CHECK_INTERVAL
+							);
+						}
+
+						resolve();
+					})
+					.catch(function (error) {
+						console.error("Error loading data:", error);
+						reject(error);
+					});
+			} else {
+				// If loadData is not available, just continue
+				console.warn(
+					"loadData function not available, skipping data loading"
+				);
+				window.renderCalendar();
+				resolve();
+			}
+		} catch (error) {
+			console.error("Error in showMainApp:", error);
+			reject(error);
+		}
+	});
 };
 
 /**
  * Renders tasks in the appropriate view (admin or user) based on current user's role.
  */
 window.renderTasks = function () {
-	const user = window.users[window.currentUser];
+	var user = window.users[window.currentUser];
 	if (user.role === "admin") {
 		window.renderAdminView();
 	} else {
@@ -344,10 +416,10 @@ window.renderTasks = function () {
  */
 window.renderAdminView = function () {
 	// Filter tasks for pending appeals (demerit tasks with pending appeal status)
-	const pendingAppeals = window.tasks.filter(
-		(t) => t.type === "demerit" && t.appealStatus === "pending"
-	);
-	const appealsContainer = document.getElementById("pendingAppeals");
+	var pendingAppeals = window.tasks.filter(function (t) {
+		return t.type === "demerit" && t.appealStatus === "pending";
+	});
+	var appealsContainer = document.getElementById("pendingAppeals");
 
 	if (appealsContainer) {
 		if (pendingAppeals.length === 0) {
@@ -355,66 +427,60 @@ window.renderAdminView = function () {
 				'<div class="empty-state">No appeals pending review</div>';
 		} else {
 			appealsContainer.innerHTML = pendingAppeals
-				.map(
-					(task) => `
-                <div class="task-item appeal-pending">
-                    <div class="task-content">
-                        <div>
-                            <span class="status-badge status-pending">Appeal Pending</span>
-                            <span class="task-text">${window.escapeHtml(
-								task.text
-							)}</span>
-                            <span class="points-badge-small">-${
-								task.penaltyPoints
-							} pts (risk: -${task.penaltyPoints * 2})</span>
-                            <div class="task-meta">
-                                User: ${
-									window.users[task.assignedTo]
-										?.displayName || task.assignedTo
-								}
-                                <br>Appealed: ${window.formatDate(
-									task.appealedAt
-								)}
-                                <br>Original demerit: ${window.formatDate(
-									task.createdAt
-								)}
-                                ${
-									task.acceptedAt
-										? `<br>Accepted: ${window.formatDate(
-												task.acceptedAt
-										  )}`
-										: "<br>Status: Not accepted"
-								}
-                                ${
-									task.appealText
-										? `<br>Appeal Reason: ${window.escapeHtml(
-												task.appealText
-										  )}`
-										: ""
-								}
-                            </div>
-                        </div>
-                        <div class="task-actions">
-                            <button class="action-btn approve-btn" onclick="approveAppeal(${
-								task.id
-							})">Approve Appeal</button>
-                            <button class="action-btn reject-btn" onclick="denyAppeal(${
-								task.id
-							})">Deny Appeal (Double Penalty)</button>
-                        </div>
-                    </div>
-                </div>
-            `
-				)
+				.map(function (task) {
+					return (
+						'<div class="task-item appeal-pending">' +
+						'<div class="task-content">' +
+						"<div>" +
+						'<span class="status-badge status-pending">Appeal Pending</span>' +
+						'<span class="task-text">' +
+						window.escapeHtml(task.text) +
+						"</span>" +
+						'<span class="points-badge-small">-' +
+						task.penaltyPoints +
+						" pts (risk: -" +
+						task.penaltyPoints * 2 +
+						")</span>" +
+						'<div class="task-meta">' +
+						"User: " +
+						(window.users[task.assignedTo]
+							? window.users[task.assignedTo].displayName
+							: task.assignedTo) +
+						"<br>Appealed: " +
+						window.formatDate(task.appealedAt) +
+						"<br>Original demerit: " +
+						window.formatDate(task.createdAt) +
+						(task.acceptedAt
+							? "<br>Accepted: " +
+							  window.formatDate(task.acceptedAt)
+							: "<br>Status: Not accepted") +
+						(task.appealText
+							? "<br>Appeal Reason: " +
+							  window.escapeHtml(task.appealText)
+							: "") +
+						"</div>" +
+						"</div>" +
+						'<div class="task-actions">' +
+						'<button class="action-btn approve-btn" onclick="approveAppeal(' +
+						task.id +
+						')">Approve Appeal</button>' +
+						'<button class="action-btn reject-btn" onclick="denyAppeal(' +
+						task.id +
+						')">Deny Appeal (Double Penalty)</button>' +
+						"</div>" +
+						"</div>" +
+						"</div>"
+					);
+				})
 				.join("");
 		}
 	}
 
 	// Filter and render suggested tasks pending approval
-	const suggestedTasksContainer = document.getElementById("suggestedTasks");
-	const pendingSuggestions = window.suggestions.filter(
-		(s) => s.status === "pending"
-	);
+	var suggestedTasksContainer = document.getElementById("suggestedTasks");
+	var pendingSuggestions = window.suggestions.filter(function (s) {
+		return s.status === "pending";
+	});
 
 	if (suggestedTasksContainer) {
 		if (pendingSuggestions.length === 0) {
@@ -422,57 +488,52 @@ window.renderAdminView = function () {
 				'<div class="empty-state">No task suggestions pending approval</div>';
 		} else {
 			suggestedTasksContainer.innerHTML = pendingSuggestions
-				.map(
-					(suggestion) => `
-                <div class="task-item">
-                    <div class="task-content">
-                        <div>
-                            <span class="task-text">${window.escapeHtml(
-								suggestion.description
-							)}</span>
-                            <div class="task-meta">
-                                Suggested by: ${
-									window.users[suggestion.suggestedBy]
-										?.displayName || suggestion.suggestedBy
-								}
-                                <br>Points: ${suggestion.suggestedPoints}
-                                ${
-									suggestion.justification
-										? `<br>Reason: ${window.escapeHtml(
-												suggestion.justification
-										  )}`
-										: ""
-								}
-                                ${
-									suggestion.suggestedDueDate
-										? `<br>Due: ${window.formatDate(
-												suggestion.suggestedDueDate
-										  )}`
-										: ""
-								}
-                            </div>
-                        </div>
-                        <div class="task-actions">
-                            <button class="action-btn approve-btn" onclick="approveSuggestion(${
-								suggestion.id
-							})">Approve</button>
-                            <button class="action-btn reject-btn" onclick="rejectSuggestion(${
-								suggestion.id
-							})">Reject</button>
-                        </div>
-                    </div>
-                </div>
-            `
-				)
+				.map(function (suggestion) {
+					return (
+						'<div class="task-item">' +
+						'<div class="task-content">' +
+						"<div>" +
+						'<span class="task-text">' +
+						window.escapeHtml(suggestion.description) +
+						"</span>" +
+						'<div class="task-meta">' +
+						"Suggested by: " +
+						(window.users[suggestion.suggestedBy]
+							? window.users[suggestion.suggestedBy].displayName
+							: suggestion.suggestedBy) +
+						"<br>Points: " +
+						suggestion.suggestedPoints +
+						(suggestion.justification
+							? "<br>Reason: " +
+							  window.escapeHtml(suggestion.justification)
+							: "") +
+						(suggestion.suggestedDueDate
+							? "<br>Due: " +
+							  window.formatDate(suggestion.suggestedDueDate)
+							: "") +
+						"</div>" +
+						"</div>" +
+						'<div class="task-actions">' +
+						'<button class="action-btn approve-btn" onclick="approveSuggestion(' +
+						suggestion.id +
+						')">Approve</button>' +
+						'<button class="action-btn reject-btn" onclick="rejectSuggestion(' +
+						suggestion.id +
+						')">Reject</button>' +
+						"</div>" +
+						"</div>" +
+						"</div>"
+					);
+				})
 				.join("");
 		}
 	}
 
 	// Filter and render tasks pending approval (regular tasks)
-	const pendingTasks = window.tasks.filter(
-		(t) => t.status === "pending_approval" && t.type !== "demerit"
-	);
-	const pendingContainer = document.getElementById("pendingTasks");
+	var pendingTasks = window.tasks.filter(function (t) {
+		return t.status === "pending_approval" && t.type !== "demerit";
+	});
+	var pendingContainer = document.getElementById("pendingTasks");
 
 	if (pendingContainer) {
 		if (pendingTasks.length === 0) {
@@ -480,56 +541,52 @@ window.renderAdminView = function () {
 				'<div class="empty-state">No tasks pending approval</div>';
 		} else {
 			pendingContainer.innerHTML = pendingTasks
-				.map(
-					(task) => `
-                <div class="task-item pending-approval ${
-					task.isOverdue ? "overdue" : ""
-				}">
-                    <div class="task-content">
-                        <div>
-                            <span class="status-badge status-pending">Pending Approval</span>
-                            <span class="task-text">${window.escapeHtml(
-								task.text
-							)}</span>
-                            <span class="points-badge-small">+${
-								task.points
-							} pts</span>
-                            <div class="task-meta">
-                                Completed by: ${
-									window.users[task.completedBy]
-										?.displayName || task.completedBy
-								}
-                                ${
-									task.dueDate
-										? `<br>Due: ${window.formatDate(
-												task.dueDate
-										  )}`
-										: ""
-								}
-                                ${task.isRepeating ? "<br>🔄 Repeating" : ""}
-                            </div>
-                        </div>
-                        <div class="task-actions">
-                            <button class="action-btn approve-btn" onclick="approveTask(${
-								task.id
-							})">Approve</button>
-                            <button class="action-btn reject-btn" onclick="rejectTask(${
-								task.id
-							})">Reject & Penalize</button>
-                            <button class="action-btn delete-btn" onclick="deleteTask(${
-								task.id
-							})">Delete</button>
-                        </div>
-                    </div>
-                </div>
-            `
-				)
+				.map(function (task) {
+					return (
+						'<div class="task-item pending-approval ' +
+						(task.isOverdue ? "overdue" : "") +
+						'">' +
+						'<div class="task-content">' +
+						"<div>" +
+						'<span class="status-badge status-pending">Pending Approval</span>' +
+						'<span class="task-text">' +
+						window.escapeHtml(task.text) +
+						"</span>" +
+						'<span class="points-badge-small">+' +
+						task.points +
+						" pts</span>" +
+						'<div class="task-meta">' +
+						"Completed by: " +
+						(window.users[task.completedBy]
+							? window.users[task.completedBy].displayName
+							: task.completedBy) +
+						(task.dueDate
+							? "<br>Due: " + window.formatDate(task.dueDate)
+							: "") +
+						(task.isRepeating ? "<br>🔄 Repeating" : "") +
+						"</div>" +
+						"</div>" +
+						'<div class="task-actions">' +
+						'<button class="action-btn approve-btn" onclick="approveTask(' +
+						task.id +
+						')">Approve</button>' +
+						'<button class="action-btn reject-btn" onclick="rejectTask(' +
+						task.id +
+						')">Reject & Penalize</button>' +
+						'<button class="action-btn delete-btn" onclick="deleteTask(' +
+						task.id +
+						')">Delete</button>' +
+						"</div>" +
+						"</div>" +
+						"</div>"
+					);
+				})
 				.join("");
 		}
 	}
 
 	// Render all tasks for the admin view
-	const allTasksContainer = document.getElementById("allTasksAdmin");
+	var allTasksContainer = document.getElementById("allTasksAdmin");
 
 	if (allTasksContainer) {
 		if (window.tasks.length === 0) {
@@ -537,98 +594,86 @@ window.renderAdminView = function () {
 				'<div class="empty-state">No tasks created yet</div>';
 		} else {
 			allTasksContainer.innerHTML = window.tasks
-				.map(
-					(task) => `
-                <div class="task-item ${
-					task.status === "completed" ? "completed" : ""
-				} ${task.isOverdue ? "overdue" : ""} ${
-						task.type === "demerit" ? "demerit-task" : ""
-					}">
-                    <div class="task-content">
-                        <div>
-                            <span class="status-badge ${window.getStatusClass(
-								task.status,
-								task.isOverdue,
-								task.type,
-								task.appealStatus
-							)}">
-                                ${window.getStatusText(
-									task.status,
-									task.isOverdue,
-									task.type,
-									task.appealStatus
-								)}
-                            </span>
-                            <span class="task-text">${window.escapeHtml(
-								task.text
-							)}</span>
-                            <span class="points-badge-small">${
-								task.type === "demerit"
-									? "-" + task.penaltyPoints
-									: "+" + task.points
-							} pts</span>
-                            ${
-								task.type === "demerit" && task.appealStatus
-									? `<span class="points-badge-small appeal-status ${task.appealStatus}">${task.appealStatus}</span>`
-									: ""
-							}
-                            ${
-								task.type === "demerit" && task.acceptedAt
-									? `<span class="points-badge-small" style="background: #e0e7ff; color: #3730a3;">Accepted</span>`
-									: ""
-							}
-                            <div class="task-meta">
-                                Assigned to: ${
-									window.users[task.assignedTo]
-										?.displayName || task.assignedTo
-								}
-                                ${
-									task.completedBy
-										? `<br>Completed by: ${
-												window.users[task.completedBy]
-													?.displayName ||
-												task.completedBy
-										  }`
-										: ""
-								}
-                                ${
-									task.dueDate
-										? `<br>Due: ${window.formatDate(
-												task.dueDate
-										  )}`
-										: ""
-								}
-                                ${task.isRepeating ? "<br>🔄 Repeating" : ""}
-                                ${
-									task.type === "demerit"
-										? "<br>📋 Demerit Task"
-										: ""
-								}
-                                ${
-									task.type === "demerit" && task.acceptedAt
-										? `<br>Accepted: ${window.formatDate(
-												task.acceptedAt
-										  )}`
-										: ""
-								}
-                                ${
-									task.appealText
-										? `<br>Appeal Reason: ${window.escapeHtml(
-												task.appealText
-										  )}`
-										: ""
-								}
-                            </div>
-                        </div>
-                        <div class="task-actions">
-                            <button class="action-btn delete-btn" onclick="deleteTask(${
-								task.id
-							})">Delete</button>
-                        </div>
-                    </div>
-                </div>
-            `
-				)
+				.map(function (task) {
+					var classes = "";
+					if (task.status === "completed") classes += "completed ";
+					if (task.isOverdue) classes += "overdue ";
+					if (task.type === "demerit") classes += "demerit-task ";
+
+					return (
+						'<div class="task-item ' +
+						classes +
+						'">' +
+						'<div class="task-content">' +
+						"<div>" +
+						'<span class="status-badge ' +
+						window.getStatusClass(
+							task.status,
+							task.isOverdue,
+							task.type,
+							task.appealStatus
+						) +
+						'">' +
+						window.getStatusText(
+							task.status,
+							task.isOverdue,
+							task.type,
+							task.appealStatus
+						) +
+						"</span>" +
+						'<span class="task-text">' +
+						window.escapeHtml(task.text) +
+						"</span>" +
+						'<span class="points-badge-small">' +
+						(task.type === "demerit"
+							? "-" + task.penaltyPoints
+							: "+" + task.points) +
+						" pts</span>" +
+						(task.type === "demerit" && task.appealStatus
+							? '<span class="points-badge-small appeal-status ' +
+							  task.appealStatus +
+							  '">' +
+							  task.appealStatus +
+							  "</span>"
+							: "") +
+						(task.type === "demerit" && task.acceptedAt
+							? '<span class="points-badge-small" style="background: #e0e7ff; color: #3730a3;">Accepted</span>'
+							: "") +
+						'<div class="task-meta">' +
+						"Assigned to: " +
+						(window.users[task.assignedTo]
+							? window.users[task.assignedTo].displayName
+							: task.assignedTo) +
+						(task.completedBy
+							? "<br>Completed by: " +
+							  (window.users[task.completedBy]
+									? window.users[task.completedBy].displayName
+									: task.completedBy)
+							: "") +
+						(task.dueDate
+							? "<br>Due: " + window.formatDate(task.dueDate)
+							: "") +
+						(task.isRepeating ? "<br>🔄 Repeating" : "") +
+						(task.type === "demerit" ? "<br>📋 Demerit Task" : "") +
+						(task.type === "demerit" && task.acceptedAt
+							? "<br>Accepted: " +
+							  window.formatDate(task.acceptedAt)
+							: "") +
+						(task.appealText
+							? "<br>Appeal Reason: " +
+							  window.escapeHtml(task.appealText)
+							: "") +
+						"</div>" +
+						"</div>" +
+						'<div class="task-actions">' +
+						'<button class="action-btn delete-btn" onclick="deleteTask(' +
+						task.id +
+						')">Delete</button>' +
+						"</div>" +
+						"</div>" +
+						"</div>"
+					);
+				})
 				.join("");
 		}
 	}
@@ -639,10 +684,10 @@ window.renderAdminView = function () {
  */
 window.renderUserView = function () {
 	// Filter tasks assigned to the current user
-	const userTasks = window.tasks.filter(
-		(t) => t.assignedTo === window.currentUser
-	);
-	const myTasksContainer = document.getElementById("myTasks");
+	var userTasks = window.tasks.filter(function (t) {
+		return t.assignedTo === window.currentUser;
+	});
+	var myTasksContainer = document.getElementById("myTasks");
 
 	if (myTasksContainer) {
 		if (userTasks.length === 0) {
@@ -650,181 +695,159 @@ window.renderUserView = function () {
 				'<div class="empty-state">No tasks available</div>';
 		} else {
 			myTasksContainer.innerHTML = userTasks
-				.map(
-					(task) => `
-                <div class="task-item ${
-					task.type === "demerit" ? "demerit-task-user" : ""
-				} ${task.isOverdue ? "overdue" : ""} ${
-						task.status === "completed" ? "completed" : ""
-					} ${
-						task.status === "pending_approval"
-							? "pending-approval"
-							: ""
-					} ${
-						task.appealStatus === "pending" ? "appeal-pending" : ""
-					}">
-                    <div class="task-content">
-                        <div>
-                            <span class="status-badge ${window.getStatusClass(
-								task.status,
-								task.isOverdue,
-								task.type,
-								task.appealStatus
-							)}">
-                                ${window.getStatusText(
-									task.status,
-									task.isOverdue,
-									task.type,
-									task.appealStatus
-								)}
-                            </span>
-                            <span class="task-text">${window.escapeHtml(
-								task.text
-							)}</span>
-                            <span class="points-badge-small">${
-								task.type === "demerit"
-									? "-" + task.penaltyPoints
-									: "+" + task.points
-							} pts</span>
-                            ${
-								task.type === "demerit" && task.appealStatus
-									? `<span class="points-badge-small appeal-status ${task.appealStatus}">${task.appealStatus}</span>`
-									: ""
-							}
-                            ${
-								task.type === "demerit" && task.acceptedAt
-									? `<span class="points-badge-small" style="background: #e0e7ff; color: #3730a3;">Accepted</span>`
-									: ""
-							}
-                            <div class="task-meta">
-                                ${
-									task.type === "demerit"
-										? `Issued by: ${
-												window.users[task.createdBy]
-													?.displayName ||
-												task.createdBy
-										  }`
-										: `Created by: ${
-												window.users[task.createdBy]
-													?.displayName ||
-												task.createdBy
-										  }`
-								}
-                                ${
-									task.dueDate
-										? `<br>Due: ${window.formatDate(
-												task.dueDate
-										  )}`
-										: ""
-								}
-                                ${task.isRepeating ? "<br>🔄 Repeating" : ""}
-                                ${
-									task.type === "demerit"
-										? "<br>📋 Demerit Task"
-										: ""
-								}
-                                ${
-									task.completedBy
-										? `<br>Completed by: ${
-												window.users[task.completedBy]
-													?.displayName ||
-												task.completedBy
-										  }`
-										: ""
-								}
-                                ${
-									task.approvedBy
-										? `<br>Approved by: ${
-												window.users[task.approvedBy]
-													?.displayName ||
-												task.approvedBy
-										  }`
-										: ""
-								}
-                                ${
-									task.rejectedBy
-										? `<br>Rejected by: ${
-												window.users[task.rejectedBy]
-													?.displayName ||
-												task.rejectedBy
-										  }`
-										: ""
-								}
-                                ${
-									task.acceptedAt
-										? `<br>Accepted: ${window.formatDate(
-												task.acceptedAt
-										  )}`
-										: ""
-								}
-                                ${
-									task.appealedAt
-										? `<br>Appealed: ${window.formatDate(
-												task.appealedAt
-										  )}`
-										: ""
-								}
-                                ${
-									task.appealReviewedAt
-										? `<br>Reviewed: ${window.formatDate(
-												task.appealReviewedAt
-										  )} by ${
-												window.users[
-													task.appealReviewedBy
-												]?.displayName
-										  }`
-										: ""
-								}
-                                ${
-									task.appealText
-										? `<br>Appeal Reason: ${window.escapeHtml(
-												task.appealText
-										  )}`
-										: ""
-								}
-                            </div>
-                        </div>
-                        <div class="task-actions">
-                            ${
-								task.type === "regular" &&
-								task.status === "todo" &&
-								!task.isOverdue
-									? `<button class="action-btn check-btn" onclick="checkOffTask(${task.id})">Mark Complete</button>`
-									: ""
-							}
-                            ${
-								task.type === "regular" &&
-								task.isOverdue &&
-								task.status === "todo"
-									? `<button class="action-btn check-btn" onclick="checkOffTask(${task.id})">Mark Complete (Overdue)</button>`
-									: ""
-							}
-                            ${
-								task.type === "demerit" &&
-								!task.acceptedAt &&
-								!task.appealStatus
-									? `<button class="action-btn accept-btn" onclick="acceptDemerit(${task.id})">Accept Demerit</button>`
-									: ""
-							}
-                            ${
-								task.type === "demerit" &&
-								!task.appealStatus &&
-								!task.acceptedAt
-									? `<button class="action-btn appeal-btn" onclick="appealDemerit(${task.id})">Appeal Demerit</button>`
-									: ""
-							}
-                        </div>
-                    </div>
-                </div>
-            `
-				)
+				.map(function (task) {
+					var classes = "";
+					if (task.type === "demerit")
+						classes += "demerit-task-user ";
+					if (task.isOverdue) classes += "overdue ";
+					if (task.status === "completed") classes += "completed ";
+					if (task.status === "pending_approval")
+						classes += "pending-approval ";
+					if (task.appealStatus === "pending")
+						classes += "appeal-pending ";
+
+					var actionButtons = "";
+					if (
+						task.type === "regular" &&
+						task.status === "todo" &&
+						!task.isOverdue
+					) {
+						actionButtons =
+							'<button class="action-btn check-btn" onclick="checkOffTask(' +
+							task.id +
+							')">Mark Complete</button>';
+					} else if (
+						task.type === "regular" &&
+						task.isOverdue &&
+						task.status === "todo"
+					) {
+						actionButtons =
+							'<button class="action-btn check-btn" onclick="checkOffTask(' +
+							task.id +
+							')">Mark Complete (Overdue)</button>';
+					} else if (
+						task.type === "demerit" &&
+						!task.acceptedAt &&
+						!task.appealStatus
+					) {
+						actionButtons =
+							'<button class="action-btn accept-btn" onclick="acceptDemerit(' +
+							task.id +
+							')">Accept Demerit</button>' +
+							'<button class="action-btn appeal-btn" onclick="appealDemerit(' +
+							task.id +
+							')">Appeal Demerit</button>';
+					}
+
+					return (
+						'<div class="task-item ' +
+						classes +
+						'">' +
+						'<div class="task-content">' +
+						"<div>" +
+						'<span class="status-badge ' +
+						window.getStatusClass(
+							task.status,
+							task.isOverdue,
+							task.type,
+							task.appealStatus
+						) +
+						'">' +
+						window.getStatusText(
+							task.status,
+							task.isOverdue,
+							task.type,
+							task.appealStatus
+						) +
+						"</span>" +
+						'<span class="task-text">' +
+						window.escapeHtml(task.text) +
+						"</span>" +
+						'<span class="points-badge-small">' +
+						(task.type === "demerit"
+							? "-" + task.penaltyPoints
+							: "+" + task.points) +
+						" pts</span>" +
+						(task.type === "demerit" && task.appealStatus
+							? '<span class="points-badge-small appeal-status ' +
+							  task.appealStatus +
+							  '">' +
+							  task.appealStatus +
+							  "</span>"
+							: "") +
+						(task.type === "demerit" && task.acceptedAt
+							? '<span class="points-badge-small" style="background: #e0e7ff; color: #3730a3;">Accepted</span>'
+							: "") +
+						'<div class="task-meta">' +
+						(task.type === "demerit"
+							? "Issued by: " +
+							  (window.users[task.createdBy]
+									? window.users[task.createdBy].displayName
+									: task.createdBy)
+							: "Created by: " +
+							  (window.users[task.createdBy]
+									? window.users[task.createdBy].displayName
+									: task.createdBy)) +
+						(task.dueDate
+							? "<br>Due: " + window.formatDate(task.dueDate)
+							: "") +
+						(task.isRepeating ? "<br>🔄 Repeating" : "") +
+						(task.type === "demerit" ? "<br>📋 Demerit Task" : "") +
+						(task.completedBy
+							? "<br>Completed by: " +
+							  (window.users[task.completedBy]
+									? window.users[task.completedBy].displayName
+									: task.completedBy)
+							: "") +
+						(task.approvedBy
+							? "<br>Approved by: " +
+							  (window.users[task.approvedBy]
+									? window.users[task.approvedBy].displayName
+									: task.approvedBy)
+							: "") +
+						(task.rejectedBy
+							? "<br>Rejected by: " +
+							  (window.users[task.rejectedBy]
+									? window.users[task.rejectedBy].displayName
+									: task.rejectedBy)
+							: "") +
+						(task.acceptedAt
+							? "<br>Accepted: " +
+							  window.formatDate(task.acceptedAt)
+							: "") +
+						(task.appealedAt
+							? "<br>Appealed: " +
+							  window.formatDate(task.appealedAt)
+							: "") +
+						(task.appealReviewedAt
+							? "<br>Reviewed: " +
+							  window.formatDate(task.appealReviewedAt) +
+							  " by " +
+							  (window.users[task.appealReviewedBy]
+									? window.users[task.appealReviewedBy]
+											.displayName
+									: task.appealReviewedBy)
+							: "") +
+						(task.appealText
+							? "<br>Appeal Reason: " +
+							  window.escapeHtml(task.appealText)
+							: "") +
+						"</div>" +
+						"</div>" +
+						'<div class="task-actions">' +
+						actionButtons +
+						"</div>" +
+						"</div>" +
+						"</div>"
+					);
+				})
 				.join("");
 		}
 	}
 };
 
 /**
- * Renders suggestions. This function primarily acts as a dispatcher to `renderMySuggestions`.
+ * Renders suggestions. This function primarily acts as a dispatcher to renderMySuggestions.
  */
 window.renderSuggestions = function () {
 	if (window.activeTab === "suggest") {
@@ -836,10 +859,10 @@ window.renderSuggestions = function () {
  * Renders the list of suggestions made by the current user.
  */
 window.renderMySuggestions = function () {
-	const mySuggestions = window.suggestions.filter(
-		(s) => s.suggestedBy === window.currentUser
-	);
-	const container = document.getElementById("mySuggestions");
+	var mySuggestions = window.suggestions.filter(function (s) {
+		return s.suggestedBy === window.currentUser;
+	});
+	var container = document.getElementById("mySuggestions");
 
 	if (!container) return;
 
@@ -848,52 +871,45 @@ window.renderMySuggestions = function () {
 			'<div class="empty-state">No suggestions submitted yet</div>';
 	} else {
 		container.innerHTML = mySuggestions
-			.map(
-				(suggestion) => `
-            <div class="task-item">
-                <div class="task-content">
-                    <div>
-                        <span class="status-badge ${window.getSuggestionStatusClass(
-							suggestion.status
-						)}">
-                            ${
-								suggestion.status.charAt(0).toUpperCase() +
-								suggestion.status.slice(1)
-							}
-                        </span>
-                        <span class="task-text">${window.escapeHtml(
-							suggestion.description
-						)}</span>
-                        <span class="points-badge-small">${
-							suggestion.suggestedPoints
-						} pts</span>
-                        <div class="task-meta">
-                            Submitted: ${window.formatDate(
-								suggestion.createdAt
-							)}
-                            ${
-								suggestion.suggestedDueDate
-									? `<br>Suggested due: ${window.formatDate(
-											suggestion.suggestedDueDate
-									  )}`
-									: ""
-							}
-                            ${
-								suggestion.reviewedAt
-									? `<br>Reviewed: ${window.formatDate(
-											suggestion.reviewedAt
-									  )} by ${
-											window.users[suggestion.reviewedBy]
-												?.displayName
-									  }`
-									: ""
-							}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `
-			)
+			.map(function (suggestion) {
+				return (
+					'<div class="task-item">' +
+					'<div class="task-content">' +
+					"<div>" +
+					'<span class="status-badge ' +
+					window.getSuggestionStatusClass(suggestion.status) +
+					'">' +
+					suggestion.status.charAt(0).toUpperCase() +
+					suggestion.status.slice(1) +
+					"</span>" +
+					'<span class="task-text">' +
+					window.escapeHtml(suggestion.description) +
+					"</span>" +
+					'<span class="points-badge-small">' +
+					suggestion.suggestedPoints +
+					" pts</span>" +
+					'<div class="task-meta">' +
+					"Submitted: " +
+					window.formatDate(suggestion.createdAt) +
+					(suggestion.suggestedDueDate
+						? "<br>Suggested due: " +
+						  window.formatDate(suggestion.suggestedDueDate)
+						: "") +
+					(suggestion.reviewedAt
+						? "<br>Reviewed: " +
+						  window.formatDate(suggestion.reviewedAt) +
+						  " by " +
+						  (window.users[suggestion.reviewedBy]
+								? window.users[suggestion.reviewedBy]
+										.displayName
+								: suggestion.reviewedBy)
+						: "") +
+					"</div>" +
+					"</div>" +
+					"</div>" +
+					"</div>"
+				);
+			})
 			.join("");
 	}
 };
@@ -902,81 +918,93 @@ window.renderMySuggestions = function () {
  * Renders the calendar view using FullCalendar.
  */
 window.renderCalendar = function () {
-	const calendarEl = document.getElementById("fullcalendar");
+	var calendarEl = document.getElementById("fullcalendar");
+	if (!calendarEl) return;
 
 	// Destroy existing calendar instance if it exists to prevent duplicates
 	if (fullCalendarInstance) {
 		fullCalendarInstance.destroy();
 	}
 
-	// Map tasks to FullCalendar event format
-	const calendarEvents = window.tasks
-		.filter((task) => task.assignedTo === window.currentUser) // Only show tasks assigned to the current user
-		.map((task) => {
-			if (task.isRepeating && task.repeatInterval && task.dueDate) {
-				// For repeating tasks, use rrule
-				let rruleFreq;
-				// Use the globally available RRule object directly
-				switch (task.repeatInterval) {
-					case "daily":
-						rruleFreq = RRule.DAILY;
-						break;
-					case "weekly":
-						rruleFreq = RRule.WEEKLY;
-						break;
-					case "monthly":
-						rruleFreq = RRule.MONTHLY;
-						break;
-					default:
-						rruleFreq = RRule.DAILY; // Default to daily if unknown
+	// Check if tasks exist and filter them safely
+	var calendarEvents = [];
+	if (window.tasks && Array.isArray(window.tasks)) {
+		calendarEvents = window.tasks
+			.filter(function (task) {
+				return (
+					task &&
+					task.assignedTo === window.currentUser &&
+					task.dueDate
+				);
+			})
+			.map(function (task) {
+				if (task.isRepeating && task.repeatInterval && task.dueDate) {
+					// For repeating tasks, use rrule if available
+					if (typeof RRule !== "undefined") {
+						var rruleFreq;
+						switch (task.repeatInterval) {
+							case "daily":
+								rruleFreq = RRule.DAILY;
+								break;
+							case "weekly":
+								rruleFreq = RRule.WEEKLY;
+								break;
+							case "monthly":
+								rruleFreq = RRule.MONTHLY;
+								break;
+							default:
+								rruleFreq = RRule.DAILY;
+						}
+
+						return {
+							id: task.id,
+							title: task.text,
+							rrule: {
+								freq: rruleFreq,
+								dtstart: task.dueDate,
+								count: 10,
+							},
+							duration: "01:00",
+							description: task.text,
+							classNames: ["fc-event-repeating"],
+							extendedProps: {
+								originalTask: task,
+							},
+						};
+					} else {
+						// Fallback to regular event if RRule not available
+						return {
+							id: task.id,
+							title: task.text + " (Repeating)",
+							start: task.dueDate,
+							allDay: !task.dueDate || task.dueDate.length === 10,
+							description: task.text,
+							classNames: ["fc-event-repeating"],
+							extendedProps: {
+								originalTask: task,
+							},
+						};
+					}
+				} else {
+					// For normal (non-repeating) tasks
+					return {
+						id: task.id,
+						title: task.text,
+						start: task.dueDate,
+						end: task.endDateTime || null,
+						allDay: !task.dueDate || task.dueDate.length === 10,
+						description: task.text,
+						classNames: ["fc-event-normal"],
+						extendedProps: {
+							originalTask: task,
+						},
+					};
 				}
+			});
+	}
 
-				// Ensure dtstart is a valid ISO string for rrule
-				const dtstart = task.dueDate; // Use dueDate as the start for recurrence
-
-				return {
-					id: task.id,
-					title: task.text,
-					rrule: {
-						freq: rruleFreq,
-						dtstart: dtstart,
-						// If you want an end date for recurrence, add 'until' here
-						// until: 'YYYY-MM-DDTHH:mm:ssZ'
-					},
-					duration:
-						task.dueDate && task.endDateTime
-							? calculateDuration(task.dueDate, task.endDateTime)
-							: "01:00", // Assuming 1 hour if no end time, or calculate from task properties
-					description: task.text, // Use task text as description for modal
-					classNames: ["fc-event-repeating"], // Custom class for repeating events
-					extendedProps: {
-						originalTask: task, // Store original task data for eventClick
-					},
-				};
-			} else {
-				// For normal (non-repeating) tasks
-				return {
-					id: task.id,
-					title: task.text,
-					start: task.dueDate,
-					end: task.endDateTime || null, // Assuming endDateTime field if available
-					allDay: !task.dueDate || task.dueDate.length === 10, // If only date, it's all day
-					description: task.text, // Use task text as description for modal
-					classNames: ["fc-event-normal"], // Custom class for normal events
-					extendedProps: {
-						originalTask: task, // Store original task data for eventClick
-					},
-				};
-			}
-		});
-
-	fullCalendarInstance = new FullCalendar.Calendar(calendarEl, {
-		plugins: [
-			FullCalendar.dayGrid,
-			FullCalendar.timeGrid,
-			FullCalendar.list,
-			FullCalendarRRule,
-		],
+	// Create calendar configuration
+	var calendarConfig = {
 		initialView: "dayGridMonth",
 		headerToolbar: {
 			left: "prev,next today",
@@ -986,99 +1014,124 @@ window.renderCalendar = function () {
 		height: "auto",
 		contentHeight: "auto",
 		aspectRatio: 1.8,
-		events: calendarEvents, // Pass the mapped events here
+		events: calendarEvents,
 		eventClick: function (info) {
-			const task = info.event.extendedProps.originalTask; // Retrieve original task data
+			var task = info.event.extendedProps.originalTask;
 
-			let start = task.dueDate ? window.formatDate(task.dueDate) : "N/A";
-			let end = task.endDateTime
+			var start = task.dueDate ? window.formatDate(task.dueDate) : "N/A";
+			var end = task.endDateTime
 				? window.formatDate(task.endDateTime)
-				: "N/A"; // Assuming endDateTime
-			let allDay =
-				task.dueDate && task.dueDate.length === 10 ? "Yes" : "No"; // Check if only date provided
-			let description = task.text || "No description available.";
-
-			let eventType = task.isRepeating
+				: "N/A";
+			var allDay =
+				task.dueDate && task.dueDate.length === 10 ? "Yes" : "No";
+			var description = task.text || "No description available.";
+			var eventType = task.isRepeating
 				? "Repeating Task"
 				: "One-time Task";
-			let statusText = window.getStatusText(
+			var statusText = window.getStatusText(
 				task.status,
 				window.isTaskOverdue(task),
 				task.type,
 				task.appealStatus
 			);
 
-			const modalHtml = `
-                <h3 class="text-xl font-semibold mb-2 text-gray-900">${window.escapeHtml(
-					task.text
-				)}</h3>
-                <p class="text-gray-700 mb-1"><strong>Type:</strong> ${eventType}</p>
-                <p class="text-gray-700 mb-1"><strong>Status:</strong> ${statusText}</p>
-                <p class="text-gray-700 mb-1"><strong>Start:</strong> ${start}</p>
-                ${
-					task.endDateTime
-						? `<p class="text-gray-700 mb-1"><strong>End:</strong> ${end}</p>`
-						: ""
-				}
-                <p class="text-gray-700 mb-1"><strong>All Day:</strong> ${allDay}</p>
-                <p class="text-gray-700 mt-3"><strong>Description:</strong> ${window.escapeHtml(
-					description
-				)}</p>
-                ${
-					task.points
-						? `<p class="text-gray-700 mb-1"><strong>Points:</strong> ${task.points}</p>`
-						: ""
-				}
-                ${
-					task.penaltyPoints
-						? `<p class="text-gray-700 mb-1"><strong>Penalty:</strong> ${task.penaltyPoints}</p>`
-						: ""
-				}
-                ${
-					task.createdBy
-						? `<p class="text-gray-700 mb-1"><strong>Created By:</strong> ${
-								window.users[task.createdBy]?.displayName ||
-								task.createdBy
-						  }</p>`
-						: ""
-				}
-                ${
-					task.completedBy
-						? `<p class="text-gray-700 mb-1"><strong>Completed By:</strong> ${
-								window.users[task.completedBy]?.displayName ||
-								task.completedBy
-						  }</p>`
-						: ""
-				}
-                ${
-					task.approvedBy
-						? `<p class="text-gray-700 mb-1"><strong>Approved By:</strong> ${
-								window.users[task.approvedBy]?.displayName ||
-								task.approvedBy
-						  }</p>`
-						: ""
-				}
-                ${
-					task.appealText
-						? `<p class="text-gray-700 mb-1"><strong>Appeal Reason:</strong> ${window.escapeHtml(
-								task.appealText
-						  )}</p>`
-						: ""
-				}
-            `;
+			var modalHtml =
+				'<h3 class="text-xl font-semibold mb-2 text-gray-900">' +
+				window.escapeHtml(task.text) +
+				"</h3>" +
+				'<p class="text-gray-700 mb-1"><strong>Type:</strong> ' +
+				eventType +
+				"</p>" +
+				'<p class="text-gray-700 mb-1"><strong>Status:</strong> ' +
+				statusText +
+				"</p>" +
+				'<p class="text-gray-700 mb-1"><strong>Start:</strong> ' +
+				start +
+				"</p>" +
+				(task.endDateTime
+					? '<p class="text-gray-700 mb-1"><strong>End:</strong> ' +
+					  end +
+					  "</p>"
+					: "") +
+				'<p class="text-gray-700 mb-1"><strong>All Day:</strong> ' +
+				allDay +
+				"</p>" +
+				'<p class="text-gray-700 mt-3"><strong>Description:</strong> ' +
+				window.escapeHtml(description) +
+				"</p>" +
+				(task.points
+					? '<p class="text-gray-700 mb-1"><strong>Points:</strong> ' +
+					  task.points +
+					  "</p>"
+					: "") +
+				(task.penaltyPoints
+					? '<p class="text-gray-700 mb-1"><strong>Penalty:</strong> ' +
+					  task.penaltyPoints +
+					  "</p>"
+					: "") +
+				(task.createdBy
+					? '<p class="text-gray-700 mb-1"><strong>Created By:</strong> ' +
+					  (window.users[task.createdBy]
+							? window.users[task.createdBy].displayName
+							: task.createdBy) +
+					  "</p>"
+					: "") +
+				(task.completedBy
+					? '<p class="text-gray-700 mb-1"><strong>Completed By:</strong> ' +
+					  (window.users[task.completedBy]
+							? window.users[task.completedBy].displayName
+							: task.completedBy) +
+					  "</p>"
+					: "") +
+				(task.approvedBy
+					? '<p class="text-gray-700 mb-1"><strong>Approved By:</strong> ' +
+					  (window.users[task.approvedBy]
+							? window.users[task.approvedBy].displayName
+							: task.approvedBy) +
+					  "</p>"
+					: "") +
+				(task.appealText
+					? '<p class="text-gray-700 mb-1"><strong>Appeal Reason:</strong> ' +
+					  window.escapeHtml(task.appealText) +
+					  "</p>"
+					: "");
+
 			window.showModal(modalHtml);
 		},
-		// Optional: eventContent for custom rendering within the event block
-		eventContent: function (arg) {
-			// You can customize how events are displayed here if needed
-			// For now, default rendering with classNames is sufficient
-			return {
-				html: `<div class='fc-event-main-frame'>${arg.event.title}</div>`,
-			};
-		},
-	});
+	};
 
-	fullCalendarInstance.render();
+	// Try to create calendar, fallback gracefully if plugins aren't available
+	try {
+		fullCalendarInstance = new FullCalendar.Calendar(
+			calendarEl,
+			calendarConfig
+		);
+		fullCalendarInstance.render();
+	} catch (error) {
+		console.error("Error initializing FullCalendar:", error);
+		// Fallback: show a simple message
+		var fallbackHtml =
+			'<div style="padding: 20px; text-align: center; color: #666;">' +
+			"<h3>Calendar Loading...</h3>" +
+			"<p>There was an issue loading the calendar. Please refresh the page.</p>" +
+			'<div style="margin-top: 20px;">' +
+			"<strong>Tasks with due dates:</strong><br>";
+
+		if (calendarEvents.length > 0) {
+			fallbackHtml += calendarEvents
+				.map(function (event) {
+					return (
+						"• " + event.title + " - " + (event.start || "No date")
+					);
+				})
+				.join("<br>");
+		} else {
+			fallbackHtml += "No tasks scheduled";
+		}
+
+		fallbackHtml += "</div></div>";
+		calendarEl.innerHTML = fallbackHtml;
+	}
 };
 
 /**
@@ -1086,17 +1139,19 @@ window.renderCalendar = function () {
  * Assumes start and end are ISO strings.
  */
 function calculateDuration(startStr, endStr) {
-	if (!startStr || !endStr) return "01:00"; // Default to 1 hour
+	if (!startStr || !endStr) return "01:00";
 
-	const start = new Date(startStr);
-	const end = new Date(endStr);
-	const diffMs = end.getTime() - start.getTime();
+	var start = new Date(startStr);
+	var end = new Date(endStr);
+	var diffMs = end.getTime() - start.getTime();
 
-	const hours = Math.floor(diffMs / (1000 * 60 * 60));
-	const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+	var hours = Math.floor(diffMs / (1000 * 60 * 60));
+	var minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
-	const pad = (num) => (num < 10 ? "0" + num : num);
-	return `${pad(hours)}:${pad(minutes)}`;
+	var pad = function (num) {
+		return num < 10 ? "0" + num : num;
+	};
+	return pad(hours) + ":" + pad(minutes);
 }
 
 /**
@@ -1107,52 +1162,50 @@ window.renderDashboard = function () {
 	if (!window.hasPermission("view_dashboard")) return;
 
 	// Filter activity log to show only 'user' activity for status
-	const userActivity = window.userActivityLog.filter(
-		(a) => a.user === "user"
-	);
-	const lastActivity = userActivity[0];
-	const isUserOnline = lastActivity && lastActivity.action === "login";
+	var userActivity = window.userActivityLog.filter(function (a) {
+		return a.user === "user";
+	});
+	var lastActivity = userActivity[0];
+	var isUserOnline = lastActivity && lastActivity.action === "login";
 
 	// Calculate task statistics for the 'user'
-	const activeTasks = window.tasks.filter(
-		(t) =>
+	var activeTasks = window.tasks.filter(function (t) {
+		return (
 			t.status !== "completed" &&
 			t.type !== "demerit" &&
 			t.assignedTo === "user"
-	);
-	const completedTasks = window.tasks.filter(
-		(t) => t.status === "completed" && t.assignedTo === "user"
-	);
-	const allNonDemeritTasks = window.tasks.filter(
-		(t) => t.type !== "demerit" && t.assignedTo === "user"
-	);
-	const completionRate =
+		);
+	});
+	var completedTasks = window.tasks.filter(function (t) {
+		return t.status === "completed" && t.assignedTo === "user";
+	});
+	var allNonDemeritTasks = window.tasks.filter(function (t) {
+		return t.type !== "demerit" && t.assignedTo === "user";
+	});
+	var completionRate =
 		allNonDemeritTasks.length > 0
 			? Math.round(
 					(completedTasks.length / allNonDemeritTasks.length) * 100
 			  )
 			: 0;
 
-	// NEW: Calculate demerit tasks issued
-	const demeritTasksCount = window.tasks.filter(
-		(t) => t.type === "demerit"
-	).length;
+	// Calculate demerit tasks issued
+	var demeritTasksCount = window.tasks.filter(function (t) {
+		return t.type === "demerit";
+	}).length;
 
 	// Update UI elements
-	const userStatusEl = document.getElementById("userStatus");
-	const activeTasksEl = document.getElementById("activeTasks");
-	const completionRateEl = document.getElementById("completionRate");
-	const demeritsIssuedCountEl = document.getElementById(
-		"demeritsIssuedCount"
-	); // Get the new element
+	var userStatusEl = document.getElementById("userStatus");
+	var activeTasksEl = document.getElementById("activeTasks");
+	var completionRateEl = document.getElementById("completionRate");
+	var demeritsIssuedCountEl = document.getElementById("demeritsIssuedCount");
 
 	if (userStatusEl) {
 		userStatusEl.textContent = isUserOnline ? "Online" : "Offline";
 		userStatusEl.style.color = isUserOnline ? "#059669" : "#dc2626";
 	}
 	if (activeTasksEl) activeTasksEl.textContent = activeTasks.length;
-	if (completionRateEl) completionRateEl.textContent = `${completionRate}%`;
-	// NEW: Update demerits issued count
+	if (completionRateEl) completionRateEl.textContent = completionRate + "%";
 	if (demeritsIssuedCountEl) {
 		demeritsIssuedCountEl.textContent = demeritTasksCount;
 	}
@@ -1166,40 +1219,47 @@ window.renderDashboard = function () {
  * Renders the user activity log on the dashboard.
  */
 window.renderUserActivityLog = function () {
-	const activityLogEl = document.getElementById("userActivityLog");
+	var activityLogEl = document.getElementById("userActivityLog");
 	if (!activityLogEl) return;
 
 	// Filter activity log to only show activity for 'user' and 'admin'
-	const filteredActivityLog = window.userActivityLog.filter(
-		(a) => a.user === "user" || a.user === "admin"
-	);
+	var filteredActivityLog = window.userActivityLog.filter(function (a) {
+		return a.user === "user" || a.user === "admin";
+	});
 
 	if (filteredActivityLog.length === 0) {
 		activityLogEl.innerHTML =
 			'<div class="empty-state">No user activity recorded</div>';
 	} else {
 		activityLogEl.innerHTML = filteredActivityLog
-			.slice(0, 20) // Display up to 20 recent activities
-			.map(
-				(activity) => `
-            <div class="activity-item">
-                <div class="activity-action activity-${activity.action}">
-                    ${
-						activity.user === "user"
-							? activity.action === "login"
-								? "🔓 User Logged In"
-								: "🔒 User Logged Out"
-							: activity.action === "login"
+			.slice(0, 20)
+			.map(function (activity) {
+				var actionText;
+				if (activity.user === "user") {
+					actionText =
+						activity.action === "login"
+							? "🔓 User Logged In"
+							: "🔒 User Logged Out";
+				} else {
+					actionText =
+						activity.action === "login"
 							? "🔓 Admin Logged In"
-							: "🔒 Admin Logged Out"
-					}
-                </div>
-                <div class="activity-time">${window.formatDate(
-					activity.timestamp
-				)}</div>
-            </div>
-        `
-			)
+							: "🔒 Admin Logged Out";
+				}
+
+				return (
+					'<div class="activity-item">' +
+					'<div class="activity-action activity-' +
+					activity.action +
+					'">' +
+					actionText +
+					"</div>" +
+					'<div class="activity-time">' +
+					window.formatDate(activity.timestamp) +
+					"</div>" +
+					"</div>"
+				);
+			})
 			.join("");
 	}
 };
@@ -1208,46 +1268,61 @@ window.renderUserActivityLog = function () {
  * Renders the user's progress summary on the dashboard.
  */
 window.renderUserProgress = function () {
-	const progressList = document.getElementById("userProgressList");
+	var progressList = document.getElementById("userProgressList");
 	if (!progressList) return;
 
-	const user = window.users["user"]; // Always target the 'user' profile for progress
-	const userTasks = window.tasks.filter(
-		(t) => t.assignedTo === "user" && t.type !== "demerit"
-	);
-	const completed = userTasks.filter((t) => t.status === "completed");
-	const pending = userTasks.filter(
-		(t) => t.status === "todo" || t.status === "pending_approval"
-	);
-	const overdue = userTasks.filter(
-		(t) => window.isTaskOverdue(t) && t.status !== "completed"
-	);
-	const demeritTasks = window.tasks.filter(
-		(t) => t.type === "demerit" && t.assignedTo === "user"
-	);
+	var user = window.users["user"];
+	var userTasks = window.tasks.filter(function (t) {
+		return t.assignedTo === "user" && t.type !== "demerit";
+	});
+	var completed = userTasks.filter(function (t) {
+		return t.status === "completed";
+	});
+	var pending = userTasks.filter(function (t) {
+		return t.status === "todo" || t.status === "pending_approval";
+	});
+	var overdue = userTasks.filter(function (t) {
+		return window.isTaskOverdue(t) && t.status !== "completed";
+	});
+	var demeritTasks = window.tasks.filter(function (t) {
+		return t.type === "demerit" && t.assignedTo === "user";
+	});
 
-	const completionRate =
+	var completionRate =
 		userTasks.length > 0
 			? Math.round((completed.length / userTasks.length) * 100)
 			: 0;
 
-	progressList.innerHTML = `
-        <div class="progress-item">
-            <div>
-                <div class="user-name">${user.displayName}</div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${completionRate}%"></div>
-                </div>
-            </div>
-            <div class="user-stats">
-                <span>${user.points} pts</span>
-                <span>${completed.length} done</span>
-                <span>${pending.length} pending</span>
-                <span>${overdue.length} overdue</span>
-                <span>${demeritTasks.length} demerits</span>
-            </div>
-        </div>
-    `;
+	progressList.innerHTML =
+		'<div class="progress-item">' +
+		"<div>" +
+		'<div class="user-name">' +
+		user.displayName +
+		"</div>" +
+		'<div class="progress-bar">' +
+		'<div class="progress-fill" style="width: ' +
+		completionRate +
+		'%"></div>' +
+		"</div>" +
+		"</div>" +
+		'<div class="user-stats">' +
+		"<span>" +
+		user.points +
+		" pts</span>" +
+		"<span>" +
+		completed.length +
+		" done</span>" +
+		"<span>" +
+		pending.length +
+		" pending</span>" +
+		"<span>" +
+		overdue.length +
+		" overdue</span>" +
+		"<span>" +
+		demeritTasks.length +
+		" demerits</span>" +
+		"</div>" +
+		"</div>";
 };
 
 /**
@@ -1255,35 +1330,41 @@ window.renderUserProgress = function () {
  */
 window.updateStats = function () {
 	// Filter tasks relevant to the current user (all for admin, assigned for user)
-	const relevantTasks = window.tasks.filter(
-		(t) =>
+	var relevantTasks = window.tasks.filter(function (t) {
+		return (
 			window.currentUser === "admin" ||
 			t.assignedTo === window.currentUser
-	);
+		);
+	});
 
 	// Calculate statistics, excluding demerit tasks from total/pending/completed counts
-	const total = relevantTasks.filter((t) => t.type !== "demerit").length;
-	const pending = relevantTasks.filter(
-		(t) =>
+	var total = relevantTasks.filter(function (t) {
+		return t.type !== "demerit";
+	}).length;
+	var pending = relevantTasks.filter(function (t) {
+		return (
 			(t.status === "todo" || t.status === "pending_approval") &&
 			t.type !== "demerit"
-	).length;
-	const completed = relevantTasks.filter(
-		(t) => t.status === "completed"
-	).length;
+		);
+	}).length;
+	var completed = relevantTasks.filter(function (t) {
+		return t.status === "completed";
+	}).length;
 
 	// Get references to the stat elements
-	const totalTasksEl = document.getElementById("totalTasksStat");
-	const pendingCountEl = document.getElementById("pendingCountStat");
-	const completedCountEl = document.getElementById("completedCountStat");
-	const myPointsEl = document.getElementById("myPointsStat");
+	var totalTasksEl = document.getElementById("totalTasksStat");
+	var pendingCountEl = document.getElementById("pendingCountStat");
+	var completedCountEl = document.getElementById("completedCountStat");
+	var myPointsEl = document.getElementById("myPointsStat");
 
 	// Update text content of stat elements
 	if (totalTasksEl) totalTasksEl.textContent = total;
 	if (pendingCountEl) pendingCountEl.textContent = pending;
 	if (completedCountEl) completedCountEl.textContent = completed;
 	if (myPointsEl)
-		myPointsEl.textContent = window.users[window.currentUser]?.points || 0;
+		myPointsEl.textContent = window.users[window.currentUser]
+			? window.users[window.currentUser].points
+			: 0;
 };
 
 /**
@@ -1292,7 +1373,7 @@ window.updateStats = function () {
  * @returns {string} The escaped HTML string.
  */
 window.escapeHtml = function (text) {
-	const div = document.createElement("div");
+	var div = document.createElement("div");
 	div.textContent = text;
 	// Additionally replace backticks to prevent template literal issues in generated HTML
 	return div.innerHTML.replace(/`/g, "&#96;");
@@ -1305,7 +1386,7 @@ window.escapeHtml = function (text) {
  */
 window.formatDate = function (dateString) {
 	if (!dateString) return "";
-	const date = new Date(dateString);
+	var date = new Date(dateString);
 	return (
 		date.toLocaleDateString() +
 		" " +
@@ -1325,16 +1406,16 @@ window.formatDate = function (dateString) {
 window.getStatusClass = function (status, isOverdue, type, appealStatus) {
 	if (type === "demerit") {
 		if (appealStatus === "pending") return "status-pending-appeal";
-		if (appealStatus === "approved") return "status-completed"; // Appeal approved, effectively completed
-		if (appealStatus === "denied") return "status-overdue"; // Appeal denied, remains a negative status
-		if (status === "demerit_accepted") return "status-demerit-accepted"; // User accepted demerit
-		return "status-demerit"; // Default for issued demerit
+		if (appealStatus === "approved") return "status-completed";
+		if (appealStatus === "denied") return "status-overdue";
+		if (status === "demerit_accepted") return "status-demerit-accepted";
+		return "status-demerit";
 	}
 	// For regular tasks
 	if (isOverdue) return "status-overdue";
 	if (status === "completed") return "status-completed";
-	if (status === "failed") return "status-overdue"; // Failed tasks are similar to overdue in negative connotation
-	return "status-pending"; // Default for 'todo' or 'pending_approval'
+	if (status === "failed") return "status-overdue";
+	return "status-pending";
 };
 
 /**
@@ -1378,7 +1459,36 @@ window.getSuggestionStatusClass = function (status) {
 };
 
 // --- Modal Helpers ---
-// These functions provide custom modal dialogs, replacing native browser `alert()` and `confirm()`.
+// These functions provide custom modal dialogs, replacing native browser alert() and confirm().
+
+/**
+ * Displays a generic modal with custom content.
+ * @param {string} htmlContent - HTML content to display in the modal.
+ */
+window.showModal = function (htmlContent) {
+	var modal = document.getElementById("eventModal");
+	var modalContent = document.getElementById("modalContent");
+	var closeButton = document.getElementById("closeModal");
+
+	if (modal && modalContent) {
+		modalContent.innerHTML = htmlContent;
+		modal.classList.remove("hidden");
+
+		// Close modal when clicking the X button
+		if (closeButton) {
+			closeButton.onclick = function () {
+				modal.classList.add("hidden");
+			};
+		}
+
+		// Close modal when clicking outside the content
+		modal.onclick = function (e) {
+			if (e.target === modal) {
+				modal.classList.add("hidden");
+			}
+		};
+	}
+};
 
 /**
  * Displays a generic confirmation modal with "Confirm" and "Cancel" buttons.
@@ -1386,27 +1496,28 @@ window.getSuggestionStatusClass = function (status) {
  * @param {function(boolean): void} onConfirm - Callback function invoked with `true` if confirmed, `false` if canceled.
  */
 window.showConfirmModal = function (message, onConfirm) {
-	const modal = document.createElement("div");
-	modal.className = "modal-overlay"; // Covers the entire screen
-	modal.innerHTML = `
-        <div class="modal-content">
-            <p>${message}</p>
-            <div class="modal-actions">
-                <button id="modalConfirm" class="action-btn approve-btn">Confirm</button>
-                <button id="modalCancel" class="action-btn delete-btn">Cancel</button>
-            </div>
-        </div>
-    `;
-	document.body.appendChild(modal); // Add modal to the DOM
+	var modal = document.createElement("div");
+	modal.className = "modal-overlay";
+	modal.innerHTML =
+		'<div class="modal-content">' +
+		"<p>" +
+		message +
+		"</p>" +
+		'<div class="modal-actions">' +
+		'<button id="modalConfirm" class="action-btn approve-btn">Confirm</button>' +
+		'<button id="modalCancel" class="action-btn delete-btn">Cancel</button>' +
+		"</div>" +
+		"</div>";
+	document.body.appendChild(modal);
 
 	// Attach event listeners to modal buttons
-	document.getElementById("modalConfirm").onclick = () => {
-		onConfirm(true); // Call callback with true for confirmation
-		document.body.removeChild(modal); // Remove modal from DOM
+	document.getElementById("modalConfirm").onclick = function () {
+		onConfirm(true);
+		document.body.removeChild(modal);
 	};
-	document.getElementById("modalCancel").onclick = () => {
-		onConfirm(false); // Call callback with false for cancellation
-		document.body.removeChild(modal); // Remove modal from DOM
+	document.getElementById("modalCancel").onclick = function () {
+		onConfirm(false);
+		document.body.removeChild(modal);
 	};
 };
 
@@ -1416,54 +1527,62 @@ window.showConfirmModal = function (message, onConfirm) {
  * @param {function(string): void} onSubmit - Callback function invoked with the appeal text when submitted.
  */
 window.showAppealModal = function (task, onSubmit) {
-	const modal = document.createElement("div");
+	var modal = document.createElement("div");
 	modal.className = "modal-overlay";
-	modal.innerHTML = `
-        <div class="modal-content">
-            <h3>Appeal Demerit Task</h3>
-            <p><strong>Task:</strong> ${window.escapeHtml(task.text)}</p>
-            <p><strong>Penalty:</strong> -${task.penaltyPoints} points</p>
-            <div class="appeal-warning">
-                <div class="warning-title">⚠️ Appeal Risk Warning</div>
-                <div>If approved: +${task.penaltyPoints} points restored</div>
-                <div>If denied: -${
-					task.penaltyPoints
-				} additional points (double penalty)</div>
-                <div><strong>Total risk if denied: ${
-					task.penaltyPoints * 2
-				} points</strong></div>
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="appealTextInput">Reason for Appeal (Required)</label>
-                <textarea id="appealTextInput" class="form-input" rows="4" placeholder="Explain why you are appealing this demerit..."></textarea>
-            </div>
-            <div id="appealError" class="error-message" style="display:none; margin-top: 10px;"></div>
-            <div class="modal-actions">
-                <button id="modalSubmitAppeal" class="action-btn approve-btn">Submit Appeal</button>
-                <button id="modalCancelAppeal" class="action-btn delete-btn">Cancel</button>
-            </div>
-        </div>
-    `;
+	modal.innerHTML =
+		'<div class="modal-content">' +
+		"<h3>Appeal Demerit Task</h3>" +
+		"<p><strong>Task:</strong> " +
+		window.escapeHtml(task.text) +
+		"</p>" +
+		"<p><strong>Penalty:</strong> -" +
+		task.penaltyPoints +
+		" points</p>" +
+		'<div class="appeal-warning">' +
+		'<div class="warning-title">⚠️ Appeal Risk Warning</div>' +
+		"<div>If approved: +" +
+		task.penaltyPoints +
+		" points restored</div>" +
+		"<div>If denied: -" +
+		task.penaltyPoints +
+		" additional points (double penalty)</div>" +
+		"<div><strong>Total risk if denied: " +
+		task.penaltyPoints * 2 +
+		" points</strong></div>" +
+		"</div>" +
+		'<div class="form-group">' +
+		'<label class="form-label" for="appealTextInput">Reason for Appeal (Required)</label>' +
+		'<textarea id="appealTextInput" class="form-input" rows="4" placeholder="Explain why you are appealing this demerit..."></textarea>' +
+		"</div>" +
+		'<div id="appealError" class="error-message" style="display:none; margin-top: 10px;"></div>' +
+		'<div class="modal-actions">' +
+		'<button id="modalSubmitAppeal" class="action-btn approve-btn">Submit Appeal</button>' +
+		'<button id="modalCancelAppeal" class="action-btn delete-btn">Cancel</button>' +
+		"</div>" +
+		"</div>";
 	document.body.appendChild(modal);
 
 	// Event listener for submitting the appeal
-	document.getElementById("modalSubmitAppeal").onclick = () => {
-		const appealText = document
+	document.getElementById("modalSubmitAppeal").onclick = function () {
+		var appealText = document
 			.getElementById("appealTextInput")
 			.value.trim();
-		const appealError = document.getElementById("appealError");
+		var appealError = document.getElementById("appealError");
 		if (appealText.length < 10) {
-			// Basic validation: require at least 10 characters for appeal reason
 			appealError.textContent =
 				"Appeal text must be at least 10 characters long.";
 			appealError.style.display = "block";
 		} else {
-			onSubmit(appealText); // Call callback with the appeal text
+			onSubmit(appealText);
 			document.body.removeChild(modal);
 		}
 	};
+
 	// Event listener for canceling the appeal
-	document.getElementById("modalCancelAppeal").onclick = () => {
+	document.getElementById("modalCancelAppeal").onclick = function () {
 		document.body.removeChild(modal);
 	};
 };
+
+// Make fullCalendarInstance globally available for other files
+window.fullCalendarInstance = fullCalendarInstance;

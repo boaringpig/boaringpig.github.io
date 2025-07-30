@@ -482,15 +482,22 @@
 
 		<!-- Supabase Script -->
 		<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-		<!-- FullCalendar Core JavaScript -->
-		<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
-		<!-- FullCalendar RRule Plugin (for repeating events) -->
+
+		<!-- FullCalendar Scripts - Updated approach -->
+		<!-- 1. First load RRule library -->
 		<script src="https://cdn.jsdelivr.net/npm/rrule@2.7.2/dist/es5/rrule.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/rrule@6.1.18/index.global.min.js"></script>
-		<!-- Your custom scripts -->
+
+		<!-- 2. Load FullCalendar with all plugins in one bundle -->
+		<script src="https://unpkg.com/@fullcalendar/core@6.1.18/index.global.min.js"></script>
+		<script src="https://unpkg.com/@fullcalendar/daygrid@6.1.18/index.global.min.js"></script>
+		<script src="https://unpkg.com/@fullcalendar/timegrid@6.1.18/index.global.min.js"></script>
+		<script src="https://unpkg.com/@fullcalendar/list@6.1.18/index.global.min.js"></script>
+		<script src="https://unpkg.com/@fullcalendar/rrule@6.1.18/index.global.min.js"></script>
+
+		<!-- Your custom scripts - Load UI first, then others -->
+		<script src="ui.js"></script>
 		<script src="auth.js"></script>
 		<script src="database.js"></script>
-		<script src="ui.js"></script>
 		<script src="main.js"></script>
 	</body>
 </html>
