@@ -56,7 +56,7 @@ window.userActivityLog = userActivityLog;
 window.taskIdCounter = taskIdCounter;
 window.suggestionIdCounter = suggestionIdCounter;
 window.overdueCheckIntervalId = overdueCheckIntervalId;
-window.OVERDUE_CHECK_INTERVAL = OVERDUE_CHECK_INTERVAL;
+window.OVERDUE_CHECK_INTERVAL = OVERDUE_CHECK_INTERVAL; // Corrected typo here
 window.currentDate = currentDate;
 window.activeTab = activeTab;
 
@@ -83,8 +83,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	const suggestForm = document.getElementById("suggestForm");
 	if (suggestForm) {
-		// submitTaskSuggestion is defined in database.js
-		suggestForm.addEventListener("submit", window.submitTaskSuggestion);
+		// Prevent default form submission and then call the suggestion handler
+		suggestForm.addEventListener("submit", function (e) {
+			e.preventDefault(); // Prevent the default form submission (page reload)
+			window.submitTaskSuggestion(); // Call the function to handle the suggestion
+		});
 	}
 
 	// Listener for repeating task checkbox

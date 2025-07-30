@@ -142,27 +142,36 @@ window.loadData = async function () {
 			"postgres_changes",
 			{ event: "*", schema: "public", table: "tasks" },
 			(payload) => {
-				console.log("Task change received!", payload);
-				if (payload.eventType === "INSERT") {
-					window.tasks.unshift(payload.new); // Add new task to the beginning of the array
-				} else if (payload.eventType === "UPDATE") {
-					const index = window.tasks.findIndex(
-						(t) => t.id === payload.old.id
-					);
-					if (index !== -1) {
-						window.tasks[index] = payload.new; // Update existing task
+				try {
+					// Added try-catch
+					console.log("Task change received!", payload);
+					if (payload.eventType === "INSERT") {
+						window.tasks.unshift(payload.new); // Add new task to the beginning of the array
+					} else if (payload.eventType === "UPDATE") {
+						const index = window.tasks.findIndex(
+							(t) => t.id === payload.old.id
+						);
+						if (index !== -1) {
+							window.tasks[index] = payload.new; // Update existing task
+						}
+					} else if (payload.eventType === "DELETE") {
+						window.tasks = window.tasks.filter(
+							(t) => t.id !== payload.old.id
+						); // Remove deleted task
 					}
-				} else if (payload.eventType === "DELETE") {
-					window.tasks = window.tasks.filter(
-						(t) => t.id !== payload.old.id
-					); // Remove deleted task
+					// Re-sort tasks and re-render UI components that depend on tasks
+					window.tasks.sort(
+						(a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+					);
+					window.renderTasks();
+					window.updateStats();
+				} catch (error) {
+					console.error("Error in tasksChannel listener:", error);
+					window.showNotification(
+						"An error occurred with task updates.",
+						"error"
+					);
 				}
-				// Re-sort tasks and re-render UI components that depend on tasks
-				window.tasks.sort(
-					(a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-				);
-				window.renderTasks();
-				window.updateStats();
 			}
 		)
 		.subscribe(); // Subscribe to activate the listener
@@ -174,26 +183,38 @@ window.loadData = async function () {
 			"postgres_changes",
 			{ event: "*", schema: "public", table: "suggestions" },
 			(payload) => {
-				console.log("Suggestion change received!", payload);
-				if (payload.eventType === "INSERT") {
-					window.suggestions.unshift(payload.new);
-				} else if (payload.eventType === "UPDATE") {
-					const index = window.suggestions.findIndex(
-						(s) => s.id === payload.old.id
-					);
-					if (index !== -1) {
-						window.suggestions[index] = payload.new;
+				try {
+					// Added try-catch
+					console.log("Suggestion change received!", payload);
+					if (payload.eventType === "INSERT") {
+						window.suggestions.unshift(payload.new);
+					} else if (payload.eventType === "UPDATE") {
+						const index = window.suggestions.findIndex(
+							(s) => s.id === payload.old.id
+						);
+						if (index !== -1) {
+							window.suggestions[index] = payload.new;
+						}
+					} else if (payload.eventType === "DELETE") {
+						window.suggestions = window.suggestions.filter(
+							(s) => s.id !== payload.old.id
+						);
 					}
-				} else if (payload.eventType === "DELETE") {
-					window.suggestions = window.suggestions.filter(
-						(s) => s.id !== payload.old.id
+					// Re-sort suggestions and re-render UI components
+					window.suggestions.sort(
+						(a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+					);
+					window.renderSuggestions();
+				} catch (error) {
+					console.error(
+						"Error in suggestionsChannel listener:",
+						error
+					);
+					window.showNotification(
+						"An error occurred with suggestion updates.",
+						"error"
 					);
 				}
-				// Re-sort suggestions and re-render UI components
-				window.suggestions.sort(
-					(a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-				);
-				window.renderSuggestions();
 			}
 		)
 		.subscribe();
@@ -205,33 +226,40 @@ window.loadData = async function () {
 			"postgres_changes",
 			{ event: "*", schema: "public", table: "userActivity" },
 			(payload) => {
-				console.log("Activity change received!", payload);
-				if (payload.eventType === "INSERT") {
-					window.userActivityLog.unshift(payload.new);
-					if (window.userActivityLog.length > 50) {
-						// Keep only last 50 activities in local log for performance
-						window.userActivityLog = window.userActivityLog.slice(
-							0,
-							50
+				try {
+					// Added try-catch
+					console.log("Activity change received!", payload);
+					if (payload.eventType === "INSERT") {
+						window.userActivityLog.unshift(payload.new);
+						if (window.userActivityLog.length > 50) {
+							// Keep only last 50 activities in local log for performance
+							window.userActivityLog =
+								window.userActivityLog.slice(0, 50);
+						}
+					} else if (payload.eventType === "UPDATE") {
+						const index = window.userActivityLog.findIndex(
+							(a) => a.id === payload.old.id
+						);
+						if (index !== -1) {
+							window.userActivityLog[index] = payload.new;
+						}
+					} else if (payload.eventType === "DELETE") {
+						window.userActivityLog = window.userActivityLog.filter(
+							(a) => a.id !== payload.old.id
 						);
 					}
-				} else if (payload.eventType === "UPDATE") {
-					const index = window.userActivityLog.findIndex(
-						(a) => a.id === payload.old.id
+					// Re-sort activity log and re-render dashboard
+					window.userActivityLog.sort(
+						(a, b) => new Date(b.timestamp) - new Date(a.timestamp)
 					);
-					if (index !== -1) {
-						window.userActivityLog[index] = payload.new;
-					}
-				} else if (payload.eventType === "DELETE") {
-					window.userActivityLog = window.userActivityLog.filter(
-						(a) => a.id !== payload.old.id
+					window.renderDashboard();
+				} catch (error) {
+					console.error("Error in activityChannel listener:", error);
+					window.showNotification(
+						"An error occurred with activity updates.",
+						"error"
 					);
 				}
-				// Re-sort activity log and re-render dashboard
-				window.userActivityLog.sort(
-					(a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-				);
-				window.renderDashboard();
 			}
 		)
 		.subscribe();
@@ -243,20 +271,33 @@ window.loadData = async function () {
 			"postgres_changes",
 			{ event: "*", schema: "public", table: "userProfiles" },
 			(payload) => {
-				console.log("User profile change received!", payload);
-				if (
-					payload.eventType === "INSERT" ||
-					payload.eventType === "UPDATE"
-				) {
-					const profileData = payload.new;
-					const username = profileData.username;
-					// Update the local 'users' object with the latest points
-					if (window.users[username]) {
-						window.users[username].points = profileData.points || 0;
+				try {
+					// Added try-catch
+					console.log("User profile change received!", payload);
+					if (
+						payload.eventType === "INSERT" ||
+						payload.eventType === "UPDATE"
+					) {
+						const profileData = payload.new;
+						const username = profileData.username;
+						// Update the local 'users' object with the latest points
+						if (window.users[username]) {
+							window.users[username].points =
+								profileData.points || 0;
+						}
 					}
+					window.updateUserPoints(); // Update UI elements displaying points
+					window.renderUserProgress(); // Re-render user progress on dashboard
+				} catch (error) {
+					console.error(
+						"Error in userProfilesChannel listener:",
+						error
+					);
+					window.showNotification(
+						"An error occurred with user data updates.",
+						"error"
+					);
 				}
-				window.updateUserPoints(); // Update UI elements displaying points
-				window.renderUserProgress(); // Re-render user progress on dashboard
 			}
 		)
 		.subscribe();
@@ -336,7 +377,9 @@ window.fetchUserProfilesInitial = async function () {
 				window.users[username].points = profileData.points || 0;
 			}
 		});
-		window.updateUserPoints(); // Update UI
+		// After fetching, ensure the local UI reflects the loaded points.
+		// The updateUserPoints function with no operation will just refresh the UI from window.users
+		window.updateUserPoints();
 		window.renderUserProgress(); // Re-render user progress on dashboard
 	}
 };
@@ -1235,7 +1278,7 @@ window.updateUserPoints = async function (
 		return; // Exit as admin points are not synced to DB
 	}
 
-	// Logic for 'user' profile - only modify points if an operation is specified
+	// Logic for 'user' profile - only modify points if an explicit operation is specified
 	if (operation === "set") {
 		window.users[username].points = points;
 	} else if (operation === "add") {
@@ -1247,9 +1290,15 @@ window.updateUserPoints = async function (
 			(window.users[username].points || 0) - points
 		);
 	}
+	// If operation is null, we assume window.users[username].points already holds the correct value
+	// from the initial fetch or a real-time update, so we just proceed to update the UI.
+	console.log(
+		`User (${username}) local points after update: ${window.users[username].points}`
+	);
 
 	// Only upsert to database if an explicit operation was performed
 	if (operation !== null && supabase) {
+		// Ensure we only write to DB if an operation (add/subtract/set) occurred
 		const { error } = await supabase.from("userProfiles").upsert(
 			{
 				username: username,

@@ -28,6 +28,89 @@
 // window.logUserActivity(action) { ... }
 // window.checkForOverdueTasks() { ... }
 
+// Global object to manage refresh button cooldown states
+window.refreshButtonStates = {};
+
+/**
+ * Sets up a refresh button with a cooldown period.
+ * @param {string} buttonId - The ID of the refresh button element.
+ * @param {number} cooldownSeconds - The cooldown duration in seconds.
+ */
+window.setupRefreshButton = function (buttonId, cooldownSeconds) {
+	const button = document.getElementById(buttonId);
+	if (!button) {
+		console.warn(`Refresh button with ID '${buttonId}' not found.`);
+		return;
+	}
+
+	// Initialize state for this button if not already present
+	if (!window.refreshButtonStates[buttonId]) {
+		window.refreshButtonStates[buttonId] = {
+			lastClickTime: 0,
+			cooldownTimerId: null,
+			originalText: button.textContent, // Store original text
+		};
+	}
+
+	const state = window.refreshButtonStates[buttonId];
+
+	const updateButtonState = () => {
+		const now = Date.now();
+		const elapsedTime = now - state.lastClickTime;
+		const remainingTime = cooldownSeconds * 1000 - elapsedTime;
+
+		if (remainingTime > 0) {
+			button.disabled = true;
+			const secondsLeft = Math.ceil(remainingTime / 1000);
+			button.textContent = `Refreshing (${secondsLeft}s)`;
+			if (state.cooldownTimerId) {
+				clearTimeout(state.cooldownTimerId);
+			}
+			state.cooldownTimerId = setTimeout(updateButtonState, 1000); // Update every second
+		} else {
+			button.disabled = false;
+			button.textContent = state.originalText;
+			if (state.cooldownTimerId) {
+				clearTimeout(state.cooldownTimerId);
+				state.cooldownTimerId = null;
+			}
+		}
+	};
+
+	// Initial state update when function is called
+	updateButtonState();
+
+	button.onclick = async () => {
+		const now = Date.now();
+		const elapsedTime = now - state.lastClickTime;
+
+		if (elapsedTime < cooldownSeconds * 1000) {
+			window.showNotification(
+				`Please wait ${Math.ceil(
+					(cooldownSeconds * 1000 - elapsedTime) / 1000
+				)} seconds before refreshing again.`,
+				"warning"
+			);
+			return;
+		}
+
+		state.lastClickTime = now;
+		button.disabled = true;
+		button.textContent = "Refreshing...";
+		window.showNotification("Refreshing data...", "info");
+
+		try {
+			await window.loadData(); // Call the data loading function
+			window.showNotification("Data refreshed successfully!", "success");
+		} catch (error) {
+			console.error("Error refreshing data:", error);
+			window.showNotification("Failed to refresh data.", "error");
+		} finally {
+			updateButtonState(); // Re-enable button or start countdown
+		}
+	};
+};
+
 /**
  * Displays an error message on the login screen.
  * @param {string} message - The error message to display.
@@ -226,6 +309,10 @@ window.showMainApp = async function () {
 	window.updateUserPoints();
 	// Render the calendar
 	window.renderCalendar();
+
+	// Setup refresh buttons
+	window.setupRefreshButton("refreshDataBtnUser", 30); // User refresh button
+	window.setupRefreshButton("refreshDataBtnAdmin", 30); // Admin refresh button
 
 	// Clear any existing overdue check interval and start a new one
 	if (window.overdueCheckIntervalId) {
