@@ -957,6 +957,12 @@ window.denyAppeal = function (taskId) {
 					}`,
 					"warning"
 				);
+				// Apply double penalty points to the user
+				await window.updateUserPoints(
+					task.assignedTo,
+					task.penaltyPoints * 2, // Apply double the penalty points
+					"subtract"
+				);
 				await window.fetchTasksInitial(); // Re-fetch tasks to update UI
 			}
 		}
@@ -1187,12 +1193,12 @@ window.createRepeatingTask = async function (originalTask) {
  * Updates a user's points in the local 'users' object and in the Supabase 'userProfiles' table.
  * @param {string} username - The username whose points are to be updated.
  * @param {number} points - The amount of points to add, subtract, or set.
- * @param {string} operation - The operation to perform ('add', 'subtract', 'set').
+ * @param {string | null} operation - The operation to perform ('add', 'subtract', 'set', or null for UI refresh).
  */
 window.updateUserPoints = async function (
 	username = window.currentUser,
 	points = 0,
-	operation = "set"
+	operation = null // Changed default to null
 ) {
 	console.log(
 		`updateUserPoints called for: ${username}, operation: ${operation}, points: ${points}`
@@ -1229,7 +1235,7 @@ window.updateUserPoints = async function (
 		return; // Exit as admin points are not synced to DB
 	}
 
-	// Logic for 'user' profile - update local and then Supabase
+	// Logic for 'user' profile - only modify points if an operation is specified
 	if (operation === "set") {
 		window.users[username].points = points;
 	} else if (operation === "add") {
@@ -1241,28 +1247,30 @@ window.updateUserPoints = async function (
 			(window.users[username].points || 0) - points
 		);
 	}
-	console.log(
-		`User (${username}) local points after update: ${window.users[username].points}`
-	);
 
-	// Upsert user profile points to Supabase
-	const { error } = await supabase.from("userProfiles").upsert(
-		{
-			username: username,
-			points: window.users[username].points,
-			updatedAt: new Date().toISOString(),
-		},
-		{ onConflict: "username" } // Upsert based on username
-	);
-	if (error) {
-		console.error("Error updating user profile points in Supabase:", error);
-	} else {
-		console.log(
-			`User (${username}) points successfully upserted to Supabase: ${window.users[username].points}`
+	// Only upsert to database if an explicit operation was performed
+	if (operation !== null && supabase) {
+		const { error } = await supabase.from("userProfiles").upsert(
+			{
+				username: username,
+				points: window.users[username].points,
+				updatedAt: new Date().toISOString(),
+			},
+			{ onConflict: "username" } // Upsert based on username
 		);
+		if (error) {
+			console.error(
+				"Error updating user profile points in Supabase:",
+				error
+			);
+		} else {
+			console.log(
+				`User (${username}) points successfully upserted to Supabase: ${window.users[username].points}`
+			);
+		}
 	}
 
-	// Update UI for the currently logged-in user (if it's the user)
+	// Always update UI for the currently logged-in user (if it's the user)
 	if (username === window.currentUser) {
 		const pointsBadge = document.getElementById("userPoints");
 		if (pointsBadge) {

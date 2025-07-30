@@ -140,7 +140,8 @@ window.showLogin = function () {
  * Displays the main application interface.
  * Also handles initial data loading and sets up periodic checks.
  */
-window.showMainApp = function () {
+window.showMainApp = async function () {
+	// Made async
 	document.getElementById("loginScreen").style.display = "none";
 	document.getElementById("mainApp").style.display = "block";
 
@@ -219,8 +220,9 @@ window.showMainApp = function () {
 	}
 
 	// Load initial data from Supabase and set up real-time listeners
-	window.loadData();
-	// Update user points display
+	await window.loadData(); // AWAIT this call
+
+	// Update user points display AFTER data is loaded
 	window.updateUserPoints();
 	// Render the calendar
 	window.renderCalendar();
@@ -948,10 +950,18 @@ window.renderDashboard = function () {
 			  )
 			: 0;
 
+	// NEW: Calculate demerit tasks issued
+	const demeritTasksCount = window.tasks.filter(
+		(t) => t.type === "demerit"
+	).length;
+
 	// Update UI elements
 	const userStatusEl = document.getElementById("userStatus");
 	const activeTasksEl = document.getElementById("activeTasks");
 	const completionRateEl = document.getElementById("completionRate");
+	const demeritsIssuedCountEl = document.getElementById(
+		"demeritsIssuedCount"
+	); // Get the new element
 
 	if (userStatusEl) {
 		userStatusEl.textContent = isUserOnline ? "Online" : "Offline";
@@ -959,6 +969,10 @@ window.renderDashboard = function () {
 	}
 	if (activeTasksEl) activeTasksEl.textContent = activeTasks.length;
 	if (completionRateEl) completionRateEl.textContent = `${completionRate}%`;
+	// NEW: Update demerits issued count
+	if (demeritsIssuedCountEl) {
+		demeritsIssuedCountEl.textContent = demeritTasksCount;
+	}
 
 	// Render detailed activity log and user progress
 	window.renderUserActivityLog();

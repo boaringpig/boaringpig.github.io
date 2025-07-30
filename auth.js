@@ -28,7 +28,7 @@ window.attemptAutoLogin = async function () {
 	if (rememberedUser && window.users && window.users[rememberedUser]) {
 		window.currentUser = rememberedUser;
 		console.log(`Auto-logging in as ${window.currentUser}`);
-		window.showMainApp(); // Show the main application UI
+		await window.showMainApp(); // Show the main application UI
 	} else {
 		window.showLogin(); // Show the login screen
 	}
@@ -78,7 +78,7 @@ window.handleLogin = async function (e) {
 		} else {
 			localStorage.removeItem("rememberedUser"); // Clear remembered user
 		}
-		window.showMainApp(); // Show the main application UI
+		await window.showMainApp(); // Show the main application UI
 		window.hideError(); // Hide any previous error messages
 	} else {
 		window.showError("Invalid username or password"); // Show error for invalid credentials
