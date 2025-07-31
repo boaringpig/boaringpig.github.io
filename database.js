@@ -9,8 +9,13 @@ let supabase = null;
 // let tasks = [];
 // let suggestions = [];
 // let userActivityLog = [];
-// let taskIdCounter = 1;
-// let suggestionIdCounter = 1;
+// let taskIdCounter = 1; // Now only initialized from DB max ID, not incremented for new inserts
+// let suggestionIdCounter = 1; // Now only initialized from DB max ID, not incremented for new inserts
+
+// NEW: Global variables for reward data
+window.rewards = []; // To store fetched rewards
+window.userRewardPurchases = []; // To store user's purchase history
+window.rewardSystemSettings = {}; // To store the single row of settings
 
 // Global unsubscribe object to hold Supabase channel subscriptions
 let unsubscribe = {};
@@ -80,10 +85,22 @@ window.loadData = async function () {
 			supabase.removeChannel(window.unsubscribe.activity);
 		if (window.unsubscribe.userProfiles)
 			supabase.removeChannel(window.unsubscribe.userProfiles);
-		window.unsubscribe = null; // Clear the unsubscribe object
+		// NEW: Unsubscribe from reward channels
+		if (window.unsubscribe.rewards)
+			supabase.removeChannel(window.unsubscribe.rewards);
+		if (window.unsubscribe.userRewardPurchases)
+			supabase.removeChannel(window.unsubscribe.userRewardPurchases);
+		if (window.unsubscribe.rewardSystemSettings)
+			supabase.removeChannel(window.unsubscribe.rewardSystemSettings);
+
+		window.unsubscribe = {}; // Clear the unsubscribe object
 	}
 
 	// --- Load Metadata Counters and ensure they are up-to-date with max IDs ---
+	// Only fetch/upsert metadata counters for tables that *actually* use client-side IDs.
+	// Tasks and Suggestions will now rely on DB auto-increment, so their counters are less critical.
+	// However, the metadata table itself might still be used for other purposes or for initial client-side ID setup if DB auto-increment is not used.
+	// For now, keep the metadata counter logic as is, but ensure tasks/suggestions don't use them for new inserts.
 	try {
 		// Fetch current counters from metadata table
 		const { data: counterData } = await supabase
@@ -94,6 +111,10 @@ window.loadData = async function () {
 
 		// Initialize/update client-side counters based on max of DB value and fetched max ID + 1
 		// This ensures client-side IDs don't conflict with existing DB IDs for tasks/suggestions.
+		// Note: For new inserts, we will *not* use these counters for tasks/suggestions,
+		// as Supabase will auto-generate IDs. These counters are now primarily for
+		// ensuring existing data's IDs are correctly handled if client-side IDs were
+		// used previously, or for other client-side ID needs not yet specified.
 		window.taskIdCounter = Math.max(
 			counterData?.[0]?.taskIdCounter || 1,
 			await fetchMaxId("tasks")
@@ -132,6 +153,10 @@ window.loadData = async function () {
 	await window.fetchSuggestionsInitial();
 	await window.fetchUserActivityInitial();
 	await window.fetchUserProfilesInitial();
+	// NEW: Fetch reward-related data
+	await window.fetchRewardsInitial();
+	await window.fetchUserRewardPurchasesInitial();
+	await window.fetchRewardSystemSettingsInitial();
 
 	// --- Real-time Listeners ---
 	// Set up real-time subscriptions for immediate UI updates on data changes.
@@ -307,13 +332,101 @@ window.loadData = async function () {
 		)
 		.subscribe();
 
+	// NEW: Rewards Listener
+	const rewardsChannel = supabase
+		.channel("rewards_channel")
+		.on(
+			"postgres_changes",
+			{ event: "*", schema: "public", table: "rewards" },
+			(payload) => {
+				console.log("Reward change received!", payload);
+				if (payload.eventType === "INSERT") {
+					window.rewards.push(payload.new);
+				} else if (payload.eventType === "UPDATE") {
+					const index = window.rewards.findIndex(
+						(r) => r.id === payload.old.id
+					);
+					if (index !== -1) window.rewards[index] = payload.new;
+				} else if (payload.eventType === "DELETE") {
+					window.rewards = window.rewards.filter(
+						(r) => r.id !== payload.old.id
+					);
+				}
+				window.rewards.sort((a, b) => a.title.localeCompare(b.title));
+				if (
+					window.activeTab === "shop" ||
+					window.currentUser === "admin"
+				) {
+					window.renderRewards();
+					if (window.currentUser === "admin") {
+						window.renderAdminRewardManagement();
+					}
+				}
+			}
+		)
+		.subscribe();
+
+	// NEW: User Reward Purchases Listener
+	const userRewardPurchasesChannel = supabase
+		.channel("user_reward_purchases_channel")
+		.on(
+			"postgres_changes",
+			{ event: "*", schema: "public", table: "userRewardPurchases" },
+			async (payload) => {
+				console.log("User reward purchase change received!", payload);
+				// Re-fetch to ensure joined data (`rewards(title, cost, type)`) is fresh
+				await window.fetchUserRewardPurchasesInitial();
+				if (
+					window.currentUser === "admin" ||
+					window.activeTab === "shop"
+				) {
+					window.renderUserRewardPurchases();
+					window.renderPendingAuthorizations(); // Update admin pending auths
+				}
+			}
+		)
+		.subscribe();
+
+	// NEW: Reward System Settings Listener
+	const rewardSystemSettingsChannel = supabase
+		.channel("reward_system_settings_channel")
+		.on(
+			"postgres_changes",
+			{ event: "*", schema: "public", table: "rewardSystemSettings" },
+			async (payload) => {
+				console.log("Reward system settings change received!", payload);
+				if (
+					payload.eventType === "UPDATE" ||
+					payload.eventType === "INSERT"
+				) {
+					window.rewardSystemSettings = payload.new;
+					window.checkForRewardLimitReset(); // Re-check for reset on update
+					if (
+						window.currentUser === "admin" &&
+						(window.activeTab === "dashboard" ||
+							window.activeTab === "adminSettings")
+					) {
+						window.renderDashboard();
+						window.renderAdminRewardSettings();
+					}
+				}
+			}
+		)
+		.subscribe();
+
 	// Store the channel objects for unsubscribing later (e.g., on logout)
 	window.unsubscribe = {
 		tasks: tasksChannel,
 		suggestions: suggestionsChannel,
 		activity: activityChannel,
 		userProfiles: userProfilesChannel,
+		rewards: rewardsChannel, // NEW
+		userRewardPurchases: userRewardPurchasesChannel, // NEW
+		rewardSystemSettings: rewardSystemSettingsChannel, // NEW
 	};
+
+	// Initial check for reward limit reset when data is loaded
+	window.checkForRewardLimitReset();
 };
 
 // Initial fetch functions (called once on load to populate data)
@@ -392,6 +505,105 @@ window.fetchUserProfilesInitial = async function () {
 		// The updateUserPoints function with no operation will just refresh the UI from window.users
 		window.updateUserPoints();
 		window.renderUserProgress(); // Re-render user progress on dashboard
+	}
+};
+
+// NEW: Function to fetch all rewards
+window.fetchRewardsInitial = async function () {
+	const { data, error } = await supabase.from("rewards").select("*");
+	if (error) {
+		console.error("Error fetching rewards:", error);
+		window.showError("Failed to load rewards.");
+	} else {
+		window.rewards = data.sort((a, b) => a.title.localeCompare(b.title)); // Sort alphabetically
+		if (window.activeTab === "shop" || window.currentUser === "admin") {
+			// Re-render if in shop/admin view
+			window.renderRewards();
+			if (window.currentUser === "admin") {
+				window.renderAdminRewardManagement();
+			}
+		}
+	}
+};
+
+// NEW: Function to fetch user's reward purchases
+window.fetchUserRewardPurchasesInitial = async function () {
+	// Fetch only current user's purchases if not admin, otherwise all purchases for admin
+	const query =
+		window.currentUser === "admin"
+			? supabase
+					.from("userRewardPurchases")
+					.select("*, rewards(title, cost, type)")
+					.order("purchaseDate", { ascending: false })
+			: supabase
+					.from("userRewardPurchases")
+					.select("*, rewards(title, cost, type)")
+					.eq("userId", window.currentUser)
+					.order("purchaseDate", { ascending: false }); // Added order by
+	const { data, error } = await query;
+
+	if (error) {
+		console.error("Error fetching user reward purchases:", error);
+		window.showError("Failed to load purchase history.");
+	} else {
+		window.userRewardPurchases = data;
+		if (window.activeTab === "shop" || window.currentUser === "admin") {
+			window.renderUserRewardPurchases(); // A new UI function to render purchases
+			if (window.currentUser === "admin") {
+				window.renderPendingAuthorizations();
+			}
+		}
+	}
+};
+
+// NEW: Function to fetch reward system settings
+window.fetchRewardSystemSettingsInitial = async function () {
+	const { data, error } = await supabase
+		.from("rewardSystemSettings")
+		.select("*")
+		.eq("id", "system_settings")
+		.limit(1);
+	if (error) {
+		console.error("Error fetching reward system settings:", error);
+		// Initialize with default settings if not found or error
+		window.rewardSystemSettings = {
+			id: "system_settings",
+			instantPurchaseLimit: 500,
+			currentInstantSpend: 0,
+			resetDurationDays: 30,
+			lastResetAt: new Date().toISOString(),
+			requiresAuthorizationAfterLimit: true,
+		};
+		// Attempt to upsert default settings
+		await supabase
+			.from("rewardSystemSettings")
+			.upsert([window.rewardSystemSettings], { onConflict: "id" });
+	} else if (data && data.length > 0) {
+		window.rewardSystemSettings = data[0];
+		// Check for automatic reset if applicable
+		window.checkForRewardLimitReset(); // A new function to implement
+	} else {
+		// If no settings exist, create with defaults
+		window.rewardSystemSettings = {
+			id: "system_settings",
+			instantPurchaseLimit: 500,
+			currentInstantSpend: 0,
+			resetDurationDays: 30,
+			lastResetAt: new Date().toISOString(),
+			requiresAuthorizationAfterLimit: true,
+		};
+		await supabase
+			.from("rewardSystemSettings")
+			.upsert([window.rewardSystemSettings], { onConflict: "id" }); // Corrected onConflict
+	}
+	// Re-render dashboard or admin settings if active
+	if (
+		window.currentUser === "admin" &&
+		(window.activeTab === "dashboard" ||
+			window.activeTab === "adminSettings")
+	) {
+		window.renderDashboard(); // Update dashboard with new stats
+		window.renderAdminRewardSettings(); // A new UI function for admin settings
 	}
 };
 
@@ -527,7 +739,7 @@ window.createTask = async function () {
 			parseInt(document.getElementById("penaltyPoints").value) || 5;
 
 		task = {
-			id: window.taskIdCounter++, // Client-generated ID
+			// id: window.taskIdCounter++, // REMOVED: Let Supabase handle ID generation
 			text: taskText,
 			status: "demerit_issued",
 			type: "demerit",
@@ -552,7 +764,7 @@ window.createTask = async function () {
 			appealText: null,
 		};
 
-		// Immediately apply penalty points for demerit tasks
+		// Immediately apply penalty points
 		await window.updateUserPoints("user", penaltyPoints, "subtract");
 	} else {
 		const points =
@@ -573,7 +785,7 @@ window.createTask = async function () {
 		}
 
 		task = {
-			id: window.taskIdCounter++, // Client-generated ID
+			// id: window.taskIdCounter++, // REMOVED: Let Supabase handle ID generation
 			text: taskText,
 			status: "todo",
 			type: "regular",
@@ -595,23 +807,24 @@ window.createTask = async function () {
 
 	// Insert the new task into the 'tasks' table
 	const { error: taskError } = await supabase.from("tasks").insert([task]);
-	// Update the taskIdCounter in the 'metadata' table
-	const { error: metadataError } = await supabase
-		.from("metadata")
-		.upsert(
-			{ id: "counters", taskIdCounter: window.taskIdCounter },
-			{ onConflict: "id" }
-		);
+	// REMOVED: Update the taskIdCounter in the 'metadata' table (Supabase handles ID)
+	// const { error: metadataError } = await supabase
+	// 	.from("metadata")
+	// 	.upsert(
+	// 		{ id: "counters", taskIdCounter: window.taskIdCounter },
+	// 		{ onConflict: "id" }
+	// 	);
 
-	if (taskError || metadataError) {
-		console.error("Error creating task:", taskError || metadataError);
+	if (taskError /* || metadataError */) {
+		// Adjusted error check
+		console.error("Error creating task:", taskError /* || metadataError */);
 		window.showNotification(
 			"Failed to create task. Please try again.",
 			"error"
 		);
-		window.taskIdCounter--; // Rollback counter if there was an error
+		// window.taskIdCounter--; // No longer need to rollback client-side counter
 	} else {
-		// Reset form fields after successful creation
+		// Reset form
 		taskInput.value = "";
 		const taskPointsEl = document.getElementById("taskPoints");
 		const penaltyPointsEl = document.getElementById("penaltyPoints");
@@ -1081,7 +1294,7 @@ window.submitTaskSuggestion = async function () {
 	}
 
 	const suggestion = {
-		id: window.suggestionIdCounter++, // Client-generated ID
+		// id: window.suggestionIdCounter++, // REMOVED: Let Supabase handle ID generation
 		description: description.value.trim(),
 		justification: justification ? justification.value.trim() : "",
 		suggestedPoints: points ? parseInt(points.value) || 10 : 10,
@@ -1097,21 +1310,22 @@ window.submitTaskSuggestion = async function () {
 	const { error: suggestionError } = await supabase
 		.from("suggestions")
 		.insert([suggestion]);
-	// Update suggestionIdCounter in 'metadata' table
-	const { error: metadataError } = await supabase
-		.from("metadata")
-		.upsert(
-			{ id: "counters", suggestionIdCounter: window.suggestionIdCounter },
-			{ onConflict: "id" }
-		);
+	// REMOVED: Update suggestionIdCounter in 'metadata' table (Supabase handles ID)
+	// const { error: metadataError } = await supabase
+	// 	.from("metadata")
+	// 	.upsert(
+	// 		{ id: "counters", suggestionIdCounter: window.suggestionIdCounter },
+	// 		{ onConflict: "id" }
+	// 	);
 
-	if (suggestionError || metadataError) {
+	if (suggestionError /* || metadataError */) {
+		// Adjusted error check
 		console.error(
 			"Error submitting suggestion:",
-			suggestionError || metadataError
+			suggestionError /* || metadataError */
 		);
 		window.showNotification("Failed to submit suggestion", "error");
-		window.suggestionIdCounter--; // Rollback counter if error
+		// window.suggestionIdCounter--; // No longer need to rollback client-side counter
 	} else {
 		const form = document.getElementById("suggestForm");
 		if (form) form.reset(); // Reset the suggestion form
@@ -1130,7 +1344,7 @@ window.approveSuggestion = async function (suggestionId) {
 
 	// Create a new task based on the approved suggestion
 	const task = {
-		id: window.taskIdCounter++, // Client-generated ID for the new task
+		// id: window.taskIdCounter++, // REMOVED: Let Supabase handle ID generation
 		text: suggestion.description,
 		status: "todo",
 		type: "regular",
@@ -1162,18 +1376,19 @@ window.approveSuggestion = async function (suggestionId) {
 		.from("suggestions")
 		.update(suggestionUpdates)
 		.eq("id", suggestionId);
-	// Update taskIdCounter in metadata
-	const { error: metadataError } = await supabase
-		.from("metadata")
-		.upsert(
-			{ id: "counters", taskIdCounter: window.taskIdCounter },
-			{ onConflict: "id" }
-		);
+	// REMOVED: Update taskIdCounter in metadata (Supabase handles ID)
+	// const { error: metadataError } = await supabase
+	// 	.from("metadata")
+	// 	.upsert(
+	// 		{ id: "counters", taskIdCounter: window.taskIdCounter },
+	// 		{ onConflict: "id" }
+	// 	);
 
-	if (taskError || suggestionError || metadataError) {
+	if (taskError || suggestionError /* || metadataError */) {
+		// Adjusted error check
 		console.error(
 			"Error approving suggestion:",
-			taskError || suggestionError || metadataError
+			taskError || suggestionError /* || metadataError */
 		);
 		window.showNotification("Failed to approve suggestion", "error");
 	} else {
@@ -1205,7 +1420,7 @@ window.createRepeatingTask = async function (originalTask) {
 
 	// Create a new task object for the next repetition
 	const newTask = {
-		id: window.taskIdCounter++, // Client-generated ID
+		// id: window.taskIdCounter++, // REMOVED: Let Supabase handle ID generation
 		text: originalTask.text,
 		status: "todo",
 		type: "regular",
@@ -1226,20 +1441,21 @@ window.createRepeatingTask = async function (originalTask) {
 
 	// Insert the new repeating task into the 'tasks' table
 	const { error: taskError } = await supabase.from("tasks").insert([newTask]);
-	// Update taskIdCounter in 'metadata' table
-	const { error: metadataError } = await supabase
-		.from("metadata")
-		.upsert(
-			{ id: "counters", taskIdCounter: window.taskIdCounter },
-			{ onConflict: "id" }
-		);
+	// REMOVED: Update taskIdCounter in 'metadata' table (Supabase handles ID)
+	// const { error: metadataError } = await supabase
+	// 	.from("metadata")
+	// 	.upsert(
+	// 		{ id: "counters", taskIdCounter: window.taskIdCounter },
+	// 		{ onConflict: "id" }
+	// 	);
 
-	if (taskError || metadataError) {
+	if (taskError /* || metadataError */) {
+		// Adjusted error check
 		console.error(
 			"Error creating repeating task:",
-			taskError || metadataError
+			taskError /* || metadataError */
 		);
-		window.taskIdCounter--; // Rollback counter if error
+		// window.taskIdCounter--; // No longer need to rollback client-side counter
 	}
 };
 
@@ -1386,4 +1602,399 @@ window.checkForOverdueTasks = function () {
 			}
 		}
 	});
+};
+
+// NEW: Function to add a new reward (Admin only)
+window.addReward = async function (title, description, cost, type) {
+	if (!window.hasPermission("manage_rewards")) {
+		// New permission
+		window.showNotification(
+			"You do not have permission to add rewards",
+			"error"
+		);
+		return;
+	}
+	const { error } = await supabase.from("rewards").insert([
+		{
+			title,
+			description,
+			cost,
+			type,
+			createdAt: new Date().toISOString(),
+			createdBy: window.currentUser,
+			lastUpdatedAt: new Date().toISOString(),
+		},
+	]);
+	if (error) {
+		console.error("Error adding reward:", error);
+		window.showNotification("Failed to add reward.", "error");
+	} else {
+		window.showNotification("Reward added successfully!");
+		await window.fetchRewardsInitial();
+	}
+};
+
+// NEW: Function to update an existing reward (Admin only)
+window.updateReward = async function (
+	rewardId,
+	title,
+	description,
+	cost,
+	type
+) {
+	if (!window.hasPermission("manage_rewards")) {
+		window.showNotification(
+			"You do not have permission to update rewards",
+			"error"
+		);
+		return;
+	}
+	const { error } = await supabase
+		.from("rewards")
+		.update({
+			title,
+			description,
+			cost,
+			type,
+			lastUpdatedAt: new Date().toISOString(),
+		})
+		.eq("id", rewardId);
+	if (error) {
+		console.error("Error updating reward:", error);
+		window.showNotification("Failed to update reward.", "error");
+	} else {
+		window.showNotification("Reward updated successfully!");
+		await window.fetchRewardsInitial();
+	}
+};
+
+// NEW: Function to delete a reward (Admin only)
+window.deleteReward = async function (rewardId) {
+	if (!window.hasPermission("manage_rewards")) {
+		window.showNotification(
+			"You do not have permission to delete rewards",
+			"error"
+		);
+		return;
+	}
+	window.showConfirmModal(
+		"Are you sure you want to delete this reward?",
+		async (confirmed) => {
+			if (!confirmed) return;
+			const { error } = await supabase
+				.from("rewards")
+				.delete()
+				.eq("id", rewardId);
+			if (error) {
+				console.error("Error deleting reward:", error);
+				window.showNotification("Failed to delete reward.", "error");
+			} else {
+				window.showNotification("Reward deleted successfully!");
+				await window.fetchRewardsInitial();
+			}
+		}
+	);
+};
+
+// NEW: Function to purchase a reward (User only)
+window.purchaseReward = async function (rewardId) {
+	const reward = window.rewards.find((r) => r.id === rewardId);
+	if (!reward) {
+		window.showNotification("Reward not found.", "error");
+		return;
+	}
+
+	const currentUserData = window.users[window.currentUser];
+	if (currentUserData.points < reward.cost) {
+		window.showNotification(
+			"Not enough points to purchase this reward.",
+			"error"
+		);
+		return;
+	}
+
+	let purchaseStatus = "purchased"; // Default for instant
+	let requiresAuth = false;
+
+	// Check instant purchase limit if applicable
+	const settings = window.rewardSystemSettings;
+	const currentSpend = settings.currentInstantSpend || 0;
+	const limit = settings.instantPurchaseLimit || 0;
+	const requiresAuthAfterLimit =
+		settings.requiresAuthorizationAfterLimit !== false; // Default to true
+
+	if (reward.type === "instant") {
+		if (requiresAuthAfterLimit && currentSpend + reward.cost > limit) {
+			requiresAuth = true;
+			purchaseStatus = "pending_authorization";
+		}
+	} else {
+		// reward.type === 'authorized'
+		requiresAuth = true;
+		purchaseStatus = "pending_authorization";
+	}
+
+	// Confirm purchase
+	window.showConfirmModal(
+		`Are you sure you want to purchase "${reward.title}" for ${reward.cost} points?` +
+			(requiresAuth
+				? " This purchase will require admin authorization."
+				: ""),
+		async (confirmed) => {
+			if (!confirmed) return;
+
+			// Update user's points
+			await window.updateUserPoints(
+				window.currentUser,
+				reward.cost,
+				"subtract"
+			);
+
+			// Record the purchase
+			const { error: purchaseError } = await supabase
+				.from("userRewardPurchases")
+				.insert([
+					{
+						userId: window.currentUser,
+						rewardId: reward.id,
+						purchaseCost: reward.cost,
+						purchaseDate: new Date().toISOString(),
+						status: purchaseStatus,
+					},
+				]);
+
+			if (purchaseError) {
+				console.error(
+					"Error recording reward purchase:",
+					purchaseError
+				);
+				window.showNotification(
+					"Failed to record purchase. Points were refunded.",
+					"error"
+				);
+				// Refund points if purchase record fails
+				await window.updateUserPoints(
+					window.currentUser,
+					reward.cost,
+					"add"
+				);
+				return;
+			}
+
+			// Update instant spend if it was an instant purchase attempt and didn't require auth
+			if (reward.type === "instant" && !requiresAuth) {
+				const { error: settingsError } = await supabase
+					.from("rewardSystemSettings")
+					.upsert(
+						{
+							id: "system_settings",
+							currentInstantSpend: currentSpend + reward.cost,
+						},
+						{ onConflict: "id", ignoreDuplicates: false } // Only update currentInstantSpend
+					);
+				if (settingsError) {
+					console.error(
+						"Error updating instant spend:",
+						settingsError
+					);
+					window.showNotification(
+						"Error updating instant spend limit.",
+						"warning"
+					);
+				} else {
+					window.rewardSystemSettings.currentInstantSpend =
+						currentSpend + reward.cost;
+				}
+			}
+
+			window.showNotification(
+				`"${reward.title}" ${
+					requiresAuth
+						? "purchase submitted for authorization."
+						: "purchased instantly!"
+				}`
+			);
+			await window.fetchRewardsInitial(); // Refresh rewards list
+			await window.fetchUserRewardPurchasesInitial(); // Refresh purchase history
+			await window.fetchRewardSystemSettingsInitial(); // Refresh settings
+		}
+	);
+};
+
+// NEW: Function to authorize a pending reward purchase (Admin only)
+window.authorizePurchase = async function (purchaseId) {
+	if (!window.hasPermission("manage_rewards")) {
+		window.showNotification(
+			"You do not have permission to authorize purchases",
+			"error"
+		);
+		return;
+	}
+	const purchase = window.userRewardPurchases.find(
+		(p) => p.id === purchaseId
+	);
+	if (!purchase) return;
+
+	const { error } = await supabase
+		.from("userRewardPurchases")
+		.update({
+			status: "authorized",
+			authorizedBy: window.currentUser,
+			authorizedAt: new Date().toISOString(),
+		})
+		.eq("id", purchaseId);
+
+	if (error) {
+		console.error("Error authorizing purchase:", error);
+		window.showNotification("Failed to authorize purchase.", "error");
+	} else {
+		window.showNotification(
+			`Purchase of "${purchase.rewards.title}" authorized for ${purchase.userId}.`
+		);
+		await window.fetchUserRewardPurchasesInitial(); // Refresh purchase history
+	}
+};
+
+// NEW: Function to deny a pending reward purchase (Admin only)
+window.denyPurchase = function (purchaseId) {
+	if (!window.hasPermission("manage_rewards")) {
+		window.showNotification(
+			"You do not have permission to deny purchases",
+			"error"
+		);
+		return;
+	}
+	const purchase = window.userRewardPurchases.find(
+		(p) => p.id === purchaseId
+	);
+	if (!purchase) return;
+
+	window.showConfirmModal(
+		`Are you sure you want to deny the purchase of "${purchase.rewards.title}" by ${purchase.userId}? Points will be refunded.`,
+		async (confirmed) => {
+			if (!confirmed) return;
+
+			const { error } = await supabase
+				.from("userRewardPurchases")
+				.update({
+					status: "denied",
+					authorizedBy: window.currentUser,
+					authorizedAt: new Date().toISOString(),
+					notes: "Denied by admin.", // Could add input for reason
+				})
+				.eq("id", purchaseId);
+
+			if (error) {
+				console.error("Error denying purchase:", error);
+				window.showNotification("Failed to deny purchase.", "error");
+			} else {
+				// Refund points
+				await window.updateUserPoints(
+					purchase.userId,
+					purchase.purchaseCost,
+					"add"
+				);
+				window.showNotification(
+					`Purchase denied. ${purchase.purchaseCost} points refunded to ${purchase.userId}.`,
+					"warning"
+				);
+				await window.fetchUserRewardPurchasesInitial(); // Refresh purchase history
+			}
+		}
+	);
+};
+
+// NEW: Function to reset instant purchase limit (Admin only)
+window.resetInstantPurchaseLimit = async function () {
+	if (!window.hasPermission("manage_rewards")) {
+		window.showNotification(
+			"You do not have permission to reset the limit",
+			"error"
+		);
+		return;
+	}
+	window.showConfirmModal(
+		"Are you sure you want to reset the instant purchase spend to 0?",
+		async (confirmed) => {
+			if (!confirmed) return;
+			const { error } = await supabase
+				.from("rewardSystemSettings")
+				.upsert(
+					{
+						id: "system_settings",
+						currentInstantSpend: 0,
+						lastResetAt: new Date().toISOString(),
+					},
+					{ onConflict: "id" }
+				);
+			if (error) {
+				console.error("Error resetting instant spend:", error);
+				window.showNotification(
+					"Failed to reset instant purchase limit.",
+					"error"
+				);
+			} else {
+				window.showNotification(
+					"Instant purchase limit reset successfully!"
+				);
+				window.rewardSystemSettings.currentInstantSpend = 0;
+				window.rewardSystemSettings.lastResetAt =
+					new Date().toISOString();
+				await window.fetchRewardSystemSettingsInitial(); // Re-fetch to update local state
+			}
+		}
+	);
+};
+
+// NEW: Function to update reward system settings (Admin only)
+window.updateRewardSystemSettings = async function (
+	limit,
+	resetDuration,
+	requiresAuthAfterLimit
+) {
+	if (!window.hasPermission("manage_rewards")) {
+		window.showNotification(
+			"You do not have permission to update reward settings",
+			"error"
+		);
+		return;
+	}
+	const { error } = await supabase.from("rewardSystemSettings").upsert(
+		{
+			id: "system_settings",
+			instantPurchaseLimit: limit,
+			resetDurationDays: resetDuration,
+			requiresAuthorizationAfterLimit: requiresAuthAfterLimit,
+			lastUpdatedAt: new Date().toISOString(), // Track last update
+		},
+		{ onConflict: "id" }
+	);
+	if (error) {
+		console.error("Error updating reward settings:", error);
+		window.showNotification("Failed to update reward settings.", "error");
+	} else {
+		window.showNotification("Reward settings updated successfully!");
+		await window.fetchRewardSystemSettingsInitial(); // Re-fetch to update local state and UI
+	}
+};
+
+// NEW: Check for automatic reward limit reset
+window.checkForRewardLimitReset = async function () {
+	const settings = window.rewardSystemSettings;
+	if (settings.resetDurationDays > 0 && settings.lastResetAt) {
+		const lastResetDate = new Date(settings.lastResetAt);
+		const nextResetDate = new Date(lastResetDate);
+		nextResetDate.setDate(
+			lastResetDate.getDate() + settings.resetDurationDays
+		);
+
+		if (new Date() >= nextResetDate) {
+			console.log("Automatic reward limit reset triggered.");
+			await window.resetInstantPurchaseLimit(); // Use the existing reset function
+			window.showNotification(
+				"Instant purchase limit automatically reset!",
+				"info"
+			);
+		}
+	}
 };

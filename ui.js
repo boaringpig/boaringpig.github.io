@@ -6,6 +6,10 @@
 // window.tasks = [];
 // window.suggestions = [];
 // window.users = {}; // For display names
+// NEW:
+// window.rewards = [];
+// window.userRewardPurchases = [];
+// window.rewardSystemSettings = {};
 
 // Global functions from main.js or database.js (accessed via window)
 // window.hasPermission(permission) { ... }
@@ -26,6 +30,16 @@
 // window.updateUserPoints() { ... }
 // window.logUserActivity(action) { ... }
 // window.checkForOverdueTasks() { ... }
+// NEW:
+// window.addReward(title, description, cost, type) { ... }
+// window.updateReward(rewardId, title, description, cost, type) { ... }
+// window.deleteReward(rewardId) { ... }
+// window.purchaseReward(rewardId) { ... }
+// window.authorizePurchase(purchaseId) { ... }
+// window.denyPurchase(purchaseId) { ... }
+// window.resetInstantPurchaseLimit() { ... }
+// window.updateRewardSystemSettings(limit, resetDuration, requiresAuthAfterLimit) { ... }
+// window.checkForRewardLimitReset() { ... }
 
 // Global object to manage refresh button cooldown states
 window.refreshButtonStates = {};
@@ -189,7 +203,7 @@ window.showNotification = function (message, type) {
 };
 
 /**
- * Switches between different application tabs (Tasks, Calendar, Dashboard, Suggest Task).
+ * Switches between different application tabs (Tasks, Calendar, Dashboard, Suggest Task, Rewards Shop, Admin Settings).
  * @param {string} tabName - The name of the tab to switch to (e.g., 'tasks', 'calendar').
  */
 window.switchTab = function (tabName) {
@@ -236,6 +250,28 @@ window.switchTab = function (tabName) {
 	} else if (tabName === "suggest") {
 		window.renderMySuggestions();
 	}
+	// NEW: Trigger specific rendering functions for new tabs (Rewards)
+	else if (tabName === "shop") {
+		window.renderRewards();
+		window.renderUserRewardPurchases();
+	} else if (tabName === "adminSettings") {
+		// Only render admin reward management if the admin has the permission
+		if (
+			window.currentUser === "admin" &&
+			window.hasPermission("manage_rewards")
+		) {
+			window.renderAdminRewardManagement();
+			window.renderPendingAuthorizations();
+			window.renderAdminRewardSettings();
+		} else {
+			// If admin doesn't have permission, ensure these sections are hidden
+			const adminRewardManagement = document.getElementById(
+				"adminRewardManagement"
+			);
+			if (adminRewardManagement)
+				adminRewardManagement.style.display = "none";
+		}
+	}
 };
 
 /**
@@ -251,151 +287,173 @@ window.showLogin = function () {
  * Displays the main application interface.
  * Also handles initial data loading and sets up periodic checks.
  */
-window.showMainApp = function () {
+window.showMainApp = async function () {
+	// Made async
 	console.log("showMainApp called");
-	return new Promise(function (resolve, reject) {
-		try {
-			document.getElementById("loginScreen").style.display = "none";
-			document.getElementById("mainApp").style.display = "block";
+	document.getElementById("loginScreen").style.display = "none";
+	document.getElementById("mainApp").style.display = "block";
 
-			var user = window.users[window.currentUser];
-			document.getElementById("userBadge").textContent = user.displayName;
+	var user = window.users[window.currentUser];
+	document.getElementById("userBadge").textContent = user.displayName;
 
-			var userPointsBadge = document.getElementById("userPoints");
-			if (userPointsBadge) {
-				if (user.role === "admin") {
-					userPointsBadge.style.display = "none"; // Hide points for admin
-				} else {
-					userPointsBadge.style.display = "inline-block"; // Show points for user
-				}
-			}
-
-			// Log user login activity
-			window.logUserActivity("login");
-
-			// Adjust visibility of dashboard and suggest tabs based on user role
-			var dashboardTab = document.getElementById("dashboardTab");
-			var suggestTab = document.getElementById("suggestTab");
-			if (user.role === "admin") {
-				if (dashboardTab) dashboardTab.style.display = "block";
-				if (suggestTab) suggestTab.style.display = "none";
-				document.getElementById("adminView").style.display = "block";
-				document.getElementById("userView").style.display = "none";
-			} else {
-				if (dashboardTab) dashboardTab.style.display = "none";
-				if (suggestTab) suggestTab.style.display = "block";
-				document.getElementById("adminView").style.display = "none";
-				document.getElementById("userView").style.display = "block";
-			}
-
-			// Event listeners for task creation form elements
-			var isRepeatingCheckbox = document.getElementById("isRepeating");
-			if (isRepeatingCheckbox) {
-				isRepeatingCheckbox.addEventListener("change", function () {
-					var repeatOptions =
-						document.getElementById("repeatOptions");
-					if (repeatOptions) {
-						repeatOptions.style.display = this.checked
-							? "block"
-							: "none";
-					}
-				});
-			}
-
-			var isDemeritCheckbox = document.getElementById("isDemerit");
-			if (isDemeritCheckbox) {
-				isDemeritCheckbox.addEventListener("change", function () {
-					var demeritWarning =
-						document.getElementById("demeritWarning");
-					if (demeritWarning) {
-						demeritWarning.style.display = this.checked
-							? "block"
-							: "none";
-					}
-					var taskPointsEl = document.getElementById("taskPoints");
-					var penaltyPointsEl =
-						document.getElementById("penaltyPoints");
-					var taskDueDateEl = document.getElementById("taskDueDate");
-
-					// Toggle visibility of fields based on demerit status
-					if (this.checked) {
-						if (taskPointsEl)
-							taskPointsEl.closest(".form-group").style.display =
-								"none";
-						if (taskDueDateEl)
-							taskDueDateEl.closest(".form-group").style.display =
-								"none";
-						if (penaltyPointsEl)
-							penaltyPointsEl.closest(
-								".form-group"
-							).style.display = "block";
-					} else {
-						if (taskPointsEl)
-							taskPointsEl.closest(".form-group").style.display =
-								"block";
-						if (taskDueDateEl)
-							taskDueDateEl.closest(".form-group").style.display =
-								"block";
-						if (penaltyPointsEl)
-							penaltyPointsEl.closest(
-								".form-group"
-							).style.display = "block";
-					}
-				});
-			}
-
-			// Load initial data from Supabase and set up real-time listeners
-			if (window.loadData && typeof window.loadData === "function") {
-				window
-					.loadData()
-					.then(function () {
-						// Update user points display AFTER data is loaded
-						if (
-							window.updateUserPoints &&
-							typeof window.updateUserPoints === "function"
-						) {
-							window.updateUserPoints();
-						}
-						// Render the calendar
-						window.renderCalendar();
-
-						// Setup refresh buttons
-						window.setupRefreshButton("refreshDataBtnUser", 30); // User refresh button
-						window.setupRefreshButton("refreshDataBtnAdmin", 30); // Admin refresh button
-
-						// Clear any existing overdue check interval and start a new one
-						if (window.overdueCheckIntervalId) {
-							clearInterval(window.overdueCheckIntervalId);
-						}
-						if (
-							window.checkForOverdueTasks &&
-							window.OVERDUE_CHECK_INTERVAL
-						) {
-							window.overdueCheckIntervalId = setInterval(
-								window.checkForOverdueTasks,
-								window.OVERDUE_CHECK_INTERVAL
-							);
-						}
-
-						resolve();
-					})
-					.catch(function (error) {
-						console.error("Error loading data:", error);
-						reject(error);
-					});
-			} else {
-				// If loadData is not available, just continue
-				console.warn(
-					"loadData function not available, skipping data loading"
-				);
-				window.renderCalendar();
-				resolve();
-			}
-		} catch (error) {
-			console.error("Error in showMainApp:", error);
-			reject(error);
+	var userPointsBadge = document.getElementById("userPoints");
+	if (userPointsBadge) {
+		if (user.role === "admin") {
+			userPointsBadge.style.display = "none"; // Hide points for admin
+		} else {
+			userPointsBadge.style.display = "inline-block"; // Show points for user
 		}
-	});
+	}
+
+	// Log user login activity
+	window.logUserActivity("login");
+
+	// Adjust visibility of dashboard, suggest, shop, and admin settings tabs based on user role
+	var dashboardTab = document.getElementById("dashboardTab");
+	var suggestTab = document.getElementById("suggestTab");
+	var shopTab = document.getElementById("shopTab"); // NEW
+	var adminSettingsTab = document.getElementById("adminSettingsTab"); // NEW
+
+	if (window.currentUser === "admin") {
+		if (dashboardTab) dashboardTab.style.display = "block";
+		if (suggestTab) suggestTab.style.display = "none";
+		if (shopTab) shopTab.style.display = "none"; // Admin doesn't need to see shop tab
+		// Only show admin settings tab if admin has 'manage_rewards' permission
+		if (adminSettingsTab)
+			adminSettingsTab.style.display = window.hasPermission(
+				"manage_rewards"
+			)
+				? "block"
+				: "none";
+
+		document.getElementById("adminView").style.display = "block";
+		document.getElementById("userView").style.display = "none";
+		// NEW: Show/Hide admin reward management section based on permission
+		const adminRewardManagement = document.getElementById(
+			"adminRewardManagement"
+		);
+		if (adminRewardManagement)
+			adminRewardManagement.style.display = window.hasPermission(
+				"manage_rewards"
+			)
+				? "block"
+				: "none";
+	} else {
+		// Regular user
+		if (dashboardTab) dashboardTab.style.display = "none";
+		if (suggestTab) suggestTab.style.display = "block";
+		if (shopTab) shopTab.style.display = "block"; // Show shop tab for user
+		if (adminSettingsTab) adminSettingsTab.style.display = "none"; // Hide admin settings tab
+
+		document.getElementById("adminView").style.display = "none";
+		document.getElementById("userView").style.display = "block";
+		// NEW: Hide admin reward management section for regular users
+		const adminRewardManagement = document.getElementById(
+			"adminRewardManagement"
+		);
+		if (adminRewardManagement) adminRewardManagement.style.display = "none";
+	}
+
+	// Event listeners for task creation form elements
+	var isRepeatingCheckbox = document.getElementById("isRepeating");
+	if (isRepeatingCheckbox) {
+		isRepeatingCheckbox.addEventListener("change", function () {
+			var repeatOptions = document.getElementById("repeatOptions");
+			if (repeatOptions) {
+				repeatOptions.style.display = this.checked ? "block" : "none";
+			}
+		});
+	}
+
+	var isDemeritCheckbox = document.getElementById("isDemerit");
+	if (isDemeritCheckbox) {
+		isDemeritCheckbox.addEventListener("change", function () {
+			var demeritWarning = document.getElementById("demeritWarning");
+			if (demeritWarning) {
+				demeritWarning.style.display = this.checked ? "block" : "none";
+			}
+			var taskPointsEl = document.getElementById("taskPoints");
+			var penaltyPointsEl = document.getElementById("penaltyPoints");
+			var taskDueDateEl = document.getElementById("taskDueDate");
+
+			// Toggle visibility of fields based on demerit status
+			if (this.checked) {
+				if (taskPointsEl)
+					taskPointsEl.closest(".form-group").style.display = "none";
+				if (taskDueDateEl)
+					taskDueDateEl.closest(".form-group").style.display = "none";
+				if (penaltyPointsEl)
+					penaltyPointsEl.closest(".form-group").style.display =
+						"block";
+			} else {
+				if (taskPointsEl)
+					taskPointsEl.closest(".form-group").style.display = "block";
+				if (taskDueDateEl)
+					taskDueDateEl.closest(".form-group").style.display =
+						"block";
+				if (penaltyPointsEl)
+					penaltyPointsEl.closest(".form-group").style.display =
+						"block";
+			}
+		});
+	}
+
+	// Load initial data from Supabase and set up real-time listeners
+	if (window.loadData && typeof window.loadData === "function") {
+		await window
+			.loadData()
+			.then(function () {
+				// Update user points display AFTER data is loaded
+				if (
+					window.updateUserPoints &&
+					typeof window.updateUserPoints === "function"
+				) {
+					window.updateUserPoints();
+				}
+				// Render the calendar
+				window.renderCalendar();
+
+				// Setup refresh buttons
+				window.setupRefreshButton("refreshDataBtnUser", 30); // User refresh button
+				window.setupRefreshButton("refreshDataBtnAdmin", 30); // Admin refresh button
+
+				// Clear any existing overdue check interval and start a new one
+				if (window.overdueCheckIntervalId) {
+					clearInterval(window.overdueCheckIntervalId);
+				}
+				if (
+					window.checkForOverdueTasks &&
+					window.OVERDUE_CHECK_INTERVAL
+				) {
+					window.overdueCheckIntervalId = setInterval(
+						window.checkForOverdueTasks,
+						window.OVERDUE_CHECK_INTERVAL
+					);
+				}
+
+				// NEW: Initial rendering for reward sections based on current user/tab and permissions
+				if (
+					window.currentUser === "admin" &&
+					window.hasPermission("manage_rewards")
+				) {
+					window.renderAdminRewardManagement();
+					window.renderPendingAuthorizations();
+					window.renderAdminRewardSettings();
+				} else if (window.currentUser !== "admin") {
+					// Regular user
+					window.renderRewards();
+					window.renderUserRewardPurchases();
+				}
+			})
+			.catch(function (error) {
+				console.error("Error loading data:", error);
+				window.showNotification("Failed to load data.", "error");
+			});
+	} else {
+		// If loadData is not available, just continue
+		console.warn("loadData function not available, skipping data loading");
+		window.renderCalendar();
+	}
 };
 
 /**
@@ -1586,3 +1644,426 @@ window.showAppealModal = function (task, onSubmit) {
 
 // Make fullCalendarInstance globally available for other files
 window.fullCalendarInstance = fullCalendarInstance;
+
+// NEW: Rendering functions for rewards
+window.renderRewards = function () {
+	const rewardsListContainer = document.getElementById("rewardsList");
+	if (!rewardsListContainer) return;
+
+	if (window.rewards.length === 0) {
+		rewardsListContainer.innerHTML =
+			'<div class="empty-state">No rewards available.</div>';
+	} else {
+		rewardsListContainer.innerHTML = window.rewards
+			.map(
+				(reward) => `
+            <div class="reward-card">
+                <h3>${window.escapeHtml(reward.title)}</h3>
+                <p class="description">${window.escapeHtml(
+					reward.description
+				)}</p>
+                <div class="cost-badge">${reward.cost} Points</div>
+                <div class="type-badge type-${reward.type}">${
+					reward.type === "instant"
+						? "Instant Purchase"
+						: "Authorization Required"
+				}</div>
+                ${
+					window.currentUser !== "admin"
+						? `
+                    <button class="purchase-btn" onclick="window.purchaseReward(${reward.id})">Purchase</button>
+                `
+						: ""
+				}
+            </div>
+        `
+			)
+			.join("");
+	}
+};
+
+window.renderUserRewardPurchases = function () {
+	const myPurchasesContainer = document.getElementById("myRewardPurchases");
+	const pendingAuthorizationsContainer = document.getElementById(
+		"pendingAuthorizations"
+	); // For admin view
+
+	if (myPurchasesContainer) {
+		// Filter purchases relevant to the current user (all for admin, assigned for user)
+		const relevantPurchases = window.userRewardPurchases.filter(
+			(p) =>
+				window.currentUser === "admin" ||
+				p.userId === window.currentUser
+		);
+
+		const userPurchases = relevantPurchases.filter(
+			(p) => p.userId === window.currentUser
+		);
+
+		if (userPurchases.length === 0) {
+			myPurchasesContainer.innerHTML =
+				'<div class="empty-state">No purchases yet.</div>';
+		} else {
+			myPurchasesContainer.innerHTML = userPurchases
+				.map(
+					(purchase) => `
+                <div class="purchase-item status-${purchase.status}">
+                    <div class="purchase-content">
+                        <h4>${window.escapeHtml(
+							purchase.rewards.title || "Unknown Reward"
+						)}</h4>
+                        <p>Cost: ${purchase.purchaseCost} Points</p>
+                        <p>Status: <span class="status-badge ${window.getPurchaseStatusClass(
+							purchase.status
+						)}">${purchase.status.replace(/_/g, " ")}</span></p>
+                        <p>Date: ${window.formatDate(purchase.purchaseDate)}</p>
+                        ${
+							purchase.status === "denied" && purchase.notes
+								? `<p class="notes">Reason: ${window.escapeHtml(
+										purchase.notes
+								  )}</p>`
+								: ""
+						}
+                    </div>
+                </div>
+            `
+				)
+				.join("");
+		}
+	}
+
+	// Render pending authorizations for admin
+	if (window.currentUser === "admin" && pendingAuthorizationsContainer) {
+		const pendingAuths = window.userRewardPurchases.filter(
+			(p) => p.status === "pending_authorization"
+		);
+		if (pendingAuths.length === 0) {
+			pendingAuthorizationsContainer.innerHTML =
+				'<div class="empty-state">No pending authorizations.</div>';
+		} else {
+			pendingAuthorizationsContainer.innerHTML = pendingAuths
+				.map(
+					(purchase) => `
+                <div class="purchase-item pending-approval">
+                    <div class="purchase-content">
+                        <h4>${window.escapeHtml(
+							purchase.rewards.title || "Unknown Reward"
+						)} by ${
+						window.users[purchase.userId]?.displayName ||
+						purchase.userId
+					}</h4>
+                        <p>Cost: ${purchase.purchaseCost} Points</p>
+                        <p>Requested: ${window.formatDate(
+							purchase.purchaseDate
+						)}</p>
+                    </div>
+                    <div class="purchase-actions">
+                        <button class="action-btn approve-btn" onclick="window.authorizePurchase(${
+							purchase.id
+						})">Authorize</button>
+                        <button class="action-btn reject-btn" onclick="window.denyPurchase(${
+							purchase.id
+						})">Deny</button>
+                    </div>
+                </div>
+            `
+				)
+				.join("");
+		}
+	}
+};
+
+// Admin view for managing rewards
+window.renderAdminRewardManagement = function () {
+	const currentRewardsList = document.getElementById("currentRewardsList");
+	const rewardCreationForm = document.querySelector(".reward-creation-form"); // Select the form itself
+	if (!currentRewardsList || !rewardCreationForm) return;
+
+	// Hide the reward management sections if admin doesn't have permission
+	if (!window.hasPermission("manage_rewards")) {
+		rewardCreationForm.style.display = "none";
+		currentRewardsList.closest(".task-section").style.display = "none"; // Hide the whole section
+		return;
+	} else {
+		rewardCreationForm.style.display = "block";
+		currentRewardsList.closest(".task-section").style.display = "block";
+	}
+
+	if (window.rewards.length === 0) {
+		currentRewardsList.innerHTML =
+			'<div class="empty-state">No rewards defined.</div>';
+	} else {
+		currentRewardsList.innerHTML = window.rewards
+			.map(
+				(reward) => `
+            <div class="task-item">
+                <div class="task-content">
+                    <div>
+                        <span class="status-badge type-${reward.type}">${
+					reward.type === "instant" ? "Instant" : "Authorized"
+				}</span>
+                        <span class="task-text">${window.escapeHtml(
+							reward.title
+						)}</span>
+                        <span class="points-badge-small">${
+							reward.cost
+						} pts</span>
+                        <div class="task-meta">
+                            ${window.escapeHtml(reward.description)}
+                            <br>Created: ${window.formatDate(
+								reward.createdAt
+							)} by ${
+					window.users[reward.createdBy]?.displayName ||
+					reward.createdBy
+				}
+                        </div>
+                    </div>
+                    <div class="task-actions">
+                        <button class="action-btn check-btn" onclick="window.editReward(${
+							reward.id
+						})">Edit</button>
+                        <button class="action-btn delete-btn" onclick="window.deleteReward(${
+							reward.id
+						})">Delete</button>
+                    </div>
+                </div>
+            </div>
+        `
+			)
+			.join("");
+	}
+};
+
+// Admin view for reward system settings
+window.renderAdminRewardSettings = function () {
+	const instantLimitInput = document.getElementById("instantLimitInput");
+	const resetDurationInput = document.getElementById("resetDurationInput");
+	const requiresAuthAfterLimitCheckbox = document.getElementById(
+		"requiresAuthAfterLimit"
+	);
+	const currentInstantSpendDisplay = document.getElementById(
+		"currentInstantSpendDisplay"
+	);
+	const instantLimitDisplay = document.getElementById("instantLimitDisplay");
+	const lastResetDateDisplay = document.getElementById(
+		"lastResetDateDisplay"
+	);
+	const settingsSection = document.querySelector(
+		"#adminRewardManagement .task-section:nth-child(3)"
+	); // Select the settings section
+
+	if (!settingsSection) return;
+
+	// Hide the settings section if admin doesn't have permission
+	if (!window.hasPermission("manage_rewards")) {
+		settingsSection.style.display = "none";
+		return;
+	} else {
+		settingsSection.style.display = "block";
+	}
+
+	const settings = window.rewardSystemSettings;
+
+	if (instantLimitInput)
+		instantLimitInput.value = settings.instantPurchaseLimit || 0;
+	if (resetDurationInput)
+		resetDurationInput.value = settings.resetDurationDays || 0;
+	if (requiresAuthAfterLimitCheckbox)
+		requiresAuthAfterLimitCheckbox.checked =
+			settings.requiresAuthorizationAfterLimit !== false;
+
+	if (currentInstantSpendDisplay)
+		currentInstantSpendDisplay.textContent =
+			settings.currentInstantSpend || 0;
+	if (instantLimitDisplay)
+		instantLimitDisplay.textContent = settings.instantPurchaseLimit || 0;
+	if (lastResetDateDisplay)
+		lastResetDateDisplay.textContent = settings.lastResetAt
+			? window.formatDate(settings.lastResetAt)
+			: "N/A";
+};
+
+// Update reward settings from UI inputs
+window.updateRewardSettingsUI = function () {
+	// Add permission check here as well, although buttons are hidden
+	if (!window.hasPermission("manage_rewards")) {
+		window.showNotification(
+			"You do not have permission to update reward settings",
+			"error"
+		);
+		return;
+	}
+
+	const instantLimit = parseInt(
+		document.getElementById("instantLimitInput").value
+	);
+	const resetDuration = parseInt(
+		document.getElementById("resetDurationInput").value
+	);
+	const requiresAuth = document.getElementById(
+		"requiresAuthAfterLimit"
+	).checked;
+
+	if (isNaN(instantLimit) || instantLimit < 0) {
+		window.showNotification(
+			"Instant purchase limit must be a non-negative number.",
+			"error"
+		);
+		return;
+	}
+	if (isNaN(resetDuration) || resetDuration < 0) {
+		window.showNotification(
+			"Reset duration must be a non-negative number of days.",
+			"error"
+		);
+		return;
+	}
+
+	window.updateRewardSystemSettings(
+		instantLimit,
+		resetDuration,
+		requiresAuth
+	);
+};
+
+// Populate form for editing a reward
+window.editReward = function (rewardId) {
+	// Add permission check
+	if (!window.hasPermission("manage_rewards")) {
+		window.showNotification(
+			"You do not have permission to edit rewards",
+			"error"
+		);
+		return;
+	}
+
+	const reward = window.rewards.find((r) => r.id === rewardId);
+	if (!reward) return;
+
+	document.getElementById("rewardIdToEdit").value = reward.id;
+	document.getElementById("rewardTitle").value = reward.title;
+	document.getElementById("rewardDescription").value = reward.description;
+	document.getElementById("rewardCost").value = reward.cost;
+	document.getElementById("rewardType").value = reward.type;
+
+	document.getElementById("saveRewardBtn").textContent = "Update Reward";
+	document.getElementById("cancelEditRewardBtn").style.display =
+		"inline-block";
+};
+
+// Cancel editing a reward
+window.cancelEditReward = function () {
+	document.getElementById("rewardIdToEdit").value = "";
+	document.getElementById("rewardTitle").value = "";
+	document.getElementById("rewardDescription").value = "";
+	document.getElementById("rewardCost").value = "10";
+	document.getElementById("rewardType").value = "instant";
+
+	document.getElementById("saveRewardBtn").textContent = "Add Reward";
+	document.getElementById("cancelEditRewardBtn").style.display = "none";
+};
+
+// Save reward (add or update)
+window.saveReward = function () {
+	// Add permission check
+	if (!window.hasPermission("manage_rewards")) {
+		window.showNotification(
+			"You do not have permission to save rewards",
+			"error"
+		);
+		return;
+	}
+
+	const rewardId = document.getElementById("rewardIdToEdit").value;
+	const title = document.getElementById("rewardTitle").value.trim();
+	const description = document
+		.getElementById("rewardDescription")
+		.value.trim();
+	const cost = parseInt(document.getElementById("rewardCost").value);
+	const type = document.getElementById("rewardType").value;
+
+	if (!title || isNaN(cost) || cost < 1) {
+		window.showNotification(
+			"Please enter a valid title and cost for the reward.",
+			"error"
+		);
+		return;
+	}
+
+	if (rewardId) {
+		window.updateReward(parseInt(rewardId), title, description, cost, type);
+	} else {
+		window.addReward(title, description, cost, type);
+	}
+	window.cancelEditReward(); // Clear form after save/add
+};
+
+// Function to get specific status class for reward purchase (for .purchase-item)
+window.getPurchaseStatusClass = function (status) {
+	switch (status) {
+		case "purchased":
+		case "authorized":
+			return "status-completed";
+		case "pending_authorization":
+			return "status-pending";
+		case "denied":
+			return "status-overdue";
+		default:
+			return "status-pending";
+	}
+};
+
+window.renderPendingAuthorizations = function () {
+	const pendingAuthorizationsContainer = document.getElementById(
+		"pendingAuthorizations"
+	);
+	if (!pendingAuthorizationsContainer) return;
+
+	// Hide pending authorizations section if admin doesn't have permission
+	const pendingAuthsSection = document.querySelector(
+		"#adminRewardManagement .task-section:nth-child(4)"
+	); // Assuming this is the 4th section
+	if (!window.hasPermission("manage_rewards")) {
+		if (pendingAuthsSection) pendingAuthsSection.style.display = "none";
+		return;
+	} else {
+		if (pendingAuthsSection) pendingAuthsSection.style.display = "block";
+	}
+
+	const pendingAuths = window.userRewardPurchases.filter(
+		(p) => p.status === "pending_authorization"
+	);
+	if (pendingAuths.length === 0) {
+		pendingAuthorizationsContainer.innerHTML =
+			'<div class="empty-state">No pending authorizations.</div>';
+	} else {
+		pendingAuthorizationsContainer.innerHTML = pendingAuths
+			.map(
+				(purchase) => `
+            <div class="purchase-item pending-approval">
+                <div class="purchase-content">
+                    <h4>${window.escapeHtml(
+						purchase.rewards.title || "Unknown Reward"
+					)} by ${
+					window.users[purchase.userId]?.displayName ||
+					purchase.userId
+				}</h4>
+                    <p>Cost: ${purchase.purchaseCost} Points</p>
+                    <p>Requested: ${window.formatDate(
+						purchase.purchaseDate
+					)}</p>
+                </div>
+                <div class="purchase-actions">
+                    <button class="action-btn approve-btn" onclick="window.authorizePurchase(${
+						purchase.id
+					})">Authorize</button>
+                    <button class="action-btn reject-btn" onclick="window.denyPurchase(${
+						purchase.id
+					})">Deny</button>
+                    </div>
+            </div>
+        `
+			)
+			.join("");
+	}
+};

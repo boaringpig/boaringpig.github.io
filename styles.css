@@ -1292,3 +1292,191 @@ body {
 	gap: 15px;
 	margin-top: 20px;
 }
+
+/* NEW: Rewards Shop */
+.shop-container {
+	padding: 20px;
+}
+
+.rewards-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+	gap: 20px;
+	margin-top: 20px;
+	margin-bottom: 40px;
+}
+
+.reward-card {
+	background: var(--card-bg);
+	border: 2px solid var(--border-color-light);
+	border-radius: 15px;
+	padding: 20px;
+	text-align: center;
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+	transition: transform 0.3s ease, box-shadow 0.3s ease;
+	position: relative;
+	overflow: hidden;
+}
+
+.reward-card:hover {
+	transform: translateY(-5px);
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.reward-card h3 {
+	font-size: 1.5em;
+	color: var(--text-color-dark);
+	margin-bottom: 10px;
+}
+
+.reward-card .description {
+	color: var(--text-color-medium);
+	font-size: 0.9em;
+	min-height: 40px; /* Ensure consistent height */
+	margin-bottom: 15px;
+}
+
+.reward-card .cost-badge {
+	display: inline-block;
+	background: linear-gradient(
+		45deg,
+		var(--accent-color-start),
+		var(--accent-color-end)
+	);
+	color: white;
+	padding: 8px 15px;
+	border-radius: 20px;
+	font-weight: 600;
+	margin-bottom: 15px;
+}
+
+.reward-card .type-badge {
+	font-size: 0.8em;
+	padding: 5px 10px;
+	border-radius: 15px;
+	font-weight: 500;
+	margin-top: 10px;
+	display: inline-block;
+}
+
+.reward-card .type-instant {
+	background: var(--status-completed-bg);
+	color: var(--status-completed-text);
+}
+
+.reward-card .type-authorized {
+	background: var(--status-pending-bg);
+	color: var(--status-pending-text);
+}
+
+.reward-card .purchase-btn {
+	background: linear-gradient(
+		45deg,
+		var(--primary-color-start),
+		var(--primary-color-end)
+	);
+	color: white;
+	border: none;
+	padding: 10px 20px;
+	border-radius: 10px;
+	cursor: pointer;
+	font-weight: 600;
+	margin-top: 15px;
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reward-card .purchase-btn:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 5px 15px rgba(139, 92, 246, 0.2);
+}
+
+/* My Purchases */
+.my-purchases-section,
+#adminRewardManagement .task-section:nth-child(2), /* Current Rewards */
+#adminRewardManagement .task-section:nth-child(4) /* Pending Authorizations */ {
+	margin-top: 40px;
+	padding-top: 20px;
+	border-top: 2px solid var(--border-color-light);
+}
+
+.my-purchases-section h3,
+#adminRewardManagement h2 {
+	color: var(--text-color-dark);
+	margin-bottom: 20px;
+}
+
+.purchase-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.purchase-item {
+	background: var(--card-bg);
+	border: 2px solid var(--border-color-light);
+	border-radius: 12px;
+	padding: 15px 20px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	color: var(--text-color-light);
+}
+
+.purchase-item.status-pending_authorization {
+	border-color: var(--status-pending-text);
+}
+.purchase-item.status-authorized {
+	border-color: var(--status-completed-text);
+}
+.purchase-item.status-denied {
+	border-color: var(--status-overdue-text);
+}
+
+.purchase-item h4 {
+	font-size: 1.1em;
+	margin-bottom: 5px;
+}
+
+.purchase-item p {
+	font-size: 0.9em;
+	color: var(--text-color-medium);
+}
+
+.purchase-item .status-badge {
+	margin-left: 10px;
+}
+
+.purchase-actions {
+	display: flex;
+	gap: 10px;
+}
+
+/* Admin Reward Creation Form */
+.reward-creation-form .form-row {
+	margin-bottom: 20px;
+}
+.reward-creation-form .form-input,
+.reward-creation-form textarea {
+	margin-bottom: 15px; /* Adjust spacing */
+}
+.reward-creation-form .add-btn {
+	width: auto;
+	padding: 10px 25px;
+	display: inline-block;
+	margin-right: 10px;
+}
+.reward-creation-form .delete-btn {
+	/* for cancel edit */
+	width: auto;
+	padding: 10px 25px;
+	display: inline-block;
+}
+
+/* Admin Settings for Rewards */
+#adminRewardManagement .text-color-medium {
+	color: var(--text-color-medium);
+}
+#adminRewardManagement .task-creation-form p span {
+	font-weight: 600;
+	color: var(--text-color-light);
+}

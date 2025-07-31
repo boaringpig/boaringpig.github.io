@@ -13,11 +13,12 @@ const users = {
 			"approve_task",
 			"delete_task",
 			"view_all_tasks",
-			"manage_users",
+			"manage_users", // Keeping for now, but effectively unused
 			"view_dashboard",
 			"approve_suggestions",
+			"manage_rewards", // RE-ADDED: Admin can now manage rewards
 		],
-		points: 0,
+		points: 0, // Admin points should always remain 0 and not be tracked
 	},
 	user: {
 		password: "user123",
@@ -31,11 +32,16 @@ let currentUser = null;
 let tasks = [];
 let suggestions = [];
 let userActivityLog = [];
+// NEW: Global variables for reward data
+let rewards = [];
+let userRewardPurchases = [];
+let rewardSystemSettings = {};
 
-// Counters for client-side ID generation (for tables not using DB auto-increment)
-// taskIdCounter and suggestionIdCounter are managed in database.js after fetching max IDs.
-let taskIdCounter = 1;
-let suggestionIdCounter = 1;
+// Counters for client-side ID generation (REMOVED FOR TASKS/SUGGESTIONS - Supabase will handle)
+// taskIdCounter and suggestionIdCounter are no longer managed client-side for inserts.
+// They will still be initialized from metadata for consistency, but not incremented for new items.
+let taskIdCounter = 1; // Will be initialized from DB max ID, but not used for new inserts
+let suggestionIdCounter = 1; // Will be initialized from DB max ID, but not used for new inserts
 
 // Interval ID for overdue task checks
 let overdueCheckIntervalId = null;
@@ -53,8 +59,13 @@ window.currentUser = currentUser;
 window.tasks = tasks;
 window.suggestions = suggestions;
 window.userActivityLog = userActivityLog;
-window.taskIdCounter = taskIdCounter;
-window.suggestionIdCounter = suggestionIdCounter;
+// NEW: Expose reward data globally
+window.rewards = rewards;
+window.userRewardPurchases = userRewardPurchases;
+window.rewardSystemSettings = rewardSystemSettings;
+
+window.taskIdCounter = taskIdCounter; // Still exposed, but its role changes
+window.suggestionIdCounter = suggestionIdCounter; // Still exposed, but its role changes
 window.overdueCheckIntervalId = overdueCheckIntervalId;
 window.OVERDUE_CHECK_INTERVAL = OVERDUE_CHECK_INTERVAL; // Corrected typo here
 // window.currentDate = currentDate; // NO LONGER NEEDED
@@ -136,6 +147,17 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 		});
 	}
+
+	// NEW: Event listeners for reward management form buttons
+	const saveRewardBtn = document.getElementById("saveRewardBtn");
+	if (saveRewardBtn) {
+		saveRewardBtn.addEventListener("click", window.saveReward);
+	}
+	const cancelEditRewardBtn = document.getElementById("cancelEditRewardBtn");
+	if (cancelEditRewardBtn) {
+		cancelEditRewardBtn.addEventListener("click", window.cancelEditReward);
+	}
+	// The update settings button is directly onclick in HTML, so no need for listener here
 });
 
 // Global helper function for permission checks (defined in main.js, exposed globally)
