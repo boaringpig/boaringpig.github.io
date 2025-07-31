@@ -1306,6 +1306,10 @@ window.submitTaskSuggestion = async function () {
 		reviewedAt: null,
 	};
 
+	// --- DEBUGGING LOG START ---
+	console.log("Submitting new suggestion:", suggestion);
+	// --- DEBUGGING LOG END ---
+
 	// Insert new suggestion into 'suggestions' table
 	const { error: suggestionError } = await supabase
 		.from("suggestions")

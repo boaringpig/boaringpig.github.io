@@ -371,10 +371,19 @@ body {
 /* Tab Content */
 .tab-content {
 	display: none;
+	border: 2px solid transparent; /* Default transparent border */
 }
 
 .tab-content.active {
 	display: block;
+	border: 2px solid blue !important; /* Force a blue border for active tab content */
+	min-height: 100px !important; /* Ensure it has height */
+	background-color: rgba(
+		0,
+		0,
+		255,
+		0.05
+	) !important; /* Light blue background */
 }
 
 /* Task Creation Form */
@@ -411,6 +420,21 @@ body {
 	flex-direction: column;
 	gap: 12px;
 }
+
+/* --- DEBUGGING CSS START --- */
+/* Add a border and min-height to help visualize if the container is present */
+.my-suggestions,
+.task-list {
+	border: 2px dashed red !important; /* Force a red dashed border */
+	min-height: 50px !important; /* Ensure it has some height */
+	background-color: rgba(
+		255,
+		0,
+		0,
+		0.1
+	) !important; /* Light red background */
+}
+/* --- DEBUGGING CSS END --- */
 
 .task-item {
 	background: var(--card-bg);

@@ -207,6 +207,10 @@ window.showNotification = function (message, type) {
  * @param {string} tabName - The name of the tab to switch to (e.g., 'tasks', 'calendar').
  */
 window.switchTab = function (tabName) {
+	// --- DEBUGGING LOGS START ---
+	console.log(`switchTab called for: ${tabName}`);
+	// --- DEBUGGING LOGS END ---
+
 	// Remove 'active' class from all navigation tabs
 	var tabs = document.querySelectorAll(".nav-tab");
 	for (var i = 0; i < tabs.length; i++) {
@@ -227,13 +231,39 @@ window.switchTab = function (tabName) {
 	// Hide all tab content sections
 	var contents = document.querySelectorAll(".tab-content");
 	for (var i = 0; i < contents.length; i++) {
+		// --- DEBUGGING LOGS START ---
+		console.log(
+			`Removing 'active' from: ${
+				contents[i].id || "unnamed div"
+			} - Before: ${contents[i].classList}`
+		);
+		// --- DEBUGGING LOGS END ---
 		contents[i].classList.remove("active");
+		// --- DEBUGGING LOGS START ---
+		console.log(
+			`Removing 'active' from: ${
+				contents[i].id || "unnamed div"
+			} - After: ${contents[i].classList}`
+		);
+		// --- DEBUGGING LOGS END ---
 	}
 
 	// Show the target tab content section
 	var targetView = document.getElementById(tabName + "View");
 	if (targetView) {
+		// --- DEBUGGING LOGS START ---
+		console.log(
+			`Targeting view: ${targetView.id} - Before: ${targetView.classList}`
+		);
+		// --- DEBUGGING LOGS END ---
 		targetView.classList.add("active");
+		// --- DEBUGGING LOGS START ---
+		console.log(
+			`Targeting view: ${targetView.id} - After: ${targetView.classList}`
+		);
+		// --- DEBUGGING LOGS END ---
+	} else {
+		console.warn(`Element with ID '${tabName}View' not found.`);
 	}
 
 	// Update the global active tab state
@@ -917,9 +947,20 @@ window.renderSuggestions = function () {
  * Renders the list of suggestions made by the current user.
  */
 window.renderMySuggestions = function () {
+	// --- DEBUGGING LOGS START ---
+	console.log("renderMySuggestions called.");
+	console.log("Current User:", window.currentUser);
+	console.log("All Suggestions (window.suggestions):", window.suggestions);
+	// --- DEBUGGING LOGS END ---
+
 	var mySuggestions = window.suggestions.filter(function (s) {
 		return s.suggestedBy === window.currentUser;
 	});
+
+	// --- DEBUGGING LOGS START ---
+	console.log("Filtered Suggestions (mySuggestions):", mySuggestions);
+	// --- DEBUGGING LOGS END ---
+
 	var container = document.getElementById("mySuggestions");
 
 	if (!container) return;
@@ -928,7 +969,7 @@ window.renderMySuggestions = function () {
 		container.innerHTML =
 			'<div class="empty-state">No suggestions submitted yet</div>';
 	} else {
-		container.innerHTML = mySuggestions
+		const generatedHtml = mySuggestions
 			.map(function (suggestion) {
 				return (
 					'<div class="task-item">' +
@@ -969,6 +1010,17 @@ window.renderMySuggestions = function () {
 				);
 			})
 			.join("");
+
+		// --- DEBUGGING LOG START ---
+		console.log("Generated HTML for suggestions:", generatedHtml);
+		// --- DEBUGGING LOG END ---
+
+		try {
+			container.innerHTML = generatedHtml;
+		} catch (e) {
+			console.error("Error setting innerHTML for mySuggestions:", e);
+			window.showNotification("Failed to display suggestions.", "error");
+		}
 	}
 };
 
