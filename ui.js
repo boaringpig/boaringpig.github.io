@@ -1,6 +1,6 @@
 // ui.js
 // This file contains functions responsible for rendering the user interface.
-
+//
 // Global variables from main.js or database.js (accessed via window)
 // window.currentUser = null;
 // window.tasks = [];
