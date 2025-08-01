@@ -24,7 +24,7 @@ window.attemptAutoLogin = async function () {
  * @param {Event} e - The submit event.
  */
 window.handleLogin = async function (e) {
-	e.preventDefault(); // Prevent default form submission
+	e.preventDefault();
 	const usernameInput = document.getElementById("username");
 	const passwordInput = document.getElementById("password");
 	const rememberMeCheckbox = document.getElementById("rememberMe");
@@ -33,14 +33,13 @@ window.handleLogin = async function (e) {
 	const password = passwordInput.value;
 	const rememberMe = rememberMeCheckbox ? rememberMeCheckbox.checked : false;
 
-	// Authenticate against Supabase 'users' table
-	// IMPORTANT: In a real app, passwords should be hashed and compared securely!
+	// Only check Supabase - remove local password verification
 	const { data, error } = await window.supabase
 		.from("users")
 		.select("username, password, role")
 		.eq("username", username)
 		.eq("password", password)
-		.limit(1); // Use limit(1) for robustness instead of single()
+		.limit(1);
 
 	if (error || !data || data.length === 0) {
 		console.error("Supabase login error:", error);
@@ -48,24 +47,20 @@ window.handleLogin = async function (e) {
 		return;
 	}
 
-	const userData = data[0]; // Get the single user object
+	const userData = data[0];
 
-	// Double check against local users object for role/permissions (for this demo structure)
-	// This local check is for demo purposes to align with the predefined `users` object.
-	if (
-		window.users[userData.username] &&
-		window.users[userData.username].password === userData.password
-	) {
-		window.currentUser = userData.username; // Set the global current user
+	// Only check if user exists in local users object (for permissions/role)
+	if (window.users[userData.username]) {
+		window.currentUser = userData.username;
 		if (rememberMe) {
-			localStorage.setItem("rememberedUser", window.currentUser); // Remember user if checkbox is checked
+			localStorage.setItem("rememberedUser", window.currentUser);
 		} else {
-			localStorage.removeItem("rememberedUser"); // Clear remembered user
+			localStorage.removeItem("rememberedUser");
 		}
-		await window.showMainApp(); // Show the main application UI
-		window.hideError(); // Hide any previous error messages
+		await window.showMainApp();
+		window.hideError();
 	} else {
-		window.showError("Invalid username or password"); // Show error for invalid credentials
+		window.showError("User configuration not found");
 	}
 };
 

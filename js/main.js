@@ -4,10 +4,9 @@
 // Global application state variables
 // These are declared here, and other files access them via the window object.
 const users = {
-	admin: {
-		password: "admin123",
+	skeen: {
 		role: "admin",
-		displayName: "Administrator",
+		displayName: "Sir",
 		permissions: [
 			"create_task",
 			"approve_task",
@@ -20,10 +19,9 @@ const users = {
 		],
 		points: 0, // Admin points should always remain 0 and not be tracked
 	},
-	user: {
-		password: "user123",
+	schinken: {
 		role: "user",
-		displayName: "User",
+		displayName: "Pig",
 		permissions: ["check_task", "view_assigned_tasks", "suggest_task"],
 		points: 0,
 	},
