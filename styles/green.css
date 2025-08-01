@@ -1,0 +1,1120 @@
+/* styles/terminal-theme.css */
+/* Terminal-style theme with monospaced font and green/black colors */
+
+:root {
+	/* Terminal Color Palette */
+	--terminal-bg: #000000; /* Pure black background */
+	--terminal-bg-alt: #0a0a0a; /* Slightly lighter black */
+	--terminal-green: #00ff00; /* Bright terminal green */
+	--terminal-green-dark: #00cc00; /* Darker green */
+	--terminal-green-light: #66ff66; /* Light green */
+	--terminal-white: #ffffff; /* Pure white text */
+	--terminal-gray: #808080; /* Gray for secondary text */
+	--terminal-gray-dark: #404040; /* Dark gray */
+	--terminal-gray-light: #b0b0b0; /* Light gray */
+
+	/* Status Colors - keeping some variety for task highlighting */
+	--status-success: #00ff00; /* Green for success */
+	--status-warning: #ffff00; /* Yellow for warnings */
+	--status-error: #ff0000; /* Red for errors */
+	--status-info: #00ffff; /* Cyan for info */
+	--status-pending: #ff8800; /* Orange for pending */
+
+	/* Primary & Accent Colors */
+	--primary-color-start: var(--terminal-green);
+	--primary-color-end: var(--terminal-green-dark);
+	--accent-color-start: var(--status-warning);
+	--accent-color-end: #cccc00;
+
+	/* Backgrounds */
+	--body-bg-start: var(--terminal-bg);
+	--body-bg-end: var(--terminal-bg-alt);
+	--container-bg: rgba(10, 10, 10, 0.95);
+	--card-bg: var(--terminal-bg-alt);
+	--input-bg: var(--terminal-bg);
+	--border-color-light: var(--terminal-green);
+	--border-color-medium: var(--terminal-green-dark);
+	--hover-border-color: var(--terminal-green-light);
+	--focus-shadow-color: rgba(0, 255, 0, 0.3);
+
+	/* Text Colors */
+	--text-color-light: var(--terminal-white);
+	--text-color-medium: var(--terminal-gray-light);
+	--text-color-dark: var(--terminal-green-light);
+	--link-color: var(--terminal-green);
+
+	/* Status & Notification Colors */
+	--status-pending-bg: rgba(255, 136, 0, 0.2);
+	--status-pending-text: var(--status-pending);
+	--status-completed-bg: rgba(0, 255, 0, 0.2);
+	--status-completed-text: var(--status-success);
+	--status-overdue-bg: rgba(255, 0, 0, 0.2);
+	--status-overdue-text: var(--status-error);
+	--status-demerit-bg: rgba(255, 0, 0, 0.2);
+	--status-demerit-text: var(--status-error);
+	--status-demerit-accepted-bg: rgba(0, 255, 255, 0.2);
+	--status-demerit-accepted-text: var(--status-info);
+	--status-pending-appeal-bg: rgba(255, 136, 0, 0.2);
+	--status-pending-appeal-text: var(--status-pending);
+
+	--notification-success-border: var(--status-success);
+	--notification-error-border: var(--status-error);
+	--notification-warning-border: var(--status-warning);
+
+	/* Demo Credentials */
+	--demo-bg: var(--terminal-bg);
+	--demo-border: var(--terminal-green);
+	--demo-header-text: var(--terminal-green);
+	--demo-text: var(--terminal-white);
+	--demo-strong-text: var(--terminal-green-light);
+
+	/* FullCalendar specific styles */
+	--fc-button-bg: var(--terminal-green);
+	--fc-button-hover-bg: var(--terminal-green-dark);
+	--fc-button-text: var(--terminal-bg);
+	--fc-border-color: var(--terminal-green);
+	--fc-event-bg-normal: var(--status-success);
+	--fc-event-border-normal: var(--terminal-green-dark);
+	--fc-event-bg-repeating: var(--status-info);
+	--fc-event-border-repeating: #00cccc;
+	--fc-event-text: var(--terminal-bg);
+	--fc-today-bg: rgba(0, 255, 0, 0.1);
+	--fc-daygrid-event-dot: var(--terminal-green);
+
+	/* Modal */
+	--modal-overlay-bg: rgba(0, 0, 0, 0.9);
+	--modal-content-bg: var(--terminal-bg-alt);
+	--modal-text-color: var(--terminal-white);
+
+	/* Font Sizes */
+	--font-size-base: 14px;
+	--font-size-sm: 12px;
+	--font-size-md: 16px;
+	--font-size-lg: 1.2em; /* ~17px at 14px base */
+	--font-size-xl: 1.5em; /* ~21px at 14px base */
+	--font-size-2xl: 2em; /* ~28px at 14px base */
+	--font-size-3xl: 2.5em; /* ~35px at 14px base */
+	--font-size-4xl: 2.2em; /* ~30px at 14px base */
+
+	/* Font Weights */
+	--font-weight-light: 300;
+	--font-weight-normal: 400;
+	--font-weight-medium: 500;
+	--font-weight-semibold: 600;
+	--font-weight-bold: 700;
+	--font-weight-extrabold: 800;
+}
+
+/* Override font family globally */
+* {
+	font-family: "PT Mono", "Monaco", "Menlo", "Consolas", monospace !important;
+}
+
+/* Global font size standardization */
+body {
+	background: var(--terminal-bg);
+	color: var(--terminal-white);
+	min-height: 100vh;
+	padding: 20px;
+	font-size: var(--font-size-base); /* Base font size */
+	line-height: 1.4;
+}
+
+/* Standardized font sizes */
+h1 {
+	font-size: var(--font-size-3xl);
+}
+h2 {
+	font-size: var(--font-size-xl);
+}
+h3 {
+	font-size: var(--font-size-lg);
+}
+h4 {
+	font-size: var(--font-size-base);
+}
+
+p,
+div,
+span,
+label,
+input,
+textarea,
+select,
+button {
+	font-size: var(--font-size-base);
+}
+
+/* Small text elements */
+.task-meta,
+.status-badge,
+.points-badge-small,
+.stat-label,
+.connection-status,
+.demo-credentials p,
+.appeal-warning div,
+.modal-content p,
+.logout-btn,
+.points-badge-small,
+.fc-event,
+.stat-card h3 {
+	font-size: var(--font-size-sm);
+}
+
+/* Large display elements */
+.stat-number,
+.stat-card .stat-number {
+	font-size: var(--font-size-4xl); /* Consistent large numbers */
+}
+
+.login-title {
+	font-size: var(--font-size-2xl);
+	color: var(--terminal-green);
+	margin-bottom: 30px;
+}
+
+.header-left h1 {
+	color: var(--terminal-green);
+	font-size: var(--font-size-3xl);
+	margin-bottom: 5px;
+}
+
+.header-left p {
+	color: var(--terminal-gray-light);
+	font-size: var(--font-size-base);
+}
+
+/* Form elements consistent sizing */
+.form-input,
+.form-select {
+	width: 100%;
+	padding: 15px;
+	border: 1px solid var(--terminal-green);
+	border-radius: 0;
+	font-size: var(--font-size-base);
+	transition: all 0.3s ease;
+	background: var(--input-bg);
+	color: var(--terminal-white);
+}
+
+.form-label {
+	display: block;
+	margin-bottom: 8px;
+	font-weight: var(--font-weight-bold);
+	color: var(--terminal-white);
+	font-size: var(--font-size-base);
+}
+
+/* Button consistent sizing */
+.login-btn,
+.add-btn,
+.action-btn,
+.nav-tab,
+.purchase-btn,
+.user-badge,
+.points-badge,
+.purchase-item p,
+.purchase-item .notes,
+.reward-card .description,
+.reward-card .cost-badge {
+	font-size: var(--font-size-base);
+	font-weight: var(--font-weight-bold);
+}
+
+/* Badge consistent sizing */
+.user-badge,
+.points-badge {
+	font-size: var(--font-size-base);
+}
+
+.logout-btn {
+	font-size: var(--font-size-sm);
+	font-weight: var(--font-weight-bold);
+	padding: 8px 16px;
+}
+
+/* Task content sizing */
+.task-text {
+	font-size: var(--font-size-base);
+	color: var(--terminal-white);
+	font-weight: var(--font-weight-normal);
+}
+
+/* Section titles consistent */
+.section-title {
+	font-size: var(--font-size-xl);
+	color: var(--terminal-green);
+	font-weight: var(--font-weight-bold);
+}
+
+/* Calendar and FullCalendar text sizing */
+.fc .fc-toolbar-title {
+	font-size: var(--font-size-xl) !important;
+	font-weight: var(--font-weight-bold) !important;
+}
+
+.fc .fc-button-primary {
+	font-size: var(--font-size-base) !important;
+	font-weight: var(--font-weight-bold) !important;
+}
+
+.fc-daygrid-day-number {
+	font-size: var(--font-size-base) !important;
+}
+
+.fc-event {
+	font-size: var(--font-size-sm) !important;
+}
+
+/* Demo credentials consistent sizing */
+.demo-credentials h3 {
+	font-size: var(--font-size-base);
+}
+
+/* Reward card text sizing */
+.reward-card h3 {
+	font-size: var(--font-size-lg);
+	color: var(--terminal-green);
+	margin-bottom: 10px;
+}
+
+.reward-card .description {
+	font-size: var(--font-size-base);
+	color: var(--terminal-gray-light);
+	min-height: 40px;
+	margin-bottom: 15px;
+}
+
+.cost-badge {
+	font-size: var(--font-size-base);
+	background: var(--terminal-bg);
+	border: 2px solid var(--status-warning);
+	color: var(--status-warning);
+	padding: 8px 15px;
+	font-weight: var(--font-weight-bold);
+	margin-bottom: 15px;
+}
+
+.type-badge {
+	font-size: var(--font-size-sm);
+	padding: 5px 10px;
+	font-weight: var(--font-weight-bold);
+	margin-top: 10px;
+	display: inline-block;
+}
+
+/* Terminal-style container with green border */
+.container {
+	max-width: 1200px;
+	margin: 0 auto;
+	/*background: var(--container-bg);
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+	*/
+	padding: 24px;
+	/*box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);*/
+}
+
+/* Login Styles */
+.login-container {
+	max-width: 400px;
+	margin: 0 auto;
+	text-align: center;
+}
+
+.login-form {
+	background: var(--card-bg);
+	padding: 40px;
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+	box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+}
+
+.login-title {
+	font-size: var(--font-size-2xl);
+	color: var(--terminal-green);
+	margin-bottom: 30px;
+}
+
+/* Form Elements */
+.form-input,
+.form-select {
+	width: 100%;
+	padding: 15px;
+	border: 1px solid var(--terminal-green);
+	border-radius: 0;
+	font-size: var(--font-size-base);
+	transition: all 0.3s ease;
+	background: var(--input-bg);
+	color: var(--terminal-white);
+}
+
+.form-input:focus,
+.form-select:focus {
+	outline: none;
+	border-color: var(--terminal-green-light);
+	box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+/* Buttons - Terminal style with green outlines */
+.login-btn,
+.add-btn,
+.action-btn {
+	padding: 12px 24px;
+	background: var(--terminal-bg);
+	color: var(--terminal-green);
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+	cursor: pointer;
+	font-size: var(--font-size-base);
+	font-weight: var(--font-weight-bold);
+	transition: all 0.3s ease;
+}
+
+.login-btn:hover,
+.add-btn:hover,
+.action-btn:hover {
+	background: var(--terminal-green);
+	color: var(--terminal-bg);
+	box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+}
+
+/* Specific button colors */
+.check-btn {
+	border-color: var(--status-info);
+	color: var(--status-info);
+}
+
+.check-btn:hover {
+	background: var(--status-info);
+	color: var(--terminal-bg);
+}
+
+.approve-btn {
+	border-color: var(--status-success);
+	color: var(--status-success);
+}
+
+.approve-btn:hover {
+	background: var(--status-success);
+	color: var(--terminal-bg);
+}
+
+.delete-btn,
+.reject-btn {
+	border-color: var(--status-error);
+	color: var(--status-error);
+}
+
+.delete-btn:hover,
+.reject-btn:hover {
+	background: var(--status-error);
+	color: var(--terminal-bg);
+}
+
+.appeal-btn {
+	border-color: var(--status-warning);
+	color: var(--status-warning);
+}
+
+.appeal-btn:hover {
+	background: var(--status-warning);
+	color: var(--terminal-bg);
+}
+
+/* Header Styles */
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 30px;
+	padding-bottom: 20px;
+	border-bottom: 2px solid var(--terminal-green);
+}
+
+.header-left h1 {
+	color: var(--terminal-green);
+	font-size: var(--font-size-3xl);
+	margin-bottom: 5px;
+}
+
+.header-left p {
+	color: var(--terminal-gray-light);
+}
+
+/* User badges */
+.user-badge,
+.points-badge {
+	display: inline-block;
+	padding: 8px 16px;
+	border: 2px solid var(--terminal-green);
+	background: var(--terminal-bg);
+	color: var(--terminal-green);
+	font-weight: var(--font-weight-bold);
+	font-size: var(--font-size-base);
+	margin-bottom: 8px;
+}
+
+.logout-btn {
+	padding: 8px 16px;
+	background: var(--terminal-bg);
+	color: var(--status-error);
+	border: 2px solid var(--status-error);
+	border-radius: 0;
+	cursor: pointer;
+	font-size: var(--font-size-sm);
+	font-weight: var(--font-weight-bold);
+	transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+	background: var(--status-error);
+	color: var(--terminal-bg);
+}
+
+/* Navigation Tabs */
+.nav-tabs {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 30px;
+	border-bottom: 2px solid var(--terminal-green);
+}
+
+.nav-tab {
+	padding: 12px 24px;
+	background: var(--terminal-bg);
+	border: 2px solid var(--terminal-green);
+	border-bottom: none;
+	cursor: pointer;
+	font-weight: var(--font-weight-bold);
+	color: var(--terminal-green);
+	transition: all 0.3s ease;
+}
+
+.nav-tab:hover,
+.nav-tab.active {
+	background: var(--terminal-green);
+	color: var(--terminal-bg);
+}
+
+/* Task Items */
+.task-item {
+	background: var(--card-bg);
+	padding: 20px;
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+	margin-bottom: 15px;
+	transition: all 0.3s ease;
+	position: relative;
+}
+
+.task-item:hover {
+	box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+	border-color: var(--terminal-green-light);
+}
+
+.task-item::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	height: 100%;
+	width: 4px;
+	background: var(--terminal-green);
+}
+
+/* Task status specific styling */
+.task-item.completed {
+	border-color: var(--status-success);
+}
+
+.task-item.completed::before {
+	background: var(--status-success);
+}
+
+.task-item.pending-approval {
+	border-color: var(--status-pending);
+}
+
+.task-item.pending-approval::before {
+	background: var(--status-pending);
+}
+
+.task-item.demerit-task,
+.task-item.demerit-task-user {
+	border-color: var(--status-error);
+}
+
+.task-item.demerit-task::before,
+.task-item.demerit-task-user::before {
+	background: var(--status-error);
+}
+
+.task-item.appeal-pending {
+	border-color: var(--status-warning);
+}
+
+.task-item.appeal-pending::before {
+	background: var(--status-warning);
+}
+
+/* Status badges */
+.status-badge {
+	font-size: var(--font-size-sm);
+	padding: 4px 12px;
+	border: 1px solid;
+	background: var(--terminal-bg);
+	font-weight: var(--font-weight-bold);
+	margin-right: 10px;
+}
+
+.status-pending {
+	border-color: var(--status-pending);
+	color: var(--status-pending);
+}
+
+.status-completed {
+	border-color: var(--status-success);
+	color: var(--status-success);
+}
+
+.status-overdue {
+	border-color: var(--status-error);
+	color: var(--status-error);
+}
+
+.status-demerit {
+	border-color: var(--status-error);
+	color: var(--status-error);
+}
+
+.status-demerit-accepted {
+	border-color: var(--status-info);
+	color: var(--status-info);
+}
+
+.status-pending-appeal {
+	border-color: var(--status-warning);
+	color: var(--status-warning);
+}
+
+/* Points badges */
+.points-badge-small {
+	background: var(--terminal-bg);
+	border: 1px solid var(--terminal-green);
+	color: var(--terminal-green);
+	font-size: 11px;
+	padding: 2px 8px;
+	font-weight: var(--font-weight-bold);
+	margin-left: 8px;
+}
+
+/* Forms and cards */
+.task-creation-form,
+.suggest-form,
+.reward-creation-form {
+	background: var(--card-bg);
+	padding: 30px;
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+	margin-bottom: 30px;
+}
+
+/* Section headers */
+.section-title {
+	font-size: var(--font-size-xl);
+	color: var(--terminal-green);
+	font-weight: var(--font-weight-bold);
+}
+
+.section-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20px;
+	padding-bottom: 10px;
+	border-bottom: 2px solid var(--terminal-green);
+}
+
+/* Tab content hide/show functionality */
+.tab-content {
+	display: none;
+}
+
+.tab-content.active {
+	display: block;
+}
+
+/* Text styling */
+.task-text {
+	font-size: var(--font-size-base);
+	color: var(--terminal-white);
+	font-weight: var(--font-weight-normal);
+}
+
+.task-meta {
+	font-size: var(--font-size-sm);
+	color: var(--terminal-gray-light);
+	margin-top: 5px;
+}
+
+/* Calendar container */
+.calendar-container {
+	background: var(--card-bg);
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+	padding: 30px;
+}
+
+/* FullCalendar overrides */
+.fc {
+	background: var(--terminal-bg) !important;
+	color: var(--terminal-white) !important;
+}
+
+.fc .fc-button-primary {
+	background-color: var(--terminal-bg) !important;
+	border-color: var(--terminal-green) !important;
+	color: var(--terminal-green) !important;
+	font-weight: var(--font-weight-bold) !important;
+}
+
+.fc .fc-button-primary:hover {
+	background-color: var(--terminal-green) !important;
+	color: var(--terminal-bg) !important;
+}
+
+.fc .fc-toolbar-title {
+	color: var(--terminal-green) !important;
+	font-weight: var(--font-weight-bold) !important;
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th {
+	border-color: var(--terminal-green) !important;
+}
+
+.fc-col-header-cell {
+	background: var(--terminal-bg) !important;
+	color: var(--terminal-green) !important;
+	font-weight: var(--font-weight-bold) !important;
+}
+
+.fc-daygrid-day-number {
+	color: var(--terminal-white) !important;
+}
+
+/* Dashboard stats */
+.stat-card {
+	background: var(--card-bg);
+	padding: 25px;
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+	text-align: center;
+	transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+	box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+}
+
+.stat-card h3 {
+	color: var(--terminal-green);
+	font-size: var(--font-size-sm);
+	margin-bottom: 10px;
+	font-weight: var(--font-weight-bold);
+}
+
+.stat-card .stat-number {
+	font-size: var(--font-size-4xl);
+	font-weight: var(--font-weight-bold);
+	color: var(--terminal-white);
+}
+
+/* Rewards styling */
+.reward-card {
+	background: var(--card-bg);
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+	padding: 20px;
+	text-align: center;
+	transition: all 0.3s ease;
+}
+
+.reward-card:hover {
+	box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+	border-color: var(--terminal-green-light);
+}
+
+.reward-card h3 {
+	color: var(--terminal-green);
+}
+
+.cost-badge {
+	background: var(--terminal-bg);
+	border: 2px solid var(--status-warning);
+	color: var(--status-warning);
+	padding: 8px 15px;
+	font-weight: var(--font-weight-bold);
+	margin-bottom: 15px;
+}
+
+.purchase-btn {
+	background: var(--terminal-bg);
+	color: var(--terminal-green);
+	border: 2px solid var(--terminal-green);
+	padding: 10px 20px;
+	cursor: pointer;
+	font-weight: var(--font-weight-bold);
+	margin-top: 15px;
+	transition: all 0.3s ease;
+}
+
+.purchase-btn:hover {
+	background: var(--terminal-green);
+	color: var(--terminal-bg);
+}
+
+/* Notifications */
+.notification {
+	background: var(--card-bg);
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+	color: var(--terminal-white);
+	font-weight: var(--font-weight-bold);
+}
+
+.notification.error {
+	border-color: var(--status-error);
+}
+
+.notification.warning {
+	border-color: var(--status-warning);
+}
+
+/* Modal styling */
+.modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: var(--modal-overlay-bg);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 1000;
+}
+
+.modal-content {
+	background: var(--modal-content-bg);
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+	color: var(--terminal-white);
+	padding: 30px;
+	box-shadow: 0 0 25px rgba(0, 255, 0, 0.5);
+	max-width: 500px;
+	width: 90%;
+	text-align: left;
+	position: relative;
+}
+
+.modal-content h3 {
+	color: var(--terminal-green);
+	font-size: var(--font-size-lg);
+	font-weight: var(--font-weight-bold);
+	margin-bottom: 20px;
+	border-bottom: 1px solid var(--terminal-green);
+	padding-bottom: 10px;
+}
+
+.modal-content p {
+	font-size: var(--font-size-base);
+	color: var(--terminal-white);
+	margin-bottom: 15px;
+	line-height: 1.4;
+}
+
+.modal-content strong {
+	color: var(--terminal-green);
+	font-weight: var(--font-weight-bold);
+}
+
+/* Event Modal specific styling */
+#eventModal {
+	background: var(--modal-overlay-bg);
+}
+
+#eventModal > div {
+	background: var(--modal-content-bg);
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+	color: var(--terminal-white);
+	box-shadow: 0 0 25px rgba(0, 255, 0, 0.5);
+	animation: fadeInScale 0.3s ease-out forwards;
+}
+
+#closeModal {
+	position: absolute;
+	top: 10px;
+	right: 15px;
+	color: var(--terminal-green);
+	font-size: 24px;
+	font-weight: var(--font-weight-bold);
+	cursor: pointer;
+	background: none;
+	border: none;
+	transition: color 0.3s ease;
+}
+
+#closeModal:hover {
+	color: var(--terminal-green-light);
+	text-shadow: 0 0 5px var(--terminal-green);
+}
+
+/* Modal actions */
+.modal-actions {
+	display: flex;
+	justify-content: center;
+	gap: 15px;
+	margin-top: 25px;
+	padding-top: 20px;
+	border-top: 1px solid var(--terminal-green);
+}
+
+/* Appeal modal specific styling */
+.appeal-warning {
+	background: rgba(255, 136, 0, 0.1);
+	border: 2px solid var(--status-warning);
+	border-radius: 0;
+	padding: 15px;
+	margin: 15px 0;
+	color: var(--status-warning);
+	font-size: var(--font-size-base);
+	font-weight: var(--font-weight-bold);
+}
+
+.appeal-warning .warning-title {
+	font-weight: var(--font-weight-bold);
+	color: var(--status-warning);
+	margin-bottom: 8px;
+	font-size: var(--font-size-base);
+}
+
+.appeal-warning div {
+	font-size: var(--font-size-base);
+	margin-bottom: 5px;
+}
+
+/* Demo credentials styling */
+.demo-credentials {
+	background: var(--demo-bg);
+	border: 2px solid var(--demo-border);
+	border-radius: 0;
+	padding: 20px;
+	margin-top: 30px;
+	text-align: left;
+}
+
+.demo-credentials h3 {
+	color: var(--demo-header-text);
+	margin-bottom: 15px;
+	font-size: var(--font-size-base);
+}
+
+/* Purchase items consistent sizing */
+.purchase-item h4 {
+	font-size: var(--font-size-base);
+	margin-bottom: 5px;
+	color: var(--terminal-green);
+}
+
+.purchase-item p {
+	font-size: var(--font-size-base);
+	color: var(--terminal-white);
+	margin-bottom: 8px;
+}
+
+.purchase-item .notes {
+	font-size: var(--font-size-base);
+	color: var(--terminal-gray-light);
+	font-style: italic;
+}
+
+/* Dashboard and stats consistent sizing */
+.stat-card h3 {
+	color: var(--terminal-green);
+	font-size: var(--font-size-sm);
+	margin-bottom: 10px;
+	font-weight: var(--font-weight-bold);
+}
+
+/* Progress and activity items */
+.progress-item,
+.leaderboard-item {
+	font-size: var(--font-size-base);
+	color: var(--terminal-white);
+}
+
+.user-name {
+	font-size: var(--font-size-base);
+	font-weight: var(--font-weight-bold);
+	color: var(--terminal-white);
+}
+
+.user-stats {
+	font-size: var(--font-size-sm);
+	color: var(--terminal-gray-light);
+}
+
+/* Activity log items */
+.activity-item {
+	font-size: var(--font-size-base);
+	color: var(--terminal-white);
+	margin-bottom: 10px;
+	padding: 8px;
+	border-left: 2px solid var(--terminal-green);
+	padding-left: 15px;
+}
+
+.activity-action {
+	font-weight: var(--font-weight-bold);
+}
+
+.activity-time {
+	font-size: var(--font-size-sm);
+	color: var(--terminal-gray);
+	margin-top: 5px;
+}
+
+/* Notification consistent sizing */
+.notification {
+	background: var(--card-bg);
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+	color: var(--terminal-white);
+	font-weight: var(--font-weight-bold);
+	font-size: var(--font-size-base);
+	padding: 15px 20px;
+}
+
+/* Error and success messages */
+.error-message,
+.success-message {
+	font-size: var(--font-size-base);
+	font-weight: var(--font-weight-bold);
+}
+
+/* Empty state consistent sizing */
+.empty-state {
+	text-align: center;
+	padding: 40px;
+	color: var(--terminal-gray);
+	font-style: italic;
+	border: 1px dashed var(--terminal-green);
+	font-size: var(--font-size-base);
+}
+
+/* Progress bars */
+.progress-bar {
+	width: 100%;
+	height: 8px;
+	background: var(--terminal-bg);
+	border: 1px solid var(--terminal-green);
+	overflow: hidden;
+	margin-top: 8px;
+}
+
+.progress-fill {
+	height: 100%;
+	background: var(--terminal-green);
+	transition: width 0.3s ease;
+}
+
+/* Footer stats */
+.stats {
+	display: flex;
+	justify-content: center;
+	gap: 30px;
+	margin-top: 30px;
+	padding: 20px;
+	background: var(--terminal-bg);
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+}
+
+.stat-item {
+	text-align: center;
+}
+
+.stat-number {
+	font-size: var(--font-size-2xl);
+	font-weight: var(--font-weight-bold);
+	color: var(--terminal-white);
+	display: block;
+}
+
+.stat-label {
+	font-size: var(--font-size-base);
+	color: var(--terminal-green);
+	font-weight: var(--font-weight-bold);
+}
+
+/* Connection status */
+.connection-status {
+	font-size: var(--font-size-sm);
+	padding: 4px 8px;
+	border: 1px solid;
+	font-weight: var(--font-weight-bold);
+}
+
+.status-online {
+	border-color: var(--status-success);
+	color: var(--status-success);
+	background: var(--terminal-bg);
+}
+
+.status-offline {
+	border-color: var(--status-error);
+	color: var(--status-error);
+	background: var(--terminal-bg);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+	.container {
+		padding: 15px;
+		margin: 10px;
+	}
+
+	.header-left h1 {
+		font-size: var(--font-size-2xl);
+	}
+
+	.nav-tabs {
+		flex-wrap: wrap;
+	}
+
+	.stats {
+		flex-direction: column;
+		gap: 15px;
+	}
+}
+
+/* Scrollbar styling for webkit browsers */
+::-webkit-scrollbar {
+	width: 12px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--terminal-bg);
+	border: 1px solid var(--terminal-green);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--terminal-green);
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--terminal-green-light);
+}

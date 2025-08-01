@@ -6,8 +6,14 @@
 		<title>Advanced Task Manager</title>
 		<!-- Tailwind CSS CDN for utility classes -->
 		<script src="https://cdn.tailwindcss.com"></script>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=PT+Mono&display=swap"
+			rel="stylesheet"
+		/>
 		<!-- Custom Stylesheet -->
-		<link rel="stylesheet" href="styles/styles.css" />
+		<link rel="stylesheet" href="styles/green.css" />
 		<!-- FullCalendar CSS -->
 		<link
 			href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/main.min.css"
@@ -131,11 +137,20 @@
 						Suggest Task
 					</button>
 					<!-- NEW: Rewards Shop Tab -->
-					<button class="nav-tab" onclick="switchTab('shop')" id="shopTab">
+					<button
+						class="nav-tab"
+						onclick="switchTab('shop')"
+						id="shopTab"
+					>
 						Rewards Shop
 					</button>
 					<!-- NEW: Admin Settings Tab (optional, can be integrated into Dashboard) -->
-					<button class="nav-tab" onclick="switchTab('adminSettings')" id="adminSettingsTab" style="display: none;">
+					<button
+						class="nav-tab"
+						onclick="switchTab('adminSettings')"
+						id="adminSettingsTab"
+						style="display: none"
+					>
 						Admin Settings
 					</button>
 				</div>
@@ -372,7 +387,7 @@
 							<div
 								id="userProgressList"
 								class="progress-list"
-							></div
+							></div>
 						</div>
 					</div>
 				</div>
@@ -471,23 +486,58 @@
 						</div>
 						<div class="reward-creation-form task-creation-form">
 							<input type="hidden" id="rewardIdToEdit" />
-							<input type="text" id="rewardTitle" class="form-input" placeholder="Reward Title" maxlength="100" required />
-							<textarea id="rewardDescription" class="form-input" placeholder="Reward Description" rows="2"></textarea>
+							<input
+								type="text"
+								id="rewardTitle"
+								class="form-input"
+								placeholder="Reward Title"
+								maxlength="100"
+								required
+							/>
+							<textarea
+								id="rewardDescription"
+								class="form-input"
+								placeholder="Reward Description"
+								rows="2"
+							></textarea>
 							<div class="form-row">
 								<div class="form-group">
-									<label class="form-label">Cost (Points)</label>
-									<input type="number" id="rewardCost" class="form-input" value="10" min="1" max="1000" />
+									<label class="form-label"
+										>Cost (Points)</label
+									>
+									<input
+										type="number"
+										id="rewardCost"
+										class="form-input"
+										value="10"
+										min="1"
+										max="1000"
+									/>
 								</div>
 								<div class="form-group">
-									<label class="form-label">Purchase Type</label>
+									<label class="form-label"
+										>Purchase Type</label
+									>
 									<select id="rewardType" class="form-input">
-										<option value="instant">Instant Purchase</option>
-										<option value="authorized">Requires Authorization</option>
+										<option value="instant">
+											Instant Purchase
+										</option>
+										<option value="authorized">
+											Requires Authorization
+										</option>
 									</select>
 								</div>
 							</div>
-							<button class="add-btn" id="saveRewardBtn">Add Reward</button>
-							<button class="action-btn delete-btn" id="cancelEditRewardBtn" style="display: none;">Cancel Edit</button>
+							<button class="add-btn" id="saveRewardBtn">
+								Add Reward
+							</button>
+							<button
+								class="action-btn delete-btn"
+								id="cancelEditRewardBtn"
+								style="display: none"
+							>
+								Cancel Edit
+							</button>
 						</div>
 
 						<div class="task-section">
@@ -496,51 +546,102 @@
 							</div>
 							<div id="currentRewardsList" class="task-list">
 								<!-- All rewards for admin to manage -->
-								<div class="empty-state">No rewards defined.</div>
+								<div class="empty-state">
+									No rewards defined.
+								</div>
 							</div>
 						</div>
 
 						<!-- Reward System Settings -->
 						<div class="task-section">
 							<div class="section-header">
-								<h2 class="section-title">Reward System Settings</h2>
+								<h2 class="section-title">
+									Reward System Settings
+								</h2>
 							</div>
 							<div class="task-creation-form">
 								<div class="form-group">
-									<label class="form-label">Instant Purchase Limit (Total Points)</label>
-									<input type="number" id="instantLimitInput" class="form-input" value="500" min="0" />
+									<label class="form-label"
+										>Instant Purchase Limit (Total
+										Points)</label
+									>
+									<input
+										type="number"
+										id="instantLimitInput"
+										class="form-input"
+										value="500"
+										min="0"
+									/>
 								</div>
 								<div class="form-group">
-									<label class="form-label">Limit Reset Duration (Days, 0 for Manual Only)</label>
-									<input type="number" id="resetDurationInput" class="form-input" value="30" min="0" />
+									<label class="form-label"
+										>Limit Reset Duration (Days, 0 for
+										Manual Only)</label
+									>
+									<input
+										type="number"
+										id="resetDurationInput"
+										class="form-input"
+										value="30"
+										min="0"
+									/>
 								</div>
 								<div class="form-group">
 									<label class="form-label">
-										<input type="checkbox" id="requiresAuthAfterLimit" checked />
-										Require Authorization After Limit Reached
+										<input
+											type="checkbox"
+											id="requiresAuthAfterLimit"
+											checked
+										/>
+										Require Authorization After Limit
+										Reached
 									</label>
 								</div>
-								<p class="text-color-medium mb-3">Current Instant Spend: <span id="currentInstantSpendDisplay">0</span> / <span id="instantLimitDisplay">0</span> Points</p>
-								<p class="text-color-medium mb-3">Last Reset: <span id="lastResetDateDisplay">N/A</span></p>
+								<p class="text-color-medium mb-3">
+									Current Instant Spend:
+									<span id="currentInstantSpendDisplay"
+										>0</span
+									>
+									/
+									<span id="instantLimitDisplay">0</span>
+									Points
+								</p>
+								<p class="text-color-medium mb-3">
+									Last Reset:
+									<span id="lastResetDateDisplay">N/A</span>
+								</p>
 
-								<button class="add-btn" onclick="window.updateRewardSettingsUI()">Update Settings</button>
-								<button class="action-btn check-btn" onclick="window.resetInstantPurchaseLimit()">Reset Instant Spend Now</button>
+								<button
+									class="add-btn"
+									onclick="window.updateRewardSettingsUI()"
+								>
+									Update Settings
+								</button>
+								<button
+									class="action-btn check-btn"
+									onclick="window.resetInstantPurchaseLimit()"
+								>
+									Reset Instant Spend Now
+								</button>
 							</div>
 						</div>
 
 						<!-- Pending Reward Authorizations (Admin) -->
 						<div class="task-section">
 							<div class="section-header">
-								<h2 class="section-title">Pending Reward Authorizations</h2>
+								<h2 class="section-title">
+									Pending Reward Authorizations
+								</h2>
 							</div>
 							<div id="pendingAuthorizations" class="task-list">
 								<!-- Pending purchases will be rendered here -->
-								<div class="empty-state">No pending authorizations.</div>
+								<div class="empty-state">
+									No pending authorizations.
+								</div>
 							</div>
 						</div>
 					</div>
 				</div>
-
 
 				<!-- Stats -->
 				<div class="stats">
