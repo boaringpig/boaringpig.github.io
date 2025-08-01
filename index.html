@@ -7,13 +7,13 @@
 		<!-- Tailwind CSS CDN for utility classes -->
 		<script src="https://cdn.tailwindcss.com"></script>
 		<!-- Custom Stylesheet -->
-		<link rel="stylesheet" href="styles.css" />
+		<link rel="stylesheet" href="styles/styles.css" />
 		<!-- FullCalendar CSS -->
 		<link
 			href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/main.min.css"
 			rel="stylesheet"
 		/>
-		<script src="config.js"></script>
+		<script src="js/config.js"></script>
 	</head>
 	<body>
 		<div class="container">
@@ -330,7 +330,7 @@
 					<div class="dashboard-container">
 						<div class="dashboard-stats">
 							<div class="stat-card">
-								<h3>User Login Status</h3>
+								<h3>User Login Status </h3>
 								<div class="stat-number" id="userStatus">
 									Offline
 								</div>
@@ -600,10 +600,25 @@
 		<script src="https://unpkg.com/@fullcalendar/list@6.1.18/index.global.min.js"></script>
 		<script src="https://unpkg.com/@fullcalendar/rrule@6.1.18/index.global.min.js"></script>
 
-		<!-- Your custom scripts - Load UI first, then others -->
-		<script src="ui.js"></script>
-		<script src="auth.js"></script>
-		<script src="database.js"></script>
-		<script src="main.js"></script>
+		<!-- Consolidated Scripts -->
+		<!-- Load helper and modal functions first, so all other files can access them -->
+		<script src="js/ui-helpers.js"></script>
+		<script src="js/ui-modals.js"></script>
+		<!-- Then load core application logic -->
+		<script src="js/main.js"></script>
+		<script src="js/auth.js"></script>
+		<script src="js/database.js"></script>
+		<!-- Database modules -->
+		<script src="js/database-tasks.js"></script>
+		<script src="js/database-suggestions.js"></script>
+		<script src="js/database-rewards.js"></script>
+		<script src="js/database-user.js"></script>
+		<!-- UI rendering modules -->
+		<script src="js/ui.js"></script>
+		<script src="js/ui-tasks.js"></script>
+		<script src="js/ui-suggestions.js"></script>
+		<script src="js/ui-calendar.js"></script>
+		<script src="js/ui-dashboard.js"></script>
+		<script src="js/ui-rewards.js"></script>
 	</body>
 </html>

@@ -1,22 +1,6 @@
 // auth.js
 // This file handles user authentication (login, logout, and "Remember Me" functionality).
 
-// Global users object (defined in main.js, but referenced here for roles/permissions)
-// const users = { ... }; // Accessed via window.users
-
-// Global currentUser variable (defined in main.js)
-// let currentUser = null; // Accessed via window.currentUser
-
-// Global supabase instance (defined in database.js)
-// let supabase = null; // Accessed via window.supabase
-
-// Global functions from ui.js (referenced here for clarity)
-// function showLogin() { ... }
-// function showMainApp() { ... }
-// function showError(message) { ... }
-// function hideError() { ... }
-// function logUserActivity(action) { ... } // Defined in database.js but called here
-
 /**
  * Attempts to auto-login the user based on localStorage.
  * This is a simplified auto-login for demo purposes.
@@ -107,6 +91,16 @@ window.logout = function () {
 			window.supabase.removeChannel(window.unsubscribe.activity);
 		if (window.unsubscribe.userProfiles)
 			window.supabase.removeChannel(window.unsubscribe.userProfiles);
+		if (window.unsubscribe.rewards)
+			window.supabase.removeChannel(window.unsubscribe.rewards);
+		if (window.unsubscribe.userRewardPurchases)
+			window.supabase.removeChannel(
+				window.unsubscribe.userRewardPurchases
+			);
+		if (window.unsubscribe.rewardSystemSettings)
+			window.supabase.removeChannel(
+				window.unsubscribe.rewardSystemSettings
+			);
 		window.unsubscribe = null; // Clear the unsubscribe object
 	}
 	// Clear overdue check interval
