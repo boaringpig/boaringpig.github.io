@@ -69,6 +69,31 @@ window.OVERDUE_CHECK_INTERVAL = OVERDUE_CHECK_INTERVAL; // Corrected typo here
 // window.currentDate = currentDate; // NO LONGER NEEDED
 window.activeTab = activeTab;
 
+/**
+ * Initializes Flatpickr on the date input fields.
+ */
+function initializeDatePickers() {
+	flatpickr("#taskDueDate", {
+		enableTime: true,
+		dateFormat: "Y-m-dTH:i",
+		time_24hr: true,
+		minuteIncrement: 1,
+		placeholder: "Select a date and time...",
+		// Theming
+		appendTo: document.getElementById("taskDueDate").parentElement,
+	});
+
+	flatpickr("#suggestedDueDate", {
+		enableTime: true,
+		dateFormat: "Y-m-dTH:i",
+		time_24hr: true,
+		minuteIncrement: 1,
+		placeholder: "Select a date and time...",
+		// Theming
+		appendTo: document.getElementById("suggestedDueDate").parentElement,
+	});
+}
+
 // Initialize Supabase client and attempt auto-login on page load
 window.addEventListener("load", function () {
 	// Initialize Supabase client first
@@ -156,6 +181,9 @@ document.addEventListener("DOMContentLoaded", function () {
 		cancelEditRewardBtn.addEventListener("click", window.cancelEditReward);
 	}
 	// The update settings button is directly onclick in HTML, so no need for listener here
+
+	// >>> This is where the Flatpickr initialization function is called. <<<
+	initializeDatePickers();
 });
 
 // Global helper function for permission checks (defined in main.js, exposed globally)

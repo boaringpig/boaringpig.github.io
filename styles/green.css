@@ -4,7 +4,7 @@
 :root {
 	/* Terminal Color Palette */
 	--terminal-bg: #000000; /* Pure black background */
-	--terminal-bg-alt: #0a0a0a; /* Slightly lighter black */
+	--terminal-bg-alt: #000801; /* Slightly lighter black */
 	--terminal-green: #00ff00; /* Bright terminal green */
 	--terminal-green-dark: #00cc00; /* Darker green */
 	--terminal-green-light: #66ff66; /* Light green */
@@ -78,7 +78,7 @@
 	--fc-event-bg-repeating: var(--status-info);
 	--fc-event-border-repeating: #00cccc;
 	--fc-event-text: var(--terminal-bg);
-	--fc-today-bg: rgba(0, 255, 0, 0.3);
+	--fc-today-bg: rgb(0, 31, 0);
 	--fc-daygrid-event-dot: var(--terminal-green);
 
 	/* Modal */

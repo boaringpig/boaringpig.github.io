@@ -14,6 +14,13 @@
 		/>
 		<!-- Custom Stylesheet -->
 		<link rel="stylesheet" href="styles/green.css" />
+		<!-- Flatpickr CSS -->
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+		/>
+		<!-- Custom Flatpickr Theme -->
+		<link rel="stylesheet" href="styles/flatpickr-theme.css" />
 		<!-- FullCalendar CSS -->
 		<link
 			href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/main.min.css"
@@ -194,9 +201,10 @@
 											>Due Date</label
 										>
 										<input
-											type="datetime-local"
+											type="text"
 											id="taskDueDate"
 											class="form-input"
+											placeholder="Select a date and time..."
 										/>
 									</div>
 									<div class="form-group">
@@ -427,9 +435,10 @@
 										>Suggested Due Date</label
 									>
 									<input
-										type="datetime-local"
+										type="text"
 										id="suggestedDueDate"
 										class="form-input"
+										placeholder="Select a date and time..."
 									/>
 								</div>
 							</div>
@@ -676,6 +685,9 @@
 
 		<!-- Supabase Script -->
 		<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+		<!-- Flatpickr Script -->
+		<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 		<!-- FullCalendar Scripts - Updated approach -->
 		<!-- 1. First load RRule library -->
