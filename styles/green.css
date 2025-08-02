@@ -78,7 +78,7 @@
 	--fc-event-bg-repeating: var(--status-info);
 	--fc-event-border-repeating: #00cccc;
 	--fc-event-text: var(--terminal-bg);
-	--fc-today-bg: rgba(0, 255, 0, 0.1);
+	--fc-today-bg: rgba(0, 255, 0, 0.3);
 	--fc-daygrid-event-dot: var(--terminal-green);
 
 	/* Modal */
@@ -87,27 +87,50 @@
 	--modal-text-color: var(--terminal-white);
 
 	/* Font Sizes */
+	/*
 	--font-size-base: 14px;
 	--font-size-sm: 12px;
 	--font-size-md: 16px;
-	--font-size-lg: 1.2em; /* ~17px at 14px base */
-	--font-size-xl: 1.5em; /* ~21px at 14px base */
-	--font-size-2xl: 2em; /* ~28px at 14px base */
-	--font-size-3xl: 2.5em; /* ~35px at 14px base */
-	--font-size-4xl: 2.2em; /* ~30px at 14px base */
+	--font-size-lg: 1.2em;
+	--font-size-xl: 1.5em;
+	--font-size-2xl: 2em;
+	--font-size-3xl: 2.5em;
+	--font-size-4xl: 2.2em;
+	*/
+
+	--font-size-base: 13px;
+	--font-size-sm: 13px;
+	--font-size-md: 13px;
+	--font-size-lg: 13px;
+	--font-size-xl: 13px;
+	--font-size-2xl: 13px;
+	--font-size-3xl: 13px;
+	--font-size-4xl: 13px;
 
 	/* Font Weights */
+	/*
 	--font-weight-light: 300;
 	--font-weight-normal: 400;
 	--font-weight-medium: 500;
 	--font-weight-semibold: 600;
 	--font-weight-bold: 700;
 	--font-weight-extrabold: 800;
+	*/
+
+	--font-weight-light: 700;
+	--font-weight-normal: 700;
+	--font-weight-medium: 700;
+	--font-weight-semibold: 700;
+	--font-weight-bold: 700;
+	--font-weight-extrabold: 700;
+
+	--fc-today-bg-color: var(--fc-today-bg);
 }
 
 /* Override font family globally */
 * {
 	font-family: "PT Mono", "Monaco", "Menlo", "Consolas", monospace !important;
+	font-weight: var(--font-weight-normal);
 }
 
 /* Global font size standardization */
@@ -126,9 +149,11 @@ h1 {
 }
 h2 {
 	font-size: var(--font-size-xl);
+	margin-bottom: 1em;
 }
 h3 {
 	font-size: var(--font-size-lg);
+	margin-bottom: 1em;
 }
 h4 {
 	font-size: var(--font-size-base);
@@ -288,7 +313,7 @@ button {
 .cost-badge {
 	font-size: var(--font-size-base);
 	background: var(--terminal-bg);
-	border: 2px solid var(--status-warning);
+	border: 1px solid var(--status-warning);
 	color: var(--status-warning);
 	padding: 8px 15px;
 	font-weight: var(--font-weight-bold);
@@ -308,7 +333,7 @@ button {
 	max-width: 1200px;
 	margin: 0 auto;
 	/*background: var(--container-bg);
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 	*/
 	padding: 24px;
@@ -325,7 +350,7 @@ button {
 .login-form {
 	background: var(--card-bg);
 	padding: 40px;
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 	box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
 }
@@ -363,7 +388,7 @@ button {
 	padding: 12px 24px;
 	background: var(--terminal-bg);
 	color: var(--terminal-green);
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 	cursor: pointer;
 	font-size: var(--font-size-base);
@@ -429,7 +454,7 @@ button {
 	align-items: center;
 	margin-bottom: 30px;
 	padding-bottom: 20px;
-	border-bottom: 2px solid var(--terminal-green);
+	border-bottom: 1px solid var(--terminal-green);
 }
 
 .header-left h1 {
@@ -447,7 +472,7 @@ button {
 .points-badge {
 	display: inline-block;
 	padding: 8px 16px;
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	background: var(--terminal-bg);
 	color: var(--terminal-green);
 	font-weight: var(--font-weight-bold);
@@ -459,7 +484,7 @@ button {
 	padding: 8px 16px;
 	background: var(--terminal-bg);
 	color: var(--status-error);
-	border: 2px solid var(--status-error);
+	border: 1px solid var(--status-error);
 	border-radius: 0;
 	cursor: pointer;
 	font-size: var(--font-size-sm);
@@ -477,13 +502,13 @@ button {
 	display: flex;
 	gap: 10px;
 	margin-bottom: 30px;
-	border-bottom: 2px solid var(--terminal-green);
+	border-bottom: 1px solid var(--terminal-green);
 }
 
 .nav-tab {
 	padding: 12px 24px;
 	background: var(--terminal-bg);
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-bottom: none;
 	cursor: pointer;
 	font-weight: var(--font-weight-bold);
@@ -501,7 +526,7 @@ button {
 .task-item {
 	background: var(--card-bg);
 	padding: 20px;
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 	margin-bottom: 15px;
 	transition: all 0.3s ease;
@@ -615,9 +640,16 @@ button {
 .reward-creation-form {
 	background: var(--card-bg);
 	padding: 30px;
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 	margin-bottom: 30px;
+	display: flex;
+	flex-direction: column;
+	gap: 30px;
+}
+
+.suggested-due-date-group {
+	margin-top: 30px;
 }
 
 /* Section headers */
@@ -633,7 +665,7 @@ button {
 	align-items: center;
 	margin-bottom: 20px;
 	padding-bottom: 10px;
-	border-bottom: 2px solid var(--terminal-green);
+	border-bottom: 1px solid var(--terminal-green);
 }
 
 /* Tab content hide/show functionality */
@@ -661,7 +693,7 @@ button {
 /* Calendar container */
 .calendar-container {
 	background: var(--card-bg);
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 	padding: 30px;
 }
@@ -708,7 +740,7 @@ button {
 .stat-card {
 	background: var(--card-bg);
 	padding: 25px;
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 	text-align: center;
 	transition: all 0.3s ease;
@@ -734,7 +766,7 @@ button {
 /* Rewards styling */
 .reward-card {
 	background: var(--card-bg);
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 	padding: 20px;
 	text-align: center;
@@ -752,7 +784,7 @@ button {
 
 .cost-badge {
 	background: var(--terminal-bg);
-	border: 2px solid var(--status-warning);
+	border: 1px solid var(--status-warning);
 	color: var(--status-warning);
 	padding: 8px 15px;
 	font-weight: var(--font-weight-bold);
@@ -762,7 +794,7 @@ button {
 .purchase-btn {
 	background: var(--terminal-bg);
 	color: var(--terminal-green);
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	padding: 10px 20px;
 	cursor: pointer;
 	font-weight: var(--font-weight-bold);
@@ -778,7 +810,7 @@ button {
 /* Notifications */
 .notification {
 	background: var(--card-bg);
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 	color: var(--terminal-white);
 	font-weight: var(--font-weight-bold);
@@ -808,7 +840,7 @@ button {
 
 .modal-content {
 	background: var(--modal-content-bg);
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 	color: var(--terminal-white);
 	padding: 30px;
@@ -847,7 +879,7 @@ button {
 
 #eventModal > div {
 	background: var(--modal-content-bg);
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 	color: var(--terminal-white);
 	box-shadow: 0 0 25px rgba(0, 255, 0, 0.5);
@@ -885,7 +917,7 @@ button {
 /* Appeal modal specific styling */
 .appeal-warning {
 	background: rgba(255, 136, 0, 0.1);
-	border: 2px solid var(--status-warning);
+	border: 1px solid var(--status-warning);
 	border-radius: 0;
 	padding: 15px;
 	margin: 15px 0;
@@ -909,7 +941,7 @@ button {
 /* Demo credentials styling */
 .demo-credentials {
 	background: var(--demo-bg);
-	border: 2px solid var(--demo-border);
+	border: 1px solid var(--demo-border);
 	border-radius: 0;
 	padding: 20px;
 	margin-top: 30px;
@@ -938,7 +970,6 @@ button {
 .purchase-item .notes {
 	font-size: var(--font-size-base);
 	color: var(--terminal-gray-light);
-	font-style: italic;
 }
 
 /* Dashboard and stats consistent sizing */
@@ -973,7 +1004,7 @@ button {
 	color: var(--terminal-white);
 	margin-bottom: 10px;
 	padding: 8px;
-	border-left: 2px solid var(--terminal-green);
+	border-left: 1px solid var(--terminal-green);
 	padding-left: 15px;
 }
 
@@ -990,7 +1021,7 @@ button {
 /* Notification consistent sizing */
 .notification {
 	background: var(--card-bg);
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 	color: var(--terminal-white);
 	font-weight: var(--font-weight-bold);
@@ -1010,7 +1041,6 @@ button {
 	text-align: center;
 	padding: 40px;
 	color: var(--terminal-gray);
-	font-style: italic;
 	border: 1px dashed var(--terminal-green);
 	font-size: var(--font-size-base);
 }
@@ -1034,17 +1064,21 @@ button {
 /* Footer stats */
 .stats {
 	display: flex;
-	justify-content: center;
+	justify-content: normal;
 	gap: 30px;
 	margin-top: 30px;
-	padding: 20px;
+	padding: 0 20px;
 	background: var(--terminal-bg);
-	border: 2px solid var(--terminal-green);
+	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 }
 
 .stat-item {
 	text-align: center;
+	flex: 0 0 25%;
+	display: flex;
+	gap: 1em;
+	padding: 30px;
 }
 
 .stat-number {
