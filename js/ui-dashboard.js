@@ -7,7 +7,7 @@
 window.renderDashboard = function () {
 	if (!window.hasPermission("view_dashboard")) return;
 	var userActivity = window.userActivityLog.filter(function (a) {
-		return a.user === "user";
+		return a.user === "schinken";
 	});
 	var lastActivity = userActivity[0];
 	var isUserOnline = lastActivity && lastActivity.action === "login";
@@ -15,14 +15,14 @@ window.renderDashboard = function () {
 		return (
 			t.status !== "completed" &&
 			t.type !== "demerit" &&
-			t.assignedTo === "user"
+			t.assignedTo === "schinken"
 		);
 	});
 	var completedTasks = window.tasks.filter(function (t) {
-		return t.status === "completed" && t.assignedTo === "user";
+		return t.status === "completed" && t.assignedTo === "schinken";
 	});
 	var allNonDemeritTasks = window.tasks.filter(function (t) {
-		return t.type !== "demerit" && t.assignedTo === "user";
+		return t.type !== "demerit" && t.assignedTo === "schinken";
 	});
 	var completionRate =
 		allNonDemeritTasks.length > 0
@@ -56,7 +56,7 @@ window.renderUserActivityLog = function () {
 	var activityLogEl = document.getElementById("userActivityLog");
 	if (!activityLogEl) return;
 	var filteredActivityLog = window.userActivityLog.filter(function (a) {
-		return a.user === "user" || a.user === "admin";
+		return a.user === "schinken" || a.user === "skeen";
 	});
 	if (filteredActivityLog.length === 0) {
 		activityLogEl.innerHTML =
@@ -66,7 +66,7 @@ window.renderUserActivityLog = function () {
 			.slice(0, 20)
 			.map(function (activity) {
 				var actionText;
-				if (activity.user === "user") {
+				if (activity.user === "schinken") {
 					actionText =
 						activity.action === "login"
 							? "🔓 User Logged In"
@@ -100,9 +100,9 @@ window.renderUserActivityLog = function () {
 window.renderUserProgress = function () {
 	var progressList = document.getElementById("userProgressList");
 	if (!progressList) return;
-	var user = window.users["user"];
+	var user = window.users["schinken"];
 	var userTasks = window.tasks.filter(function (t) {
-		return t.assignedTo === "user" && t.type !== "demerit";
+		return t.assignedTo === "schinken" && t.type !== "demerit";
 	});
 	var completed = userTasks.filter(function (t) {
 		return t.status === "completed";
@@ -114,7 +114,7 @@ window.renderUserProgress = function () {
 		return window.isTaskOverdue(t) && t.status !== "completed";
 	});
 	var demeritTasks = window.tasks.filter(function (t) {
-		return t.type === "demerit" && t.assignedTo === "user";
+		return t.type === "demerit" && t.assignedTo === "schinken";
 	});
 	var completionRate =
 		userTasks.length > 0
@@ -158,7 +158,7 @@ window.renderUserProgress = function () {
 window.updateStats = function () {
 	var relevantTasks = window.tasks.filter(function (t) {
 		return (
-			window.currentUser === "admin" ||
+			window.currentUser === "skeen" ||
 			t.assignedTo === window.currentUser
 		);
 	});

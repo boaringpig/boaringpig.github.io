@@ -48,115 +48,146 @@ window.createTask = async function () {
 
 	let task;
 
-	if (isDemerit) {
-		const penaltyPoints =
-			parseInt(document.getElementById("penaltyPoints").value) || 5;
-
-		task = {
-			text: taskText,
-			status: "demerit_issued",
-			type: "demerit",
-			createdAt: new Date().toISOString(),
-			createdBy: window.currentUser,
-			assignedTo: "user",
-			points: 0,
-			penaltyPoints: penaltyPoints,
-			dueDate: null,
-			isRepeating: false,
-			repeatInterval: null,
-			completedAt: null,
-			completedBy: null,
-			approvedAt: null,
-			approvedBy: null,
-			isOverdue: false,
-			appealStatus: null,
-			appealedAt: null,
-			appealReviewedAt: null,
-			appealReviewedBy: null,
-			acceptedAt: null,
-			appealText: null,
-		};
-		await window.updateUserPoints("user", penaltyPoints, "subtract");
-	} else {
-		const points =
-			parseInt(document.getElementById("taskPoints").value) || 10;
-		const penaltyPoints =
-			parseInt(document.getElementById("penaltyPoints").value) || 5;
-		const dueDate = document.getElementById("taskDueDate").value;
-		const isRepeating = document.getElementById("isRepeating")
-			? document.getElementById("isRepeating").checked
-			: false;
-		const repeatInterval = document.getElementById("repeatInterval")
-			? document.getElementById("repeatInterval").value
-			: null;
-
-		if (dueDate && new Date(dueDate) < new Date()) {
-			window.showNotification("Due date cannot be in the past", "error");
-			return;
-		}
-
-		task = {
-			text: taskText,
-			status: "todo",
-			type: "regular",
-			createdAt: new Date().toISOString(),
-			createdBy: window.currentUser,
-			assignedTo: "user",
-			points: points,
-			penaltyPoints: penaltyPoints,
-			dueDate: dueDate || null,
-			isRepeating: isRepeating,
-			repeatInterval: isRepeating ? repeatInterval : null,
-			completedAt: null,
-			completedBy: null,
-			approvedAt: null,
-			approvedBy: null,
-			isOverdue: false,
-		};
-	}
-
-	const { error: taskError } = await window.supabase
-		.from("tasks")
-		.insert([task]);
-	if (taskError) {
-		console.error("Error creating task:", taskError);
-		window.showNotification(
-			"Failed to create task. Please try again.",
-			"error"
-		);
-	} else {
-		taskInput.value = "";
-		const taskPointsEl = document.getElementById("taskPoints");
-		const penaltyPointsEl = document.getElementById("penaltyPoints");
-		const taskDueDateEl = document.getElementById("taskDueDate");
-		const isRepeatingEl = document.getElementById("isRepeating");
-		const isDemeritEl = document.getElementById("isDemerit");
-		const demeritWarningEl = document.getElementById("demeritWarning");
-		const repeatOptionsEl = document.getElementById("repeatOptions");
-
-		if (taskPointsEl) {
-			taskPointsEl.value = "10";
-			taskPointsEl.closest(".form-group").style.display = "block";
-		}
-		if (penaltyPointsEl) penaltyPointsEl.value = "5";
-		if (taskDueDateEl) {
-			taskDueDateEl.value = "";
-			taskDueDateEl.closest(".form-group").style.display = "block";
-		}
-		if (isRepeatingEl) isRepeatingEl.checked = false;
-		if (isDemeritEl) isDemeritEl.checked = false;
-		if (demeritWarningEl) demeritWarningEl.style.display = "none";
-		if (repeatOptionsEl) repeatOptionsEl.style.display = "none";
-
+	try {
 		if (isDemerit) {
-			window.showNotification(
-				`Demerit task issued to user. ${task.penaltyPoints} points deducted.`,
-				"warning"
+			const penaltyPoints =
+				parseInt(document.getElementById("penaltyPoints").value) || 5;
+
+			task = {
+				text: taskText,
+				status: "demerit_issued",
+				type: "demerit",
+				createdAt: new Date().toISOString(),
+				createdBy: window.currentUser,
+				assignedTo: "schinken",
+				points: 0,
+				penaltyPoints: penaltyPoints,
+				dueDate: null,
+				isRepeating: false,
+				repeatInterval: null,
+				completedAt: null,
+				completedBy: null,
+				approvedAt: null,
+				approvedBy: null,
+				isOverdue: false,
+				appealStatus: null,
+				appealedAt: null,
+				appealReviewedAt: null,
+				appealReviewedBy: null,
+				acceptedAt: null,
+				appealText: null,
+			};
+			await window.updateUserPoints(
+				"schinken",
+				penaltyPoints,
+				"subtract"
 			);
 		} else {
-			window.showNotification("Task created successfully!");
+			const points =
+				parseInt(document.getElementById("taskPoints").value) || 10;
+			const penaltyPoints =
+				parseInt(document.getElementById("penaltyPoints").value) || 5;
+
+			// Use the new Flatpickr-compatible input
+			const dueDate = document.getElementById("taskDueDate").value;
+
+			const isRepeating = document.getElementById("isRepeating")
+				? document.getElementById("isRepeating").checked
+				: false;
+			const repeatInterval = document.getElementById("repeatInterval")
+				? document.getElementById("repeatInterval").value
+				: null;
+
+			// More robust date validation for the new date picker
+			if (dueDate) {
+				const selectedDate = new Date(dueDate);
+				const now = new Date();
+
+				// Check if the date is valid
+				if (isNaN(selectedDate.getTime())) {
+					window.showNotification("Invalid due date format", "error");
+					return;
+				}
+
+				// Check if the date is in the past
+				if (selectedDate < now) {
+					window.showNotification(
+						"Due date cannot be in the past",
+						"error"
+					);
+					return;
+				}
+			}
+
+			task = {
+				text: taskText,
+				status: "todo",
+				type: "regular",
+				createdAt: new Date().toISOString(),
+				createdBy: window.currentUser,
+				assignedTo: "schinken",
+				points: points,
+				penaltyPoints: penaltyPoints,
+				dueDate: dueDate || null,
+				isRepeating: isRepeating,
+				repeatInterval: isRepeating ? repeatInterval : null,
+				completedAt: null,
+				completedBy: null,
+				approvedAt: null,
+				approvedBy: null,
+				isOverdue: false,
+			};
 		}
-		await window.fetchTasksInitial();
+
+		const { error: taskError } = await window.supabase
+			.from("tasks")
+			.insert([task]);
+		if (taskError) {
+			console.error("Error creating task:", taskError);
+			window.showNotification(
+				"Failed to create task. Please try again.",
+				"error"
+			);
+		} else {
+			taskInput.value = "";
+			const taskPointsEl = document.getElementById("taskPoints");
+			const penaltyPointsEl = document.getElementById("penaltyPoints");
+			const taskDueDateEl = document.getElementById("taskDueDate");
+			const isRepeatingEl = document.getElementById("isRepeating");
+			const isDemeritEl = document.getElementById("isDemerit");
+			const demeritWarningEl = document.getElementById("demeritWarning");
+			const repeatOptionsEl = document.getElementById("repeatOptions");
+
+			if (taskPointsEl) {
+				taskPointsEl.value = "10";
+				taskPointsEl.closest(".form-group").style.display = "block";
+			}
+			if (penaltyPointsEl) penaltyPointsEl.value = "5";
+			if (taskDueDateEl) {
+				taskDueDateEl.value = "";
+				taskDueDateEl.closest(".form-group").style.display = "block";
+			}
+			if (isRepeatingEl) isRepeatingEl.checked = false;
+			if (isDemeritEl) isDemeritEl.checked = false;
+			if (demeritWarningEl) demeritWarningEl.style.display = "none";
+			if (repeatOptionsEl) repeatOptionsEl.style.display = "none";
+
+			if (isDemerit) {
+				window.showNotification(
+					`Demerit task issued to user. ${task.penaltyPoints} points deducted.`,
+					"warning"
+				);
+			} else {
+				window.showNotification("Task created successfully!");
+			}
+			await window.fetchTasksInitial();
+		}
+	} catch (e) {
+		console.error("An unexpected error occurred during task creation:", e);
+		window.showNotification(
+			"An unexpected error occurred. Check console for details.",
+			"error"
+		);
 	}
 };
 
@@ -510,7 +541,7 @@ window.createRepeatingTask = async function (originalTask) {
 		type: "regular",
 		createdAt: new Date().toISOString(),
 		createdBy: originalTask.createdBy,
-		assignedTo: "user",
+		assignedTo: "schinken",
 		points: originalTask.points,
 		penaltyPoints: originalTask.penaltyPoints,
 		dueDate: nextDueDate.toISOString(),

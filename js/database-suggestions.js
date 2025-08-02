@@ -108,7 +108,7 @@ window.approveSuggestion = async function (suggestionId) {
 		type: "regular",
 		createdAt: new Date().toISOString(),
 		createdBy: window.currentUser,
-		assignedTo: "user",
+		assignedTo: "schinken",
 		points: suggestion.suggestedPoints,
 		penaltyPoints: Math.floor(suggestion.suggestedPoints / 2),
 		dueDate: suggestion.suggestedDueDate,

@@ -405,9 +405,9 @@ window.fetchRewardsInitial = async function () {
 		window.showError("Failed to load rewards.");
 	} else {
 		window.rewards = data.sort((a, b) => a.title.localeCompare(b.title));
-		if (window.activeTab === "shop" || window.currentUser === "admin") {
+		if (window.activeTab === "shop" || window.currentUser === "skeen") {
 			window.renderRewards();
-			if (window.currentUser === "admin") {
+			if (window.currentUser === "skeen") {
 				window.renderAdminRewardManagement();
 			}
 		}
@@ -419,7 +419,7 @@ window.fetchRewardsInitial = async function () {
  */
 window.fetchUserRewardPurchasesInitial = async function () {
 	const query =
-		window.currentUser === "admin"
+		window.currentUser === "skeen"
 			? window.supabase
 					.from("userRewardPurchases")
 					.select("*, rewards(title, cost, type)")
@@ -436,9 +436,9 @@ window.fetchUserRewardPurchasesInitial = async function () {
 		window.showError("Failed to load purchase history.");
 	} else {
 		window.userRewardPurchases = data;
-		if (window.activeTab === "shop" || window.currentUser === "admin") {
+		if (window.activeTab === "shop" || window.currentUser === "skeen") {
 			window.renderUserRewardPurchases();
-			if (window.currentUser === "admin") {
+			if (window.currentUser === "skeen") {
 				window.renderPendingAuthorizations();
 			}
 		}
@@ -484,7 +484,7 @@ window.fetchRewardSystemSettingsInitial = async function () {
 			.upsert([window.rewardSystemSettings], { onConflict: "id" });
 	}
 	if (
-		window.currentUser === "admin" &&
+		window.currentUser === "skeen" &&
 		(window.activeTab === "dashboard" ||
 			window.activeTab === "adminSettings")
 	) {

@@ -9,7 +9,7 @@ const LOGIN_DEBOUNCE_TIME = 5000;
  * @param {string} action - The action performed (e.g., 'login', 'logout').
  */
 window.logUserActivity = async function (action) {
-	if (window.currentUser !== "user" && window.currentUser !== "admin") {
+	if (window.currentUser !== "schinken" && window.currentUser !== "skeen") {
 		return;
 	}
 
@@ -94,7 +94,7 @@ window.updateUserPoints = async function (
 	points = 0,
 	operation = null
 ) {
-	if (username === "admin") {
+	if (username === "skeen") {
 		if (operation === "set") {
 			window.users[username].points = points;
 		} else if (operation === "add") {

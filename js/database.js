@@ -260,10 +260,10 @@ window.loadData = async function () {
 				window.rewards.sort((a, b) => a.title.localeCompare(b.title));
 				if (
 					window.activeTab === "shop" ||
-					window.currentUser === "admin"
+					window.currentUser === "skeen"
 				) {
 					window.renderRewards();
-					if (window.currentUser === "admin") {
+					if (window.currentUser === "skeen") {
 						window.renderAdminRewardManagement();
 					}
 				}
@@ -280,7 +280,7 @@ window.loadData = async function () {
 				console.log("User reward purchase change received!", payload);
 				await window.fetchUserRewardPurchasesInitial();
 				if (
-					window.currentUser === "admin" ||
+					window.currentUser === "skeen" ||
 					window.activeTab === "shop"
 				) {
 					window.renderUserRewardPurchases();
@@ -304,7 +304,7 @@ window.loadData = async function () {
 					window.rewardSystemSettings = payload.new;
 					window.checkForRewardLimitReset();
 					if (
-						window.currentUser === "admin" &&
+						window.currentUser === "skeen" &&
 						(window.activeTab === "dashboard" ||
 							window.activeTab === "adminSettings")
 					) {
@@ -391,7 +391,7 @@ window.checkForOverdueTasks = function () {
 			task.dueDate &&
 			task.status !== "completed" &&
 			task.type !== "demerit" &&
-			task.assignedTo === "user"
+			task.assignedTo === "schinken"
 		) {
 			const wasOverdue = task.isOverdue;
 			const isNowOverdue = new Date(task.dueDate) < now;

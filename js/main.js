@@ -5,7 +5,7 @@
 // These are declared here, and other files access them via the window object.
 const users = {
 	skeen: {
-		role: "admin",
+		role: "skeen",
 		displayName: "Sir",
 		permissions: [
 			"create_task",
@@ -20,7 +20,7 @@ const users = {
 		points: 0, // Admin points should always remain 0 and not be tracked
 	},
 	schinken: {
-		role: "user",
+		role: "schinken",
 		displayName: "Pig",
 		permissions: ["check_task", "view_assigned_tasks", "suggest_task"],
 		points: 0,

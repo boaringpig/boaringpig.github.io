@@ -138,7 +138,7 @@ window.switchTab = function (tabName) {
 		window.renderUserRewardPurchases();
 	} else if (tabName === "adminSettings") {
 		if (
-			window.currentUser === "admin" &&
+			window.currentUser === "skeen" &&
 			window.hasPermission("manage_rewards")
 		) {
 			window.renderAdminRewardManagement();
@@ -173,7 +173,7 @@ window.showMainApp = async function () {
 	var userPointsBadge = document.getElementById("userPoints");
 	if (userPointsBadge) {
 		userPointsBadge.style.display =
-			user.role === "admin" ? "none" : "inline-block";
+			user.role === "skeen" ? "none" : "inline-block";
 	}
 	window.logUserActivity("login");
 
@@ -187,7 +187,7 @@ window.showMainApp = async function () {
 		"adminRewardManagement"
 	);
 
-	if (window.currentUser === "admin") {
+	if (window.currentUser === "skeen") {
 		if (dashboardTab) dashboardTab.style.display = "block";
 		if (suggestTab) suggestTab.style.display = "none";
 		if (shopTab) shopTab.style.display = "none";
@@ -280,13 +280,13 @@ window.showMainApp = async function () {
 					);
 				}
 				if (
-					window.currentUser === "admin" &&
+					window.currentUser === "skeen" &&
 					window.hasPermission("manage_rewards")
 				) {
 					window.renderAdminRewardManagement();
 					window.renderPendingAuthorizations();
 					window.renderAdminRewardSettings();
-				} else if (window.currentUser !== "admin") {
+				} else if (window.currentUser !== "skeen") {
 					window.renderRewards();
 					window.renderUserRewardPurchases();
 				}

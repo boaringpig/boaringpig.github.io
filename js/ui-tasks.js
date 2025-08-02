@@ -6,7 +6,7 @@
  */
 window.renderTasks = function () {
 	var user = window.users[window.currentUser];
-	if (user.role === "admin") {
+	if (user.role === "skeen") {
 		window.renderAdminView();
 	} else {
 		window.renderUserView();
