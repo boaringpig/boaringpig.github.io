@@ -76,6 +76,10 @@ window.renderAdminView = function () {
 				.join("");
 		}
 	}
+
+	// This is the new function call to render pending suggestions for the admin.
+	window.renderAdminSuggestions();
+
 	var pendingTasks = window.tasks.filter(function (t) {
 		return t.status === "pending_approval" && t.type !== "demerit";
 	});
@@ -108,7 +112,7 @@ window.renderAdminView = function () {
 						(task.dueDate
 							? "<br>Due: " + window.formatDate(task.dueDate)
 							: "") +
-						(task.isRepeating ? "<br>🔄 Repeating" : "") +
+						(task.isRepeating ? "<br>売 Repeating" : "") +
 						"</div>" +
 						"</div>" +
 						'<div class="task-actions">' +
@@ -194,8 +198,10 @@ window.renderAdminView = function () {
 						(task.dueDate
 							? "<br>Due: " + window.formatDate(task.dueDate)
 							: "") +
-						(task.isRepeating ? "<br>🔄 Repeating" : "") +
-						(task.type === "demerit" ? "<br>📋 Demerit Task" : "") +
+						(task.isRepeating ? "<br>売 Repeating" : "") +
+						(task.type === "demerit"
+							? "<br>搭 Demerit Task"
+							: "") +
 						(task.type === "demerit" && task.acceptedAt
 							? "<br>Accepted: " +
 							  window.formatDate(task.acceptedAt)
@@ -344,8 +350,10 @@ window.renderUserView = function () {
 						(task.dueDate
 							? "<br>Due: " + window.formatDate(task.dueDate)
 							: "") +
-						(task.isRepeating ? "<br>🔄 Repeating" : "") +
-						(task.type === "demerit" ? "<br>📋 Demerit Task" : "") +
+						(task.isRepeating ? "<br>売 Repeating" : "") +
+						(task.type === "demerit"
+							? "<br>搭 Demerit Task"
+							: "") +
 						(task.completedBy
 							? "<br>Completed by: " +
 							  (window.users[task.completedBy]

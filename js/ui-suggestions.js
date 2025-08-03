@@ -72,3 +72,76 @@ window.renderMySuggestions = function () {
 		}
 	}
 };
+
+/**
+ * Renders pending task suggestions on the admin dashboard.
+ * This is a new function to display suggestions awaiting review by 'skeen'.
+ */
+window.renderAdminSuggestions = function () {
+	// Filter for suggestions that are in a 'pending' state
+	var pendingSuggestions = window.suggestions.filter(function (s) {
+		return s.status === "pending";
+	});
+
+	var container = document.getElementById("suggestedTasks");
+	if (!container) return;
+
+	if (pendingSuggestions.length === 0) {
+		container.innerHTML =
+			'<div class="empty-state">No suggested tasks pending approval</div>';
+	} else {
+		const generatedHtml = pendingSuggestions
+			.map(function (suggestion) {
+				return (
+					'<div class="task-item pending-approval">' +
+					'<div class="task-content">' +
+					"<div>" +
+					'<span class="status-badge ' +
+					window.getSuggestionStatusClass(suggestion.status) +
+					'">' +
+					suggestion.status.charAt(0).toUpperCase() +
+					suggestion.status.slice(1) +
+					"</span>" +
+					'<span class="task-text">' +
+					window.escapeHtml(suggestion.description) +
+					"</span>" +
+					'<span class="points-badge-small">+' +
+					suggestion.suggestedPoints +
+					" pts</span>" +
+					'<div class="task-meta">' +
+					"Suggested by: " +
+					(window.users[suggestion.suggestedBy]
+						? window.users[suggestion.suggestedBy].displayName
+						: suggestion.suggestedBy) +
+					"<br>Justification: " +
+					window.escapeHtml(suggestion.justification) +
+					(suggestion.suggestedDueDate
+						? "<br>Suggested Due: " +
+						  window.formatDate(suggestion.suggestedDueDate)
+						: "") +
+					"</div>" +
+					"</div>" +
+					'<div class="task-actions">' +
+					'<button class="action-btn approve-btn" onclick="window.approveSuggestion(' +
+					suggestion.id +
+					')">Approve</button>' +
+					'<button class="action-btn reject-btn" onclick="window.rejectSuggestion(' +
+					suggestion.id +
+					')">Reject</button>' +
+					"</div>" +
+					"</div>" +
+					"</div>"
+				);
+			})
+			.join("");
+		try {
+			container.innerHTML = generatedHtml;
+		} catch (e) {
+			console.error("Error setting innerHTML for suggestedTasks:", e);
+			window.showNotification(
+				"Failed to display suggested tasks.",
+				"error"
+			);
+		}
+	}
+};

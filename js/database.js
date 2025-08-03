@@ -147,7 +147,13 @@ window.loadData = async function () {
 					window.suggestions.sort(
 						(a, b) => new Date(b.createdAt) - new Date(a.createdAt)
 					);
-					window.renderSuggestions();
+
+					// Re-render the correct UI based on the current user and tab
+					if (window.currentUser === "skeen") {
+						window.renderTasks(); // This will call renderAdminView and then renderAdminSuggestions
+					} else {
+						window.renderSuggestions(); // This is for 'schinken's' view
+					}
 				} catch (error) {
 					console.error(
 						"Error in suggestionsChannel listener:",

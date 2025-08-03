@@ -151,6 +151,11 @@ window.switchTab = function (tabName) {
 			if (adminRewardManagement)
 				adminRewardManagement.style.display = "none";
 		}
+	} else if (tabName === "tasks") {
+		// For the 'tasks' tab, fetch and render all data for the admin
+		if (window.currentUser === "skeen") {
+			window.renderTasks();
+		}
 	}
 };
 
@@ -289,6 +294,10 @@ window.showMainApp = async function () {
 				} else if (window.currentUser !== "skeen") {
 					window.renderRewards();
 					window.renderUserRewardPurchases();
+				}
+				// FIX: For the admin, explicitly render tasks after data is loaded on initial page load
+				if (window.currentUser === "skeen") {
+					window.renderTasks();
 				}
 			})
 			.catch(function (error) {
