@@ -138,7 +138,8 @@ body {
 	background: var(--terminal-bg);
 	color: var(--terminal-white);
 	min-height: 100vh;
-	padding: 20px;
+	padding: 10px;
+	margin: 0;
 	font-size: var(--font-size-base); /* Base font size */
 	line-height: 1.4;
 }
@@ -336,7 +337,7 @@ button {
 	border: 1px solid var(--terminal-green);
 	border-radius: 0;
 	*/
-	padding: 24px;
+	padding: 10px;
 	/*box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);*/
 }
 
@@ -525,12 +526,15 @@ button {
 /* Task Items */
 .task-item {
 	background: var(--card-bg);
-	padding: 20px;
+	padding: 10px 10px 10px 20px;
 	border: 1px solid var(--terminal-green);
 	border-radius: 0;
-	margin-bottom: 15px;
+	margin-bottom: 20px;
 	transition: all 0.3s ease;
 	position: relative;
+	max-height: 150px;
+	height: 150px;
+	border-left: 22px solid;
 }
 
 .task-item:hover {
@@ -548,6 +552,10 @@ button {
 	background: var(--terminal-green);
 }
 
+.rewards-grid {
+	margin-bottom: 20px;
+}
+
 /* Task status specific styling */
 .task-item.completed {
 	border-color: var(--status-success);
@@ -557,10 +565,12 @@ button {
 	background: var(--status-success);
 }
 
+.task-item.status-pending,
 .task-item.pending-approval {
-	border-color: var(--status-pending);
+	border-color: var(--status-pending) !important;
 }
 
+.task-item.status-pending::before,
 .task-item.pending-approval::before {
 	background: var(--status-pending);
 }
@@ -586,16 +596,23 @@ button {
 /* Status badges */
 .status-badge {
 	font-size: var(--font-size-sm);
-	padding: 4px 12px;
-	border: 1px solid;
-	background: var(--terminal-bg);
+	padding: 4px 10px;
+	/* border: 1px solid; */
+	/* background: var(--terminal-bg); */
 	font-weight: var(--font-weight-bold);
-	margin-right: 10px;
+	margin: 0;
+	transform: rotate(270deg);
+	position: absolute;
+	top: 60.5px;
+	left: -83px;
+	width: 100%;
+	max-width: 150px;
+	text-align: center;
 }
 
 .status-pending {
 	border-color: var(--status-pending);
-	color: var(--status-pending);
+	/* color: var(--status-pending); */
 }
 
 .status-completed {
@@ -1117,8 +1134,8 @@ button {
 /* Responsive adjustments */
 @media (max-width: 768px) {
 	.container {
-		padding: 15px;
-		margin: 10px;
+		padding: 0;
+		margin: 0;
 	}
 
 	.header-left h1 {

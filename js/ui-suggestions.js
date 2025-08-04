@@ -26,7 +26,9 @@ window.renderMySuggestions = function () {
 		const generatedHtml = mySuggestions
 			.map(function (suggestion) {
 				return (
-					'<div class="task-item">' +
+					'<div class="task-item ' +
+					window.getSuggestionStatusClass(suggestion.status) +
+					'">' +
 					'<div class="task-content">' +
 					"<div>" +
 					'<span class="status-badge ' +

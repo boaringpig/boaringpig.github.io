@@ -114,62 +114,60 @@ window.renderCalendar = function () {
 			);
 
 			var modalHtml =
-				'<h3 class="text-xl font-semibold mb-2 text-gray-900">' +
+				'<h3 class="">' +
 				window.escapeHtml(task.text) +
 				"</h3>" +
-				'<p class="text-gray-700 mb-1"><strong>Type:</strong> ' +
+				'<p class=""><strong>Type:</strong> ' +
 				eventType +
 				"</p>" +
-				'<p class="text-gray-700 mb-1"><strong>Status:</strong> ' +
+				'<p class=""><strong>Status:</strong> ' +
 				statusText +
 				"</p>" +
-				'<p class="text-gray-700 mb-1"><strong>Start:</strong> ' +
+				'<p class=""><strong>Start:</strong> ' +
 				start +
 				"</p>" +
 				(task.endDateTime
-					? '<p class="text-gray-700 mb-1"><strong>End:</strong> ' +
-					  end +
-					  "</p>"
+					? '<p class=""><strong>End:</strong> ' + end + "</p>"
 					: "") +
-				'<p class="text-gray-700 mb-1"><strong>All Day:</strong> ' +
+				'<p class=""><strong>All Day:</strong> ' +
 				allDay +
 				"</p>" +
-				'<p class="text-gray-700 mt-3"><strong>Description:</strong> ' +
+				'<p class=""><strong>Description:</strong> ' +
 				window.escapeHtml(description) +
 				"</p>" +
 				(task.points
-					? '<p class="text-gray-700 mb-1"><strong>Points:</strong> ' +
+					? '<p class=""><strong>Points:</strong> ' +
 					  task.points +
 					  "</p>"
 					: "") +
 				(task.penaltyPoints
-					? '<p class="text-gray-700 mb-1"><strong>Penalty:</strong> ' +
+					? '<p class=""><strong>Penalty:</strong> ' +
 					  task.penaltyPoints +
 					  "</p>"
 					: "") +
 				(task.createdBy
-					? '<p class="text-gray-700 mb-1"><strong>Created By:</strong> ' +
+					? '<p class=""><strong>Created By:</strong> ' +
 					  (window.users[task.createdBy]
 							? window.users[task.createdBy].displayName
 							: task.createdBy) +
 					  "</p>"
 					: "") +
 				(task.completedBy
-					? '<p class="text-gray-700 mb-1"><strong>Completed By:</strong> ' +
+					? '<p class=""><strong>Completed By:</strong> ' +
 					  (window.users[task.completedBy]
 							? window.users[task.completedBy].displayName
 							: task.completedBy) +
 					  "</p>"
 					: "") +
 				(task.approvedBy
-					? '<p class="text-gray-700 mb-1"><strong>Approved By:</strong> ' +
+					? '<p class=""><strong>Approved By:</strong> ' +
 					  (window.users[task.approvedBy]
 							? window.users[task.approvedBy].displayName
 							: task.approvedBy) +
 					  "</p>"
 					: "") +
 				(task.appealText
-					? '<p class="text-gray-700 mb-1"><strong>Appeal Reason:</strong> ' +
+					? '<p class=""><strong>Appeal Reason:</strong> ' +
 					  window.escapeHtml(task.appealText) +
 					  "</p>"
 					: "");
