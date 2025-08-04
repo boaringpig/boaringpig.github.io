@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spiral Pattern Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            color: white;
+        }
+
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        #text-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            transform-origin: center center;
+            z-index: 10;
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            opacity: 0;
+            max-width: 80%;
+            line-height: 1.2;
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+
+        #controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 20;
+            max-height: 80vh;
+            overflow-y: auto;
+            min-width: 300px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .control-group h3 {
+            margin-bottom: 10px;
+            color: #4fc3f7;
+            font-size: 1rem;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 10px;
+        }
+
+        label {
+            min-width: 100px;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+
+        input, select, button {
+            padding: 5px;
+            border: 1px solid #555;
+            border-radius: 3px;
+            background: #222;
+            color: white;
+            flex: 1;
+        }
+
+        input[type="range"] {
+            height: 20px;
+        }
+
+        button {
+            background: #4fc3f7;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #29b6f6;
+        }
+
+        .spiral-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            border-radius: 3px;
+            background: #111;
+            padding: 5px;
+        }
+
+        .spiral-item {
+            padding: 5px;
+            margin: 2px 0;
+            background: rgba(79, 195, 247, 0.1);
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .spiral-item:hover {
+            background: rgba(79, 195, 247, 0.2);
+        }
+
+        .spiral-item.selected {
+            background: rgba(79, 195, 247, 0.3);
+        }
+
+        .delete-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 2px 6px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+
+        #text-script {
+            width: 100%;
+            height: 100px;
+            background: #111;
+            border: 1px solid #333;
+            color: white;
+            padding: 5px;
+            border-radius: 3px;
+            resize: vertical;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+
+        .value-display {
+            min-width: 40px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #4fc3f7;
+        }
+
+        #toggle-controls {
+            position: fixed;
+            top: 20px;
+            right: 340px;
+            background: rgba(79, 195, 247, 0.8);
+            color: black;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 21;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="text-overlay"></div>
+    
+    <button id="toggle-controls">Hide Controls</button>
+    
+    <div id="controls">
+        <div class="control-group">
+            <h3>Text Animation</h3>
+            <textarea id="text-script" placeholder="Enter your text script here. Use 'DELAY:ms' for delays, e.g.:
+Hello World
+DELAY:2000
+This appears after 2 seconds
+Another line
+DELAY:1000
+Final text"></textarea>
+            <div class="control-row">
+                <label>Display Time:</label>
+                <input type="range" id="text-interval" min="500" max="5000" value="2000">
+                <span class="value-display" id="text-interval-val">2000ms</span>
+            </div>
+            <div class="control-row">
+                <label>Hold Duration:</label>
+                <input type="range" id="text-hold" min="1000" max="8000" value="3000">
+                <span class="value-display" id="text-hold-val">3000ms</span>
+            </div>
+            <div class="control-row">
+                <label>Animation Speed:</label>
+                <input type="range" id="text-anim-speed" min="0.1" max="2" step="0.1" value="0.5">
+                <span class="value-display" id="text-anim-speed-val">0.5s</span>
+            </div>
+            <div class="control-row">
+                <label>Text Size:</label>
+                <input type="range" id="text-size" min="1" max="6" step="0.1" value="2.5">
+                <span class="value-display" id="text-size-val">2.5rem</span>
+            </div>
+            <div class="control-row">
+                <label>Text Color:</label>
+                <input type="color" id="text-color" value="#ffffff">
+            </div>
+            <button onclick="startTextSequence()">Start Text Loop</button>
+            <button onclick="stopTextSequence()">Stop Text Loop</button>
+        </div>
+
+        <div class="control-group">
+            <h3>Spirals</h3>
+            <div class="spiral-list" id="spiral-list"></div>
+            <button onclick="addSpiral()">Add New Spiral</button>
+        </div>
+
+        <div class="control-group">
+            <h3>Current Spiral Properties</h3>
+            <div class="control-row">
+                <label>Speed:</label>
+                <input type="range" id="speed" min="0.1" max="5" step="0.1" value="1">
+                <span class="value-display" id="speed-val">1</span>
+            </div>
+            <div class="control-row">
+                <label>Radius:</label>
+                <input type="range" id="radius" min="10" max="100" value="50">
+                <span class="value-display" id="radius-val">50%</span>
+            </div>
+            <div class="control-row">
+                <label>Arms:</label>
+                <input type="range" id="arms" min="1" max="20" value="3">
+                <span class="value-display" id="arms-val">3</span>
+            </div>
+            <div class="control-row">
+                <label>Thickness:</label>
+                <input type="range" id="thickness" min="1" max="20" value="3">
+                <span class="value-display" id="thickness-val">3</span>
+            </div>
+            <div class="control-row">
+                <label>Color:</label>
+                <input type="color" id="color" value="#4fc3f7">
+            </div>
+            <div class="control-row">
+                <label>Opacity:</label>
+                <input type="range" id="opacity" min="0.1" max="1" step="0.1" value="0.8">
+                <span class="value-display" id="opacity-val">0.8</span>
+            </div>
+            <div class="control-row">
+                <label>Time Offset:</label>
+                <input type="range" id="time-offset" min="0" max="10" step="0.1" value="0">
+                <span class="value-display" id="time-offset-val">0</span>
+            </div>
+            <div class="control-row">
+                <label>Rotation:</label>
+                <input type="range" id="rotation" min="0" max="360" value="0">
+                <span class="value-display" id="rotation-val">0°</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3>Configuration</h3>
+            <div class="control-row">
+                <button onclick="saveConfiguration()">Save Config</button>
+                <button onclick="loadConfiguration()">Load Config</button>
+            </div>
+            <input type="file" id="config-file" accept=".json" style="display: none;" onchange="handleConfigFile(event)">
+        </div>
+
+        <div class="control-group">
+            <h3>Global Settings</h3>
+            <div class="control-row">
+                <label>Background:</label>
+                <input type="color" id="bg-color" value="#000000">
+            </div>
+            <button onclick="clearAllSpirals()">Clear All Spirals</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const textOverlay = document.getElementById('text-overlay');
+        
+        let spirals = [];
+        let selectedSpiralIndex = 0;
+        let animationId;
+        let startTime = Date.now();
+        let textScript = [];
+        let textIndex = 0;
+        let textTimer;
+        let isTextSequenceRunning = false;
+        let textAnimationSpeed = 0.5;
+        let textSize = 2.5;
+        let textColor = '#ffffff';
+
+        // Initialize canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            // Update all spiral positions to center
+            spirals.forEach(spiral => {
+                spiral.x = canvas.width / 2;
+                spiral.y = canvas.height / 2;
+            });
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Spiral class
+        class Spiral {
+            constructor(id) {
+                this.id = id;
+                this.speed = 1;
+                this.radiusPercent = 50; // Store as percentage
+                this.arms = 3;
+                this.thickness = 3;
+                this.color = '#4fc3f7';
+                this.opacity = 0.8;
+                this.timeOffset = 0;
+                this.rotation = 0;
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+            }
+
+            get radius() {
+                // Convert percentage to actual radius (200% max = 2x screen size)
+                const screenSize = Math.min(canvas.width, canvas.height);
+                return (this.radiusPercent / 100) * screenSize * 2;
+            }
+
+            draw(time) {
+                const adjustedTime = (time + this.timeOffset * 1000) * this.speed * 0.001;
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate((this.rotation * Math.PI / 180) + adjustedTime * 0.5);
+                
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = this.thickness;
+                ctx.globalAlpha = this.opacity;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                for (let i = 0; i < this.arms; i++) {
+                    ctx.save();
+                    ctx.rotate((i * 2 * Math.PI) / this.arms);
+                    
+                    ctx.beginPath();
+                    let firstPoint = true;
+                    
+                    for (let r = 0; r < this.radius; r += 0.5) {
+                        const angle = r * 0.08 + adjustedTime;
+                        const x = r * Math.cos(angle);
+                        const y = r * Math.sin(angle);
+                        
+                        if (firstPoint) {
+                            ctx.moveTo(x, y);
+                            firstPoint = false;
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                    
+                    ctx.stroke();
+                    ctx.restore();
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        // Add initial spiral
+        function addSpiral() {
+            const spiral = new Spiral(spirals.length);
+            spirals.push(spiral);
+            updateSpiralList();
+            selectSpiral(spirals.length - 1);
+        }
+
+        // Update spiral list display
+        function updateSpiralList() {
+            const list = document.getElementById('spiral-list');
+            list.innerHTML = '';
+            
+            spirals.forEach((spiral, index) => {
+                const item = document.createElement('div');
+                item.className = 'spiral-item';
+                if (index === selectedSpiralIndex) item.classList.add('selected');
+                
+                item.innerHTML = `
+                    <span>Spiral ${index + 1}</span>
+                    <button class="delete-btn" onclick="deleteSpiral(${index})">×</button>
+                `;
+                
+                item.onclick = (e) => {
+                    if (!e.target.classList.contains('delete-btn')) {
+                        selectSpiral(index);
+                    }
+                };
+                
+                list.appendChild(item);
+            });
+        }
+
+        // Select spiral
+        function selectSpiral(index) {
+            selectedSpiralIndex = index;
+            if (spirals[index]) {
+                updateControlsFromSpiral(spirals[index]);
+            }
+            updateSpiralList();
+        }
+
+        // Delete spiral
+        function deleteSpiral(index) {
+            spirals.splice(index, 1);
+            if (selectedSpiralIndex >= spirals.length) {
+                selectedSpiralIndex = Math.max(0, spirals.length - 1);
+            }
+            updateSpiralList();
+            if (spirals.length > 0) {
+                updateControlsFromSpiral(spirals[selectedSpiralIndex]);
+            }
+        }
+
+        // Clear all spirals
+        function clearAllSpirals() {
+            spirals = [];
+            selectedSpiralIndex = 0;
+            updateSpiralList();
+        }
+
+        // Update controls from spiral
+        function updateControlsFromSpiral(spiral) {
+            document.getElementById('speed').value = spiral.speed;
+            document.getElementById('radius').value = spiral.radiusPercent;
+            document.getElementById('arms').value = spiral.arms;
+            document.getElementById('thickness').value = spiral.thickness;
+            document.getElementById('color').value = spiral.color;
+            document.getElementById('opacity').value = spiral.opacity;
+            document.getElementById('time-offset').value = spiral.timeOffset;
+            document.getElementById('rotation').value = spiral.rotation;
+            updateValueDisplays();
+        }
+
+        // Update value displays
+        function updateValueDisplays() {
+            document.getElementById('speed-val').textContent = document.getElementById('speed').value;
+            document.getElementById('radius-val').textContent = document.getElementById('radius').value + '%';
+            document.getElementById('arms-val').textContent = document.getElementById('arms').value;
+            document.getElementById('thickness-val').textContent = document.getElementById('thickness').value;
+            document.getElementById('opacity-val').textContent = document.getElementById('opacity').value;
+            document.getElementById('time-offset-val').textContent = document.getElementById('time-offset').value;
+            document.getElementById('rotation-val').textContent = document.getElementById('rotation').value + '°';
+            
+            const displayTime = document.getElementById('text-interval').value;
+            const holdTime = document.getElementById('text-hold').value;
+            const animSpeed = document.getElementById('text-anim-speed').value;
+            const fadeTime = parseFloat(animSpeed) * 1000;
+            const totalTime = fadeTime + parseInt(holdTime) + fadeTime;
+            
+            document.getElementById('text-interval-val').textContent = displayTime + 'ms';
+            document.getElementById('text-hold-val').textContent = holdTime + 'ms (total: ' + totalTime + 'ms)';
+            document.getElementById('text-anim-speed-val').textContent = document.getElementById('text-anim-speed').value + 's';
+            document.getElementById('text-size-val').textContent = document.getElementById('text-size').value + 'rem';
+        }
+
+        // Control event listeners
+        ['speed', 'arms', 'thickness', 'opacity', 'time-offset', 'rotation'].forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                if (spirals[selectedSpiralIndex]) {
+                    const prop = id.replace('-', '');
+                    spirals[selectedSpiralIndex][prop === 'timeoffset' ? 'timeOffset' : prop] = parseFloat(e.target.value);
+                }
+                updateValueDisplays();
+            });
+        });
+
+        // Special handler for radius (percentage-based)
+        document.getElementById('radius').addEventListener('input', (e) => {
+            if (spirals[selectedSpiralIndex]) {
+                spirals[selectedSpiralIndex].radiusPercent = parseFloat(e.target.value);
+            }
+            updateValueDisplays();
+        });
+
+        document.getElementById('color').addEventListener('input', (e) => {
+            if (spirals[selectedSpiralIndex]) {
+                spirals[selectedSpiralIndex].color = e.target.value;
+            }
+        });
+
+        // Text animation controls
+        document.getElementById('text-anim-speed').addEventListener('input', (e) => {
+            textAnimationSpeed = parseFloat(e.target.value);
+            updateValueDisplays();
+        });
+
+        document.getElementById('text-size').addEventListener('input', (e) => {
+            textSize = parseFloat(e.target.value);
+            updateValueDisplays();
+        });
+
+        document.getElementById('text-color').addEventListener('input', (e) => {
+            textColor = e.target.value;
+        });
+
+        document.getElementById('text-interval').addEventListener('input', updateValueDisplays);
+        document.getElementById('text-hold').addEventListener('input', updateValueDisplays);
+
+        // Text sequence functions
+        function parseTextScript() {
+            const script = document.getElementById('text-script').value;
+            const lines = script.split('\n').filter(line => line.trim());
+            textScript = [];
+            
+            lines.forEach(line => {
+                line = line.trim();
+                if (line.startsWith('DELAY:')) {
+                    const delay = parseInt(line.substring(6));
+                    if (!isNaN(delay)) {
+                        textScript.push({ type: 'delay', value: delay });
+                    }
+                } else if (line) {
+                    textScript.push({ type: 'text', value: line });
+                }
+            });
+        }
+
+        function startTextSequence() {
+            parseTextScript();
+            textIndex = 0;
+            isTextSequenceRunning = true;
+            showNextText();
+        }
+
+        function stopTextSequence() {
+            isTextSequenceRunning = false;
+            if (textTimer) {
+                clearTimeout(textTimer);
+            }
+            hideText();
+        }
+
+        function showNextText() {
+            if (!isTextSequenceRunning) {
+                hideText();
+                return;
+            }
+
+            // Loop back to beginning if we've reached the end
+            if (textIndex >= textScript.length) {
+                textIndex = 0;
+            }
+
+            const current = textScript[textIndex];
+            
+            if (current.type === 'text') {
+                // Add a small delay before showing new text to ensure proper state reset
+                setTimeout(() => {
+                    showText(current.value);
+                }, 50);
+                textIndex++;
+                
+                const interval = parseInt(document.getElementById('text-interval').value);
+                const holdDuration = parseInt(document.getElementById('text-hold').value);
+                const animationDuration = textAnimationSpeed * 1000; // Convert to milliseconds
+                // Total time = fade in + hold duration + fade out + small delay
+                const totalDisplayTime = animationDuration + holdDuration + animationDuration + 50;
+                
+                textTimer = setTimeout(showNextText, totalDisplayTime);
+            } else if (current.type === 'delay') {
+                hideText();
+                textIndex++;
+                textTimer = setTimeout(showNextText, current.value);
+            }
+        }
+
+        function showText(text) {
+            // Ensure we start from a clean state
+            textOverlay.style.transition = 'none';
+            textOverlay.style.transform = 'translate(-50%, -50%) scale(0)';
+            textOverlay.style.opacity = '0';
+            textOverlay.textContent = text;
+            textOverlay.style.fontSize = textSize + 'rem';
+            textOverlay.style.color = textColor;
+            textOverlay.style.transformOrigin = 'center center';
+            
+            // Force reflow to ensure the reset is applied
+            textOverlay.offsetHeight;
+            
+            // Now apply transition and animate in
+            textOverlay.style.transition = `opacity ${textAnimationSpeed}s ease-out, transform ${textAnimationSpeed}s ease-out`;
+            textOverlay.style.opacity = '1';
+            textOverlay.style.transform = 'translate(-50%, -50%) scale(1)';
+            
+            // Schedule the fade out based on hold duration
+            const holdDuration = parseInt(document.getElementById('text-hold').value);
+            const fadeInTime = textAnimationSpeed * 1000;
+            
+            setTimeout(() => {
+                if (isTextSequenceRunning) {
+                    hideText();
+                }
+            }, fadeInTime + holdDuration);
+        }
+
+        function hideText() {
+            textOverlay.style.transition = `opacity ${textAnimationSpeed}s ease-out, transform ${textAnimationSpeed}s ease-out`;
+            textOverlay.style.opacity = '0';
+            textOverlay.style.transform = 'translate(-50%, -50%) scale(2)'; // Scale up significantly as if moving toward viewer
+        }
+
+        // Animation loop
+        function animate() {
+            const currentTime = Date.now() - startTime;
+            
+            // Clear canvas
+            const bgColor = document.getElementById('bg-color').value;
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw all spirals
+            spirals.forEach(spiral => {
+                spiral.draw(currentTime);
+            });
+            
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // Configuration save/load functions
+        function saveConfiguration() {
+            const config = {
+                spirals: spirals.map(spiral => ({
+                    id: spiral.id,
+                    speed: spiral.speed,
+                    radiusPercent: spiral.radiusPercent,
+                    arms: spiral.arms,
+                    thickness: spiral.thickness,
+                    color: spiral.color,
+                    opacity: spiral.opacity,
+                    timeOffset: spiral.timeOffset,
+                    rotation: spiral.rotation
+                })),
+                textSettings: {
+                    script: document.getElementById('text-script').value,
+                    interval: document.getElementById('text-interval').value,
+                    holdDuration: document.getElementById('text-hold').value,
+                    animationSpeed: textAnimationSpeed,
+                    size: textSize,
+                    color: textColor
+                },
+                globalSettings: {
+                    backgroundColor: document.getElementById('bg-color').value,
+                    selectedSpiralIndex: selectedSpiralIndex
+                }
+            };
+            
+            const dataStr = JSON.stringify(config, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const exportFileDefaultName = 'spiral_config_' + new Date().toISOString().slice(0,19).replace(/:/g, '-') + '.json';
+            
+            const linkElement = document.createElement('a');
+            linkElement.href = url;
+            linkElement.download = exportFileDefaultName;
+            document.body.appendChild(linkElement);
+            linkElement.click();
+            document.body.removeChild(linkElement);
+            URL.revokeObjectURL(url);
+        }
+
+        function loadConfiguration() {
+            document.getElementById('config-file').click();
+        }
+
+        function handleConfigFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const config = JSON.parse(e.target.result);
+                    applyConfiguration(config);
+                } catch (error) {
+                    alert('Error loading configuration: Invalid JSON file');
+                    console.error('Configuration load error:', error);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function applyConfiguration(config) {
+            // Clear existing spirals
+            spirals = [];
+            
+            // Load spirals
+            if (config.spirals && Array.isArray(config.spirals)) {
+                config.spirals.forEach(spiralData => {
+                    const spiral = new Spiral(spiralData.id);
+                    spiral.speed = spiralData.speed || 1;
+                    spiral.radiusPercent = spiralData.radiusPercent || 50;
+                    spiral.arms = spiralData.arms || 3;
+                    spiral.thickness = spiralData.thickness || 3;
+                    spiral.color = spiralData.color || '#4fc3f7';
+                    spiral.opacity = spiralData.opacity || 0.8;
+                    spiral.timeOffset = spiralData.timeOffset || 0;
+                    spiral.rotation = spiralData.rotation || 0;
+                    spiral.x = canvas.width / 2;
+                    spiral.y = canvas.height / 2;
+                    spirals.push(spiral);
+                });
+            }
+            
+            // Load text settings
+            if (config.textSettings) {
+                document.getElementById('text-script').value = config.textSettings.script || '';
+                document.getElementById('text-interval').value = config.textSettings.interval || 2000;
+                document.getElementById('text-hold').value = config.textSettings.holdDuration || 3000;
+                document.getElementById('text-anim-speed').value = config.textSettings.animationSpeed || 0.5;
+                document.getElementById('text-size').value = config.textSettings.size || 2.5;
+                document.getElementById('text-color').value = config.textSettings.color || '#ffffff';
+                
+                textAnimationSpeed = config.textSettings.animationSpeed || 0.5;
+                textSize = config.textSettings.size || 2.5;
+                textColor = config.textSettings.color || '#ffffff';
+            }
+            
+            // Load global settings
+            if (config.globalSettings) {
+                document.getElementById('bg-color').value = config.globalSettings.backgroundColor || '#000000';
+                selectedSpiralIndex = Math.min(config.globalSettings.selectedSpiralIndex || 0, spirals.length - 1);
+            }
+            
+            // Update UI
+            updateSpiralList();
+            if (spirals.length > 0) {
+                selectSpiral(Math.max(0, selectedSpiralIndex));
+            }
+            updateValueDisplays();
+            
+            // Hide controls and start text loop automatically
+            const controls = document.getElementById('controls');
+            const toggleButton = document.getElementById('toggle-controls');
+            controls.style.display = 'none';
+            toggleButton.textContent = 'Show Controls';
+            
+            // Auto-start text sequence if there's text content
+            const textScript = document.getElementById('text-script').value.trim();
+            if (textScript) {
+                startTextSequence();
+            }
+            
+            alert('Configuration loaded successfully! Text loop started and controls hidden.');
+        }
+
+        // Controls toggle
+        document.getElementById('toggle-controls').addEventListener('click', function() {
+            const controls = document.getElementById('controls');
+            const isHidden = controls.style.display === 'none';
+            controls.style.display = isHidden ? 'block' : 'none';
+            this.textContent = isHidden ? 'Hide Controls' : 'Show Controls';
+        });
+
+        // Initialize
+        addSpiral(); // Start with one spiral
+        updateValueDisplays();
+        animate();
+
+        // Set default text script
+        document.getElementById('text-script').value = `Welcome to the Spiral Generator
+DELAY:2000
+Watch the patterns dance
+DELAY:1500
+Customize every parameter
+DELAY:2000
+Create your own visual symphony
+DELAY:3000
+The possibilities are infinite`;
+    </script>
+</body>
+</html>

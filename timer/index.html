@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Cost Tracker Stopwatch</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+				background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+				color: #ffffff;
+				min-height: 100vh;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				padding: 20px;
+			}
+
+			.container {
+				background: rgba(255, 255, 255, 0.1);
+				backdrop-filter: blur(10px);
+				border-radius: 20px;
+				padding: 40px;
+				box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+				border: 1px solid rgba(255, 255, 255, 0.2);
+				max-width: 1200px;
+				width: 100%;
+				text-align: center;
+			}
+
+			.main-content {
+				display: flex;
+				gap: 30px;
+				align-items: flex-start;
+			}
+
+			.tracker-section {
+				flex: 1;
+				min-width: 400px;
+			}
+
+			.penalties-section {
+				flex: 1;
+				min-width: 350px;
+				margin: 0;
+				padding: 20px;
+				background: rgba(255, 107, 107, 0.1);
+				border-radius: 15px;
+				border: 1px solid rgba(255, 107, 107, 0.3);
+				text-align: left;
+				align-self: stretch;
+			}
+
+			@media (max-width: 900px) {
+				.main-content {
+					flex-direction: column;
+				}
+
+				.penalties-section {
+					margin-top: 30px;
+					text-align: center;
+				}
+
+				.tracker-section {
+					min-width: auto;
+				}
+			}
+
+			h1 {
+				font-size: 2.5rem;
+				margin-bottom: 30px;
+				background: linear-gradient(45deg, #00d4ff, #ff6b6b);
+				-webkit-background-clip: text;
+				-webkit-text-fill-color: transparent;
+				background-clip: text;
+			}
+
+			.settings {
+				margin-bottom: 30px;
+				display: grid;
+				gap: 15px;
+			}
+
+			.input-group {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				justify-content: space-between;
+			}
+
+			label {
+				font-weight: 600;
+				font-size: 1.1rem;
+			}
+
+			input,
+			select {
+				background: rgba(255, 255, 255, 0.1);
+				border: 1px solid rgba(255, 255, 255, 0.3);
+				border-radius: 10px;
+				padding: 10px 15px;
+				color: white;
+				font-size: 1rem;
+				width: 150px;
+			}
+
+			input:focus,
+			select:focus {
+				outline: none;
+				border-color: #00d4ff;
+				box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+			}
+
+			option {
+				background: #1a1a2e;
+				color: white;
+			}
+
+			.timer-display {
+				font-size: 3rem;
+				font-weight: bold;
+				margin: 30px 0;
+				color: #00d4ff;
+				text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+			}
+
+			.cost-display {
+				font-size: 2rem;
+				margin: 20px 0;
+				padding: 20px;
+				background: rgba(0, 212, 255, 0.1);
+				border-radius: 15px;
+				border: 1px solid rgba(0, 212, 255, 0.3);
+			}
+
+			.cost-label {
+				font-size: 1rem;
+				color: #b0b0b0;
+				margin-bottom: 10px;
+			}
+
+			.cost-amount {
+				font-weight: bold;
+				color: #00d4ff;
+			}
+
+			.controls {
+				display: flex;
+				gap: 15px;
+				justify-content: center;
+				margin-top: 30px;
+			}
+
+			button {
+				background: linear-gradient(45deg, #00d4ff, #0099cc);
+				border: none;
+				border-radius: 50px;
+				padding: 15px 30px;
+				color: white;
+				font-size: 1.1rem;
+				font-weight: 600;
+				cursor: pointer;
+				transition: all 0.3s ease;
+				box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+			}
+
+			button:hover {
+				transform: translateY(-2px);
+				box-shadow: 0 6px 20px rgba(0, 212, 255, 0.4);
+			}
+
+			button:active {
+				transform: translateY(0);
+			}
+
+			button:disabled {
+				background: rgba(255, 255, 255, 0.1);
+				cursor: not-allowed;
+				transform: none;
+				box-shadow: none;
+			}
+
+			.stop-btn {
+				background: linear-gradient(45deg, #ff6b6b, #cc0000);
+				box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+			}
+
+			.stop-btn:hover {
+				box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+			}
+
+			.reset-btn {
+				background: linear-gradient(45deg, #666666, #444444);
+				box-shadow: 0 4px 15px rgba(102, 102, 102, 0.3);
+			}
+
+			.reset-btn:hover {
+				box-shadow: 0 6px 20px rgba(102, 102, 102, 0.4);
+			}
+
+			.penalties-section {
+				flex: 1;
+				min-width: 350px;
+				margin: 0;
+				padding: 20px;
+				background: rgba(255, 107, 107, 0.1);
+				border-radius: 15px;
+				border: 1px solid rgba(255, 107, 107, 0.3);
+				text-align: left;
+				align-self: stretch;
+			}
+
+			.penalties-header {
+				font-size: 1.2rem;
+				margin-bottom: 15px;
+				color: #ff6b6b;
+			}
+
+			.penalty-input {
+				display: flex;
+				gap: 10px;
+				margin-bottom: 15px;
+				align-items: center;
+			}
+
+			.penalty-input input[type="text"] {
+				flex: 1;
+				min-width: 150px;
+			}
+
+			.penalty-input input[type="number"] {
+				width: 100px;
+			}
+
+			.add-penalty-btn {
+				background: linear-gradient(45deg, #ff6b6b, #cc0000);
+				padding: 8px 15px;
+				font-size: 0.9rem;
+				min-width: auto;
+			}
+
+			.penalty-list {
+				margin-top: 15px;
+			}
+
+			.penalty-item {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				padding: 10px;
+				margin-bottom: 8px;
+				background: rgba(255, 255, 255, 0.1);
+				border-radius: 8px;
+				border: 1px solid rgba(255, 255, 255, 0.2);
+			}
+
+			.penalty-description {
+				flex: 1;
+				text-align: left;
+			}
+
+			.penalty-amount {
+				font-weight: bold;
+				color: #ff6b6b;
+				margin: 0 15px;
+			}
+
+			.remove-penalty {
+				background: rgba(255, 255, 255, 0.2);
+				color: white;
+				border: none;
+				border-radius: 50%;
+				width: 25px;
+				height: 25px;
+				cursor: pointer;
+				font-size: 0.8rem;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+
+			.remove-penalty:hover {
+				background: rgba(255, 107, 107, 0.5);
+			}
+
+			.final-total {
+				margin-top: 20px;
+				padding: 20px;
+				background: linear-gradient(
+					45deg,
+					rgba(255, 107, 107, 0.2),
+					rgba(0, 212, 255, 0.2)
+				);
+				border-radius: 15px;
+				border: 1px solid rgba(255, 255, 255, 0.3);
+				display: none;
+			}
+
+			.final-total.show {
+				display: block;
+				animation: slideIn 0.3s ease;
+			}
+
+			.bill-breakdown {
+				margin-top: 20px;
+				text-align: left;
+			}
+
+			.bill-item {
+				display: flex;
+				justify-content: space-between;
+				padding: 8px 0;
+				border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+			}
+
+			.bill-item:last-child {
+				border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+				font-weight: bold;
+				font-size: 1.1rem;
+				color: #00d4ff;
+			}
+
+			.bill-description {
+				flex: 1;
+			}
+
+			.bill-amount {
+				font-weight: bold;
+			}
+
+			@keyframes slideIn {
+				from {
+					opacity: 0;
+					transform: translateY(20px);
+				}
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+
+			.pulse {
+				animation: pulse 0.5s ease;
+			}
+
+			@keyframes pulse {
+				0% {
+					transform: scale(1);
+				}
+				50% {
+					transform: scale(1.05);
+				}
+				100% {
+					transform: scale(1);
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>💰 Cost Tracker</h1>
+
+			<div class="main-content">
+				<div class="tracker-section">
+					<div class="settings">
+						<div class="input-group">
+							<label for="rate">Rate per unit:</label>
+							<input
+								type="number"
+								id="rate"
+								value="50"
+								min="0"
+								step="0.01"
+							/>
+						</div>
+
+						<div class="input-group">
+							<label for="currency">Currency:</label>
+							<select id="currency">
+								<option value="€">Euro (€)</option>
+								<option value="£">Pound (£)</option>
+								<option value="$">Dollar ($)</option>
+							</select>
+						</div>
+
+						<div class="input-group">
+							<label for="interval">Increment every:</label>
+							<select id="interval">
+								<option value="1000">1 Second</option>
+								<option value="60000" selected>1 Minute</option>
+								<option value="3600000">1 Hour</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="timer-display" id="timer">00:00:00</div>
+
+					<div class="cost-display">
+						<div class="cost-label">Current Cost</div>
+						<div class="cost-amount" id="currentCost">€0.00</div>
+					</div>
+
+					<div class="controls">
+						<button id="startBtn">Start</button>
+						<button id="stopBtn" disabled class="stop-btn">
+							Stop
+						</button>
+						<button id="resetBtn" class="reset-btn">Reset</button>
+					</div>
+				</div>
+
+				<div class="penalties-section">
+					<div class="penalties-header">
+						📋 Additional Costs / Penalties
+					</div>
+					<div class="penalty-input">
+						<input
+							type="text"
+							id="penaltyDescription"
+							placeholder="Description (e.g., Late delivery fee)"
+						/>
+						<input
+							type="number"
+							id="penaltyAmount"
+							placeholder="Amount"
+							min="0"
+							step="0.01"
+						/>
+						<button id="addPenaltyBtn" class="add-penalty-btn">
+							Add
+						</button>
+					</div>
+					<div class="penalty-list" id="penaltyList"></div>
+				</div>
+			</div>
+
+			<div class="final-total" id="finalTotal">
+				<div class="cost-label">Final Invoice</div>
+				<div class="bill-breakdown" id="billBreakdown"></div>
+			</div>
+		</div>
+
+		<script>
+			class CostTracker {
+				constructor() {
+					this.startTime = 0;
+					this.elapsedTime = 0;
+					this.timerInterval = null;
+					this.costInterval = null;
+					this.isRunning = false;
+					this.totalCost = 0;
+					this.penalties = [];
+
+					this.initializeElements();
+					this.bindEvents();
+					this.updateDisplay();
+				}
+
+				initializeElements() {
+					this.timerDisplay = document.getElementById("timer");
+					this.currentCostDisplay =
+						document.getElementById("currentCost");
+					this.finalTotalDiv = document.getElementById("finalTotal");
+					this.billBreakdownDiv =
+						document.getElementById("billBreakdown");
+
+					this.startBtn = document.getElementById("startBtn");
+					this.stopBtn = document.getElementById("stopBtn");
+					this.resetBtn = document.getElementById("resetBtn");
+
+					this.rateInput = document.getElementById("rate");
+					this.currencySelect = document.getElementById("currency");
+					this.intervalSelect = document.getElementById("interval");
+
+					this.penaltyDescriptionInput =
+						document.getElementById("penaltyDescription");
+					this.penaltyAmountInput =
+						document.getElementById("penaltyAmount");
+					this.addPenaltyBtn =
+						document.getElementById("addPenaltyBtn");
+					this.penaltyListDiv =
+						document.getElementById("penaltyList");
+				}
+
+				bindEvents() {
+					this.startBtn.addEventListener("click", () => this.start());
+					this.stopBtn.addEventListener("click", () => this.stop());
+					this.resetBtn.addEventListener("click", () => this.reset());
+
+					this.currencySelect.addEventListener("change", () =>
+						this.calculateCurrentCost()
+					);
+					this.rateInput.addEventListener("input", () =>
+						this.calculateCurrentCost()
+					);
+
+					this.addPenaltyBtn.addEventListener("click", () =>
+						this.addPenalty()
+					);
+					this.penaltyDescriptionInput.addEventListener(
+						"keypress",
+						(e) => {
+							if (e.key === "Enter") this.addPenalty();
+						}
+					);
+					this.penaltyAmountInput.addEventListener(
+						"keypress",
+						(e) => {
+							if (e.key === "Enter") this.addPenalty();
+						}
+					);
+				}
+
+				start() {
+					if (!this.isRunning) {
+						this.startTime = Date.now() - this.elapsedTime;
+						this.isRunning = true;
+
+						this.timerInterval = setInterval(
+							() => this.updateTimer(),
+							100
+						);
+						this.costInterval = setInterval(
+							() => this.incrementCost(),
+							parseInt(this.intervalSelect.value)
+						);
+
+						this.startBtn.disabled = true;
+						this.stopBtn.disabled = false;
+						this.finalTotalDiv.classList.remove("show");
+					}
+				}
+
+				stop() {
+					if (this.isRunning) {
+						this.isRunning = false;
+						clearInterval(this.timerInterval);
+						clearInterval(this.costInterval);
+
+						this.startBtn.disabled = false;
+						this.stopBtn.disabled = true;
+
+						this.showFinalTotal();
+					}
+				}
+
+				reset() {
+					this.stop();
+					this.elapsedTime = 0;
+					this.totalCost = 0;
+					this.penalties = [];
+
+					this.updateTimer();
+					this.calculateCurrentCost();
+					this.updatePenaltyList();
+					this.finalTotalDiv.classList.remove("show");
+
+					this.startBtn.disabled = false;
+					this.stopBtn.disabled = true;
+				}
+
+				updateTimer() {
+					if (this.isRunning) {
+						this.elapsedTime = Date.now() - this.startTime;
+						// Update cost calculation in real-time
+						this.calculateCurrentCost();
+					}
+
+					const totalSeconds = Math.floor(this.elapsedTime / 1000);
+					const hours = Math.floor(totalSeconds / 3600);
+					const minutes = Math.floor((totalSeconds % 3600) / 60);
+					const seconds = totalSeconds % 60;
+
+					this.timerDisplay.textContent = `${hours
+						.toString()
+						.padStart(2, "0")}:${minutes
+						.toString()
+						.padStart(2, "0")}:${seconds
+						.toString()
+						.padStart(2, "0")}`;
+				}
+
+				incrementCost() {
+					// This just triggers the visual pulse and display update
+					this.calculateCurrentCost();
+
+					// Add pulse animation
+					this.currentCostDisplay.classList.add("pulse");
+					setTimeout(() => {
+						this.currentCostDisplay.classList.remove("pulse");
+					}, 500);
+				}
+
+				calculateCurrentCost() {
+					const rate = parseFloat(this.rateInput.value) || 0;
+					const intervalMs = parseInt(this.intervalSelect.value);
+
+					// Calculate cost based on actual elapsed time as a fraction of the selected interval
+					const fractionalUnits = this.elapsedTime / intervalMs;
+					this.totalCost = fractionalUnits * rate;
+
+					this.updateDisplay();
+				}
+
+				updateDisplay() {
+					const currency = this.currencySelect.value;
+					const formattedCost = this.formatCurrency(
+						this.totalCost,
+						currency
+					);
+					this.currentCostDisplay.textContent = formattedCost;
+				}
+
+				showFinalTotal() {
+					this.generateBillBreakdown();
+					this.finalTotalDiv.classList.add("show");
+				}
+
+				generateBillBreakdown() {
+					const currency = this.currencySelect.value;
+					const intervalText = this.getIntervalText();
+					const timeText = this.getElapsedTimeText();
+
+					let html = "";
+
+					// Time-based cost
+					html += `
+                    <div class="bill-item">
+                        <div class="bill-description">${timeText} @ ${this.formatCurrency(
+						parseFloat(this.rateInput.value) || 0,
+						currency
+					)} per ${intervalText}</div>
+                        <div class="bill-amount">${this.formatCurrency(
+							this.totalCost,
+							currency
+						)}</div>
+                    </div>
+                `;
+
+					// Penalties
+					let penaltyTotal = 0;
+					this.penalties.forEach((penalty) => {
+						penaltyTotal += penalty.amount;
+						html += `
+                        <div class="bill-item">
+                            <div class="bill-description">${
+								penalty.description
+							}</div>
+                            <div class="bill-amount">${this.formatCurrency(
+								penalty.amount,
+								currency
+							)}</div>
+                        </div>
+                    `;
+					});
+
+					// Total
+					const grandTotal = this.totalCost + penaltyTotal;
+					html += `
+                    <div class="bill-item">
+                        <div class="bill-description"><strong>TOTAL</strong></div>
+                        <div class="bill-amount">${this.formatCurrency(
+							grandTotal,
+							currency
+						)}</div>
+                    </div>
+                `;
+
+					this.billBreakdownDiv.innerHTML = html;
+				}
+
+				getIntervalText() {
+					const interval = parseInt(this.intervalSelect.value);
+					switch (interval) {
+						case 1000:
+							return "second";
+						case 60000:
+							return "minute";
+						case 3600000:
+							return "hour";
+						default:
+							return "unit";
+					}
+				}
+
+				getElapsedTimeText() {
+					const totalSeconds = Math.floor(this.elapsedTime / 1000);
+					const hours = Math.floor(totalSeconds / 3600);
+					const minutes = Math.floor((totalSeconds % 3600) / 60);
+					const seconds = totalSeconds % 60;
+
+					if (hours > 0) {
+						return `${hours}h ${minutes}m ${seconds}s`;
+					} else if (minutes > 0) {
+						return `${minutes}m ${seconds}s`;
+					} else {
+						return `${seconds}s`;
+					}
+				}
+
+				addPenalty() {
+					const description =
+						this.penaltyDescriptionInput.value.trim();
+					const amount =
+						parseFloat(this.penaltyAmountInput.value) || 0;
+
+					if (description && amount > 0) {
+						this.penalties.push({
+							description: description,
+							amount: amount,
+							id: Date.now(),
+						});
+
+						this.penaltyDescriptionInput.value = "";
+						this.penaltyAmountInput.value = "";
+						this.updatePenaltyList();
+					}
+				}
+
+				removePenalty(id) {
+					this.penalties = this.penalties.filter(
+						(penalty) => penalty.id !== id
+					);
+					this.updatePenaltyList();
+				}
+
+				updatePenaltyList() {
+					const currency = this.currencySelect.value;
+					let html = "";
+
+					this.penalties.forEach((penalty) => {
+						html += `
+                        <div class="penalty-item">
+                            <div class="penalty-description">${
+								penalty.description
+							}</div>
+                            <div class="penalty-amount">${this.formatCurrency(
+								penalty.amount,
+								currency
+							)}</div>
+                            <button class="remove-penalty" onclick="costTracker.removePenalty(${
+								penalty.id
+							})">×</button>
+                        </div>
+                    `;
+					});
+
+					this.penaltyListDiv.innerHTML = html;
+				}
+
+				formatCurrency(amount, currency) {
+					return `${currency}${amount.toFixed(2)}`;
+				}
+			}
+
+			// Initialize the application
+			let costTracker;
+			document.addEventListener("DOMContentLoaded", () => {
+				costTracker = new CostTracker();
+			});
+		</script>
+	</body>
+</html>
