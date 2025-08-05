@@ -91,44 +91,74 @@ window.renderAdminView = function () {
 		} else {
 			pendingContainer.innerHTML = pendingTasks
 				.map(function (task) {
-					return (
-						'<div class="task-item pending-approval ' +
-						(task.isOverdue ? "overdue" : "") +
-						'">' +
-						'<div class="task-content">' +
-						"<div>" +
-						'<span class="status-badge status-pending">Pending Approval</span>' +
-						'<span class="task-text">' +
-						window.escapeHtml(task.text) +
-						"</span>" +
-						'<span class="points-badge-small">+' +
-						task.points +
-						" pts</span>" +
-						'<div class="task-meta">' +
-						"Completed by: " +
-						(window.users[task.completedBy]
-							? window.users[task.completedBy].displayName
-							: task.completedBy) +
-						(task.dueDate
-							? "<br>Due: " + window.formatDate(task.dueDate)
-							: "") +
-						(task.isRepeating ? "<br>売 Repeating" : "") +
-						"</div>" +
-						"</div>" +
-						'<div class="task-actions">' +
-						'<button class="action-btn approve-btn" onclick="approveTask(' +
-						task.id +
-						')">Approve</button>' +
-						'<button class="action-btn reject-btn" onclick="rejectTask(' +
-						task.id +
-						')">Reject & Penalize</button>' +
-						'<button class="action-btn delete-btn" onclick="deleteTask(' +
-						task.id +
-						')">Delete</button>' +
-						"</div>" +
-						"</div>" +
-						"</div>"
-					);
+					var taskType = "regular";
+					if (task.type === "cost-tracker") {
+						taskType = "cost-tracker";
+					}
+					var taskContent = "";
+
+					if (taskType === "cost-tracker") {
+						const costDetails = task.costDetails;
+						taskContent = `
+							<div>
+								<span class="status-badge status-pending">Invoice Pending Approval</span>
+								<span class="task-text">${window.escapeHtml(task.text)}</span>
+								<div class="task-meta">
+									${costDetails ? `<strong>Total:</strong> ${costDetails.grandTotal}<br>` : ""}
+									Completed by: ${
+										window.users[task.completedBy]
+											? window.users[task.completedBy]
+													.displayName
+											: task.completedBy
+									}
+								</div>
+							</div>
+							<div class="task-actions">
+								<button class="action-btn approve-btn" onclick="approveTask(${
+									task.id
+								})">Approve & Confirm</button>
+								<button class="action-btn reject-btn" onclick="rejectTask(${
+									task.id
+								})">Reject & Cancel</button>
+								<button class="action-btn delete-btn" onclick="deleteTask(${
+									task.id
+								})">Delete</button>
+							</div>
+						`;
+					} else {
+						// Existing regular task content
+						taskContent = `
+							<div>
+								<span class="status-badge status-pending">Pending Approval</span>
+								<span class="task-text">${window.escapeHtml(task.text)}</span>
+								<span class="points-badge-small">+${task.points} pts</span>
+								<div class="task-meta">
+									Completed by: ${
+										window.users[task.completedBy]
+											? window.users[task.completedBy]
+													.displayName
+											: task.completedBy
+									}
+									${task.dueDate ? "<br>Due: " + window.formatDate(task.dueDate) : ""}
+									${task.isRepeating ? "<br>売 Repeating" : ""}
+								</div>
+							</div>
+							<div class="task-actions">
+								<button class="action-btn approve-btn" onclick="approveTask(${
+									task.id
+								})">Approve</button>
+								<button class="action-btn reject-btn" onclick="rejectTask(${
+									task.id
+								})">Reject & Penalize</button>
+								<button class="action-btn delete-btn" onclick="deleteTask(${
+									task.id
+								})">Delete</button>
+							</div>
+						`;
+					}
+					return `<div class="task-item pending-approval ${
+						task.isOverdue ? "overdue" : ""
+					}"><div class="task-content">${taskContent}</div></div>`;
 				})
 				.join("");
 		}
@@ -145,6 +175,9 @@ window.renderAdminView = function () {
 					if (task.status === "completed") classes += "completed ";
 					if (task.isOverdue) classes += "overdue ";
 					if (task.type === "demerit") classes += "demerit-task ";
+					if (task.type === "spiral") classes += "spiral-task ";
+					if (task.type === "cost-tracker")
+						classes += "cost-tracker-task ";
 					return (
 						'<div class="task-item ' +
 						classes +
@@ -169,11 +202,21 @@ window.renderAdminView = function () {
 						'<span class="task-text">' +
 						window.escapeHtml(task.text) +
 						"</span>" +
-						'<span class="points-badge-small">' +
+						(task.type === "cost-tracker" && task.costDetails
+							? '<span class="points-badge-small cost-badge">' +
+							  task.costDetails.grandTotal +
+							  "</span>"
+							: "") +
+						(task.type === "regular"
+							? '<span class="points-badge-small">+' +
+							  task.points +
+							  " pts</span>"
+							: "") +
 						(task.type === "demerit"
-							? "-" + task.penaltyPoints
-							: "+" + task.points) +
-						" pts</span>" +
+							? '<span class="points-badge-small">-' +
+							  task.penaltyPoints +
+							  " pts</span>"
+							: "") +
 						(task.type === "demerit" && task.appealStatus
 							? '<span class="points-badge-small appeal-status ' +
 							  task.appealStatus +
@@ -201,6 +244,10 @@ window.renderAdminView = function () {
 						(task.isRepeating ? "<br>売 Repeating" : "") +
 						(task.type === "demerit"
 							? "<br>搭 Demerit Task"
+							: "") +
+						(task.type === "spiral" ? "<br>🌀 Spiral Task" : "") +
+						(task.type === "cost-tracker"
+							? "<br>💰 Cost Tracker Task"
 							: "") +
 						(task.type === "demerit" && task.acceptedAt
 							? "<br>Accepted: " +
@@ -266,38 +313,40 @@ window.renderUserView = function () {
 						classes += "pending-approval ";
 					if (task.appealStatus === "pending")
 						classes += "appeal-pending ";
+
+					// New task types
+					if (task.type === "spiral") classes += "spiral-task-user";
+					if (task.type === "cost-tracker")
+						classes += "cost-tracker-task-user";
+
 					var actionButtons = "";
-					if (
+					var taskDescription = window.escapeHtml(task.text);
+
+					if (task.type === "spiral") {
+						actionButtons = `<button class="action-btn check-btn" onclick="window.viewSpiralTask(${task.id})">View Spiral</button>`;
+					} else if (task.type === "cost-tracker") {
+						actionButtons = `<button class="action-btn check-btn" onclick="window.viewCostTrackerTask(${task.id})">View Invoice</button>`;
+					} else if (
 						task.type === "regular" &&
 						task.status === "todo" &&
 						!task.isOverdue
 					) {
-						actionButtons =
-							'<button class="action-btn check-btn" onclick="checkOffTask(' +
-							task.id +
-							')">Mark Complete</button>';
+						actionButtons = `<button class="action-btn check-btn" onclick="checkOffTask(${task.id})">Mark Complete</button>`;
 					} else if (
 						task.type === "regular" &&
 						task.isOverdue &&
 						task.status === "todo"
 					) {
-						actionButtons =
-							'<button class="action-btn check-btn" onclick="checkOffTask(' +
-							task.id +
-							')">Mark Complete (Overdue)</button>';
+						actionButtons = `<button class="action-btn check-btn" onclick="checkOffTask(${task.id})">Mark Complete (Overdue)</button>`;
 					} else if (
 						task.type === "demerit" &&
 						!task.acceptedAt &&
 						!task.appealStatus
 					) {
-						actionButtons =
-							'<button class="action-btn accept-btn" onclick="acceptDemerit(' +
-							task.id +
-							')">Accept Demerit</button>' +
-							'<button class="action-btn appeal-btn" onclick="appealDemerit(' +
-							task.id +
-							')">Appeal Demerit</button>';
+						actionButtons = `<button class="action-btn accept-btn" onclick="acceptDemerit(${task.id})">Accept Demerit</button>
+										 <button class="action-btn appeal-btn" onclick="appealDemerit(${task.id})">Appeal Demerit</button>`;
 					}
+
 					return (
 						'<div class="task-item ' +
 						classes +
@@ -320,13 +369,23 @@ window.renderUserView = function () {
 						) +
 						"</span>" +
 						'<span class="task-text">' +
-						window.escapeHtml(task.text) +
+						taskDescription +
 						"</span>" +
-						'<span class="points-badge-small">' +
+						(task.type === "cost-tracker" && task.costDetails
+							? '<span class="points-badge-small cost-badge">' +
+							  task.costDetails.grandTotal +
+							  "</span>"
+							: "") +
+						(task.type === "regular"
+							? '<span class="points-badge-small">+' +
+							  task.points +
+							  " pts</span>"
+							: "") +
 						(task.type === "demerit"
-							? "-" + task.penaltyPoints
-							: "+" + task.points) +
-						" pts</span>" +
+							? '<span class="points-badge-small">-' +
+							  task.penaltyPoints +
+							  " pts</span>"
+							: "") +
 						(task.type === "demerit" && task.appealStatus
 							? '<span class="points-badge-small appeal-status ' +
 							  task.appealStatus +
@@ -353,6 +412,10 @@ window.renderUserView = function () {
 						(task.isRepeating ? "<br>売 Repeating" : "") +
 						(task.type === "demerit"
 							? "<br>搭 Demerit Task"
+							: "") +
+						(task.type === "spiral" ? "<br>🌀 Spiral Task" : "") +
+						(task.type === "cost-tracker"
+							? "<br>💰 Cost Tracker Task"
 							: "") +
 						(task.completedBy
 							? "<br>Completed by: " +
@@ -408,4 +471,53 @@ window.renderUserView = function () {
 	setTimeout(function () {
 		window.setupRefreshButton("refreshDataBtnUser", 30);
 	}, 0);
+};
+
+// New functions for the user to view the new task types
+window.viewSpiralTask = function (taskId) {
+	const task = window.tasks.find((t) => t.id === taskId);
+	if (!task || task.type !== "spiral") {
+		window.showNotification("This is not a spiral task.", "error");
+		return;
+	}
+
+	const modal = document.getElementById("spiralModal");
+	if (modal) {
+		modal.classList.remove("hidden");
+		// Initialize spiral viewer in read-only mode
+		if (window.spiral) {
+			window.spiral.init();
+			window.spiral.applyConfiguration(task.spiralConfig);
+		}
+		// Hide controls for the user
+		const controls = document.getElementById("controls");
+		if (controls) controls.style.display = "none";
+	}
+};
+
+window.viewCostTrackerTask = function (taskId) {
+	const task = window.tasks.find((t) => t.id === taskId);
+	if (!task || task.type !== "cost-tracker" || !task.costDetails) {
+		window.showNotification("This is not a cost tracker invoice.", "error");
+		return;
+	}
+
+	const modalContent = document.createElement("div");
+	modalContent.innerHTML = `
+		<h3>Cost Tracker Invoice</h3>
+		<p><strong>Issued by:</strong> ${task.createdBy}</p>
+		<p><strong>Issued on:</strong> ${window.formatDate(task.createdAt)}</p>
+		<hr>
+		<h4>Breakdown:</h4>
+		<p>${task.costDetails.timeBasedCost.description}: <strong>${
+		task.costDetails.timeBasedCost.amount
+	}</strong></p>
+		${task.costDetails.penalties
+			.map((p) => `<p>${p.description}: <strong>${p.amount}</strong></p>`)
+			.join("")}
+		<hr>
+		<h3>Total: <strong>${task.costDetails.grandTotal}</strong></h3>
+	`;
+
+	window.showModal(modalContent.outerHTML);
 };

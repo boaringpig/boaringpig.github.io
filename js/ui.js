@@ -97,6 +97,10 @@ window.setupRefreshButton = function (buttonId, cooldownSeconds) {
  * @param {string} tabName - The name of the tab to switch to.
  */
 window.switchTab = function (tabName) {
+	// Hide all tool modals first
+	window.hideSpiralGenerator();
+	window.hideCostTracker();
+
 	var tabs = document.querySelectorAll(".nav-tab");
 	for (var i = 0; i < tabs.length; i++) {
 		tabs[i].classList.remove("active");
@@ -219,6 +223,9 @@ window.showMainApp = async function () {
 		if (userView) userView.style.display = "block";
 		if (adminRewardManagement) adminRewardManagement.style.display = "none";
 	}
+
+	// Initialize the tool buttons here
+	window.initializeToolButtons();
 
 	var isRepeatingCheckbox = document.getElementById("isRepeating");
 	if (isRepeatingCheckbox) {

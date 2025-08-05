@@ -180,7 +180,32 @@ document.addEventListener("DOMContentLoaded", function () {
 	if (cancelEditRewardBtn) {
 		cancelEditRewardBtn.addEventListener("click", window.cancelEditReward);
 	}
-	// The update settings button is directly onclick in HTML, so no need for listener here
+
+	// NEW: Event listeners for the new tool buttons
+	const showSpiralGeneratorBtn = document.getElementById(
+		"showSpiralGeneratorBtn"
+	);
+	const showCostTrackerBtn = document.getElementById("showCostTrackerBtn");
+
+	if (showSpiralGeneratorBtn) {
+		showSpiralGeneratorBtn.addEventListener("click", () => {
+			if (window.showSpiralGenerator) {
+				window.showSpiralGenerator();
+			} else {
+				console.error("showSpiralGenerator function is not available.");
+			}
+		});
+	}
+
+	if (showCostTrackerBtn) {
+		showCostTrackerBtn.addEventListener("click", () => {
+			if (window.showCostTracker) {
+				window.showCostTracker();
+			} else {
+				console.error("showCostTracker function is not available.");
+			}
+		});
+	}
 
 	// >>> This is where the Flatpickr initialization function is called. <<<
 	initializeDatePickers();
@@ -191,9 +216,3 @@ window.hasPermission = function (permission) {
 	const user = window.users[window.currentUser];
 	return user && user.permissions.includes(permission);
 };
-
-// window.changeMonth is no longer needed as FullCalendar handles navigation
-// window.changeMonth = function (direction) {
-// 	window.currentDate.setMonth(window.currentDate.getMonth() + direction);
-// 	window.renderCalendar();
-// };

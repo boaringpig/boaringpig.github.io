@@ -27,6 +27,12 @@
 			rel="stylesheet"
 		/>
 		<script src="js/config.js"></script>
+		<!-- Three.js for 3D/Spiral simulations -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+		<!-- New Integration Scripts moved to head to be loaded first -->
+		<script src="js/spiral-integration.js"></script>
+		<script src="js/cost-tracker-integration.js"></script>
 	</head>
 	<body>
 		<div class="container">
@@ -154,6 +160,20 @@
 						<div class="task-section">
 							<div class="section-header">
 								<h2 class="section-title">Create New Task</h2>
+								<div class="task-actions">
+									<button
+										id="showSpiralGeneratorBtn"
+										class="action-btn check-btn"
+									>
+										Create Spiral Task
+									</button>
+									<button
+										id="showCostTrackerBtn"
+										class="action-btn check-btn"
+									>
+										Open Cost Tracker
+									</button>
+								</div>
 							</div>
 							<div class="task-creation-form">
 								<input
@@ -683,6 +703,383 @@
 			</div>
 		</div>
 
+		<!-- New Modals for the tools -->
+		<!-- Spiral Generator Modal -->
+		<div id="spiralModal" class="modal-overlay hidden">
+			<div class="modal-content large">
+				<button
+					id="closeSpiralModal"
+					class="close-modal-btn"
+					onclick="window.hideSpiralGenerator()"
+				>
+					&times;
+				</button>
+				<div id="spiral-viewer">
+					<canvas id="spiral-canvas"></canvas>
+					<div id="text-overlay"></div>
+					<div id="controls">
+						<div class="control-group">
+							<h3>Text Animation</h3>
+							<textarea
+								id="text-script"
+								placeholder="Enter your text script here. Use 'DELAY:ms' for delays, e.g.:
+Hello World
+DELAY:2000
+This appears after 2 seconds
+Another line
+DELAY:1000
+Final text"
+							></textarea>
+							<div class="control-row">
+								<label>Display Time:</label>
+								<input
+									type="range"
+									id="text-interval"
+									min="500"
+									max="5000"
+									value="2000"
+								/>
+								<span
+									class="value-display"
+									id="text-interval-val"
+									>2000ms</span
+								>
+							</div>
+							<div class="control-row">
+								<label>Hold Duration:</label>
+								<input
+									type="range"
+									id="text-hold"
+									min="1000"
+									max="8000"
+									value="3000"
+								/>
+								<span class="value-display" id="text-hold-val"
+									>3000ms</span
+								>
+							</div>
+							<div class="control-row">
+								<label>Animation Speed:</label>
+								<input
+									type="range"
+									id="text-anim-speed"
+									min="0.1"
+									max="2"
+									step="0.1"
+									value="0.5"
+								/>
+								<span
+									class="value-display"
+									id="text-anim-speed-val"
+									>0.5s</span
+								>
+							</div>
+							<div class="control-row">
+								<label>Text Size:</label>
+								<input
+									type="range"
+									id="text-size"
+									min="1"
+									max="6"
+									step="0.1"
+									value="2.5"
+								/>
+								<span class="value-display" id="text-size-val"
+									>2.5rem</span
+								>
+							</div>
+							<div class="control-row">
+								<label>Text Color:</label>
+								<input
+									type="color"
+									id="text-color"
+									value="#ffffff"
+								/>
+							</div>
+							<button onclick="window.spiral.startTextSequence()">
+								Start Text Loop
+							</button>
+							<button onclick="window.spiral.stopTextSequence()">
+								Stop Text Loop
+							</button>
+						</div>
+
+						<div class="control-group">
+							<h3>Spirals</h3>
+							<div class="spiral-list" id="spiral-list"></div>
+							<button onclick="window.spiral.addSpiral()">
+								Add New Spiral
+							</button>
+						</div>
+
+						<div class="control-group">
+							<h3>Current Spiral Properties</h3>
+							<div class="control-row">
+								<label>Speed:</label>
+								<input
+									type="range"
+									id="speed"
+									min="0.1"
+									max="5"
+									step="0.1"
+									value="1"
+								/>
+								<span class="value-display" id="speed-val"
+									>1</span
+								>
+							</div>
+							<div class="control-row">
+								<label>Radius:</label>
+								<input
+									type="range"
+									id="radius"
+									min="10"
+									max="100"
+									value="50"
+								/>
+								<span class="value-display" id="radius-val"
+									>50%</span
+								>
+							</div>
+							<div class="control-row">
+								<label>Arms:</label>
+								<input
+									type="range"
+									id="arms"
+									min="1"
+									max="20"
+									value="3"
+								/>
+								<span class="value-display" id="arms-val"
+									>3</span
+								>
+							</div>
+							<div class="control-row">
+								<label>Thickness:</label>
+								<input
+									type="range"
+									id="thickness"
+									min="1"
+									max="20"
+									value="3"
+								/>
+								<span class="value-display" id="thickness-val"
+									>3</span
+								>
+							</div>
+							<div class="control-row">
+								<label>Color:</label>
+								<input
+									type="color"
+									id="color"
+									value="#4fc3f7"
+								/>
+							</div>
+							<div class="control-row">
+								<label>Opacity:</label>
+								<input
+									type="range"
+									id="opacity"
+									min="0.1"
+									max="1"
+									step="0.1"
+									value="0.8"
+								/>
+								<span class="value-display" id="opacity-val"
+									>0.8</span
+								>
+							</div>
+							<div class="control-row">
+								<label>Time Offset:</label>
+								<input
+									type="range"
+									id="time-offset"
+									min="0"
+									max="10"
+									step="0.1"
+									value="0"
+								/>
+								<span class="value-display" id="time-offset-val"
+									>0</span
+								>
+							</div>
+							<div class="control-row">
+								<label>Rotation:</label>
+								<input
+									type="range"
+									id="rotation"
+									min="0"
+									max="360"
+									value="0"
+								/>
+								<span class="value-display" id="rotation-val"
+									>0°</span
+								>
+							</div>
+						</div>
+
+						<div class="control-group">
+							<h3>Configuration</h3>
+							<div class="control-row">
+								<button
+									onclick="window.spiral.saveSpiralConfig()"
+								>
+									Save Config
+								</button>
+								<button
+									onclick="window.spiral.loadSpiralConfig()"
+								>
+									Load Config
+								</button>
+							</div>
+							<input
+								type="file"
+								id="config-file"
+								accept=".json"
+								style="display: none"
+								onchange="window.spiral.handleSpiralConfigFile(event)"
+							/>
+						</div>
+
+						<div class="control-group">
+							<h3>Global Settings</h3>
+							<div class="control-row">
+								<label>Background:</label>
+								<input
+									type="color"
+									id="bg-color"
+									value="#000000"
+								/>
+							</div>
+							<button onclick="window.spiral.clearAllSpirals()">
+								Clear All Spirals
+							</button>
+						</div>
+					</div>
+					<button
+						class="send-as-task-btn"
+						onclick="window.spiral.sendSpiralConfigAsTask()"
+					>
+						Send as Task
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Cost Tracker Modal -->
+		<div id="costTrackerModal" class="modal-overlay hidden">
+			<div class="modal-content">
+				<button
+					id="closeCostTrackerModal"
+					class="close-modal-btn"
+					onclick="window.hideCostTracker()"
+				>
+					&times;
+				</button>
+				<div id="cost-tracker-app">
+					<h1>💰 Cost Tracker</h1>
+
+					<div class="main-content">
+						<div class="tracker-section">
+							<div class="settings">
+								<div class="input-group">
+									<label for="rate">Rate per unit:</label>
+									<input
+										type="number"
+										id="rate"
+										value="50"
+										min="0"
+										step="0.01"
+									/>
+								</div>
+
+								<div class="input-group">
+									<label for="currency">Currency:</label>
+									<select id="currency">
+										<option value="€">Euro (€)</option>
+										<option value="£">Pound (£)</option>
+										<option value="$">Dollar ($)</option>
+									</select>
+								</div>
+
+								<div class="input-group">
+									<label for="interval"
+										>Increment every:</label
+									>
+									<select id="interval">
+										<option value="1000">1 Second</option>
+										<option value="60000" selected>
+											1 Minute
+										</option>
+										<option value="3600000">1 Hour</option>
+									</select>
+								</div>
+							</div>
+
+							<div class="timer-display" id="timer">00:00:00</div>
+
+							<div class="cost-display">
+								<div class="cost-label">Current Cost</div>
+								<div class="cost-amount" id="currentCost">
+									€0.00
+								</div>
+							</div>
+
+							<div class="controls">
+								<button id="startBtn">Start</button>
+								<button id="stopBtn" disabled class="stop-btn">
+									Stop
+								</button>
+								<button id="resetBtn" class="reset-btn">
+									Reset
+								</button>
+							</div>
+						</div>
+
+						<div class="penalties-section">
+							<div class="penalties-header">
+								📋 Additional Costs / Penalties
+							</div>
+							<div class="penalty-input">
+								<input
+									type="text"
+									id="penaltyDescription"
+									placeholder="Description (e.g., Late delivery fee)"
+								/>
+								<input
+									type="number"
+									id="penaltyAmount"
+									placeholder="Amount"
+									min="0"
+									step="0.01"
+								/>
+								<button
+									id="addPenaltyBtn"
+									class="add-penalty-btn"
+								>
+									Add
+								</button>
+							</div>
+							<div id="penaltyList"></div>
+						</div>
+					</div>
+
+					<div class="final-total" id="finalTotal">
+						<div class="cost-label">Final Invoice</div>
+						<div id="billBreakdown"></div>
+						<div class="modal-actions">
+							<button
+								class="send-as-task-btn"
+								onclick="window.costTracker.sendCostConfigAsTask()"
+							>
+								Send as Task
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<!-- Supabase Script -->
 		<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -720,5 +1117,7 @@
 		<script src="js/ui-calendar.js"></script>
 		<script src="js/ui-dashboard.js"></script>
 		<script src="js/ui-rewards.js"></script>
+		<!-- New file for tool initialization -->
+		<script src="js/tool-init.js"></script>
 	</body>
 </html>

@@ -87,17 +87,6 @@
 	--modal-text-color: var(--terminal-white);
 
 	/* Font Sizes */
-	/*
-	--font-size-base: 14px;
-	--font-size-sm: 12px;
-	--font-size-md: 16px;
-	--font-size-lg: 1.2em;
-	--font-size-xl: 1.5em;
-	--font-size-2xl: 2em;
-	--font-size-3xl: 2.5em;
-	--font-size-4xl: 2.2em;
-	*/
-
 	--font-size-base: 13px;
 	--font-size-sm: 13px;
 	--font-size-md: 13px;
@@ -108,15 +97,6 @@
 	--font-size-4xl: 13px;
 
 	/* Font Weights */
-	/*
-	--font-weight-light: 300;
-	--font-weight-normal: 400;
-	--font-weight-medium: 500;
-	--font-weight-semibold: 600;
-	--font-weight-bold: 700;
-	--font-weight-extrabold: 800;
-	*/
-
 	--font-weight-light: 700;
 	--font-weight-normal: 700;
 	--font-weight-medium: 700;
@@ -211,158 +191,6 @@ button {
 }
 
 /* Form elements consistent sizing */
-.form-input,
-.form-select {
-	width: 100%;
-	padding: 15px;
-	border: 1px solid var(--terminal-green);
-	border-radius: 0;
-	font-size: var(--font-size-base);
-	transition: all 0.3s ease;
-	background: var(--input-bg);
-	color: var(--terminal-white);
-}
-
-.form-label {
-	display: block;
-	margin-bottom: 8px;
-	font-weight: var(--font-weight-bold);
-	color: var(--terminal-white);
-	font-size: var(--font-size-base);
-}
-
-/* Button consistent sizing */
-.login-btn,
-.add-btn,
-.action-btn,
-.nav-tab,
-.purchase-btn,
-.user-badge,
-.points-badge,
-.purchase-item p,
-.purchase-item .notes,
-.reward-card .description,
-.reward-card .cost-badge {
-	font-size: var(--font-size-base);
-	font-weight: var(--font-weight-bold);
-}
-
-/* Badge consistent sizing */
-.user-badge,
-.points-badge {
-	font-size: var(--font-size-base);
-}
-
-.logout-btn {
-	font-size: var(--font-size-sm);
-	font-weight: var(--font-weight-bold);
-	padding: 8px 16px;
-}
-
-/* Task content sizing */
-.task-text {
-	font-size: var(--font-size-base);
-	color: var(--terminal-white);
-	font-weight: var(--font-weight-normal);
-}
-
-/* Section titles consistent */
-.section-title {
-	font-size: var(--font-size-xl);
-	color: var(--terminal-green);
-	font-weight: var(--font-weight-bold);
-}
-
-/* Calendar and FullCalendar text sizing */
-.fc .fc-toolbar-title {
-	font-size: var(--font-size-xl) !important;
-	font-weight: var(--font-weight-bold) !important;
-}
-
-.fc .fc-button-primary {
-	font-size: var(--font-size-base) !important;
-	font-weight: var(--font-weight-bold) !important;
-}
-
-.fc-daygrid-day-number {
-	font-size: var(--font-size-base) !important;
-}
-
-.fc-event {
-	font-size: var(--font-size-sm) !important;
-}
-
-/* Demo credentials consistent sizing */
-.demo-credentials h3 {
-	font-size: var(--font-size-base);
-}
-
-/* Reward card text sizing */
-.reward-card h3 {
-	font-size: var(--font-size-lg);
-	color: var(--terminal-green);
-	margin-bottom: 10px;
-}
-
-.reward-card .description {
-	font-size: var(--font-size-base);
-	color: var(--terminal-gray-light);
-	min-height: 40px;
-	margin-bottom: 15px;
-}
-
-.cost-badge {
-	font-size: var(--font-size-base);
-	background: var(--terminal-bg);
-	border: 1px solid var(--status-warning);
-	color: var(--status-warning);
-	padding: 8px 15px;
-	font-weight: var(--font-weight-bold);
-	margin-bottom: 15px;
-}
-
-.type-badge {
-	font-size: var(--font-size-sm);
-	padding: 5px 10px;
-	font-weight: var(--font-weight-bold);
-	margin-top: 10px;
-	display: inline-block;
-}
-
-/* Terminal-style container with green border */
-.container {
-	max-width: 1200px;
-	margin: 0 auto;
-	/*background: var(--container-bg);
-	border: 1px solid var(--terminal-green);
-	border-radius: 0;
-	*/
-	padding: 10px;
-	/*box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);*/
-}
-
-/* Login Styles */
-.login-container {
-	max-width: 400px;
-	margin: 0 auto;
-	text-align: center;
-}
-
-.login-form {
-	background: var(--card-bg);
-	padding: 40px;
-	border: 1px solid var(--terminal-green);
-	border-radius: 0;
-	box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
-}
-
-.login-title {
-	font-size: var(--font-size-2xl);
-	color: var(--terminal-green);
-	margin-bottom: 30px;
-}
-
-/* Form Elements */
 .form-input,
 .form-select {
 	width: 100%;
@@ -868,6 +696,11 @@ button {
 	position: relative;
 }
 
+.modal-content.large {
+	max-width: 90%;
+	max-height: 90%;
+}
+
 .modal-content h3 {
 	color: var(--terminal-green);
 	font-size: var(--font-size-lg);
@@ -1168,4 +1001,207 @@ button {
 
 ::-webkit-scrollbar-thumb:hover {
 	background: var(--terminal-green-light);
+}
+
+/* New styles for Spiral and Cost Tracker integration */
+.modal-content.large {
+	max-width: 90%;
+	max-height: 90vh;
+	overflow-y: auto;
+}
+
+.close-modal-btn {
+	position: absolute;
+	top: 10px;
+	right: 15px;
+	font-size: var(--font-size-xl);
+	color: var(--terminal-green);
+	background: none;
+	border: none;
+	cursor: pointer;
+	z-index: 100;
+}
+
+.close-modal-btn:hover {
+	color: var(--terminal-green-light);
+}
+
+/* Spiral Task Styling for User View */
+.task-item.spiral-task-user {
+	border-color: var(--status-info);
+}
+.task-item.spiral-task-user::before {
+	background: var(--status-info);
+}
+
+/* Cost Tracker Task Styling for User View */
+.task-item.cost-tracker-task-user {
+	border-color: var(--status-warning);
+}
+.task-item.cost-tracker-task-user::before {
+	background: var(--status-warning);
+}
+
+.cost-badge {
+	background: var(--terminal-bg) !important;
+	border: 1px solid var(--status-warning);
+	color: var(--status-warning) !important;
+}
+
+.send-as-task-btn {
+	width: 100%;
+	padding: 12px 24px;
+	background: var(--terminal-bg);
+	color: var(--terminal-green);
+	border: 1px solid var(--terminal-green);
+	border-radius: 0;
+	cursor: pointer;
+	font-size: var(--font-size-base);
+	font-weight: var(--font-weight-bold);
+	transition: all 0.3s ease;
+	margin-top: 20px;
+}
+
+.send-as-task-btn:hover {
+	background: var(--terminal-green);
+	color: var(--terminal-bg);
+}
+
+/* Styles for the new tools inside the modals */
+#spiral-viewer,
+#cost-tracker-app {
+	padding: 20px;
+}
+
+#spiral-canvas,
+#canvas {
+	position: relative !important;
+	background: #000;
+	margin-bottom: 20px;
+	border: 1px solid var(--terminal-green);
+}
+
+#controls {
+	background: var(--card-bg);
+	border: 1px solid var(--terminal-green);
+	color: var(--terminal-white);
+	padding: 10px;
+}
+#controls button {
+	font-size: 13px !important;
+}
+
+.control-group {
+	background: none;
+	border: none;
+}
+
+.control-group h3 {
+	color: var(--terminal-green);
+	font-size: var(--font-size-base);
+	border-bottom: 1px dashed var(--terminal-green);
+	padding-bottom: 5px;
+	margin-bottom: 10px;
+}
+
+.control-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 8px;
+	gap: 10px;
+}
+
+.control-row label {
+	font-size: var(--font-size-base);
+	color: var(--terminal-white);
+}
+
+.value-display {
+	font-size: var(--font-size-base);
+	color: var(--terminal-green);
+	min-width: 50px;
+	text-align: right;
+}
+
+#text-script {
+	background: var(--terminal-bg);
+	border: 1px solid var(--terminal-green);
+	color: var(--terminal-white);
+	font-size: var(--font-size-base);
+	resize: vertical;
+}
+
+.spiral-list {
+	border: 1px solid var(--terminal-green);
+	background: var(--terminal-bg);
+	max-height: 150px;
+	overflow-y: auto;
+}
+
+.spiral-item {
+	background: var(--terminal-bg-alt);
+	border-bottom: 1px solid var(--terminal-green);
+	cursor: pointer;
+	font-size: var(--font-size-base);
+	color: var(--terminal-white);
+}
+
+.spiral-item.selected {
+	background: var(--terminal-green-dark);
+	color: var(--terminal-bg);
+}
+
+.spiral-item .delete-btn {
+	background: var(--status-error);
+	color: var(--terminal-white);
+	border: none;
+	font-size: var(--font-size-base);
+}
+
+#cost-tracker-app .input-group label {
+	color: var(--terminal-white);
+	font-size: var(--font-size-base);
+}
+#cost-tracker-app input,
+#cost-tracker-app select {
+	background: var(--terminal-bg);
+	border: 1px solid var(--terminal-green);
+	color: var(--terminal-white);
+	font-size: var(--font-size-base);
+}
+#cost-tracker-app .timer-display,
+#cost-tracker-app .cost-amount {
+	font-weight: var(--font-weight-bold);
+	color: var(--terminal-green);
+	text-shadow: none;
+}
+#cost-tracker-app .penalties-section {
+	background: var(--terminal-bg);
+	border: 1px solid var(--status-error);
+}
+#cost-tracker-app .penalties-header {
+	color: var(--status-error);
+	border-bottom: 1px dashed var(--status-error);
+}
+#cost-tracker-app .penalty-item {
+	background: var(--terminal-bg-alt);
+	border: 1px solid var(--terminal-green);
+}
+#cost-tracker-app .penalty-amount {
+	color: var(--status-error);
+}
+#cost-tracker-app .final-total {
+	background: var(--terminal-bg-alt);
+	border: 1px solid var(--terminal-green);
+}
+#cost-tracker-app .bill-item {
+	border-bottom: 1px dashed var(--terminal-green);
+}
+#cost-tracker-app .bill-item:last-child {
+	border-bottom: 2px solid var(--terminal-green);
+	color: var(--terminal-green);
+}
+#cost-tracker-app .bill-amount {
+	color: var(--terminal-green);
 }
