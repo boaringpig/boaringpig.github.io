@@ -333,37 +333,95 @@ window.costTracker = (function () {
 
 	async function sendCostConfigAsTask() {
 		const costDetails = costTrackerInstance.getCostDetails();
+
+		// Create task description with cost breakdown
+		const taskDescription = `💰 INVOICE - Cost Tracker
+
+Time-based Cost: ${costDetails.timeBasedCost.description} = ${costDetails.timeBasedCost.amount}`;
+
+		// Add penalties to description if any exist
+		let penaltiesText = "";
+		if (costDetails.penalties && costDetails.penalties.length > 0) {
+			penaltiesText =
+				"\n\nAdditional Costs:\n" +
+				costDetails.penalties
+					.map((p) => `• ${p.description}: ${p.amount}`)
+					.join("\n");
+		}
+
+		const finalDescription =
+			taskDescription +
+			penaltiesText +
+			`\n\n💸 TOTAL AMOUNT DUE: ${costDetails.grandTotal}\n\n⚠️ This is an invoice that must be approved for payment. Failure to approve will result in penalty points.`;
+
+		// Fixed penalty points for all invoices
+		const penaltyPoints = 100; // All invoices carry a 100 point penalty for non-payment
+
 		const task = {
-			text: `Invoice from Cost Tracker`,
-			status: "pending_approval", // Set to pending approval for the user to review
+			text: finalDescription,
+			status: "todo", // Starts as "todo" - user must mark as paid first
 			type: "cost-tracker",
 			createdAt: new Date().toISOString(),
 			createdBy: window.currentUser,
-			assignedTo: "schinken", // Send to the user
-			costDetails: costDetails,
+			assignedTo: "schinken", // Invoice is sent to the user
+			points: 0, // Invoices don't give reward points
+			penaltyPoints: penaltyPoints, // Fixed 100 point penalty for non-payment
+			// Set due date for payment (optional - 7 days from now)
+			dueDate: new Date(
+				Date.now() + 7 * 24 * 60 * 60 * 1000
+			).toISOString(),
+			isRepeating: false,
+			repeatInterval: null,
 		};
-		const { error: taskError } = await window.supabase
-			.from("tasks")
-			.insert([task]);
-		if (taskError) {
-			console.error("Error creating cost tracker task:", taskError);
-			window.showNotification(
-				"Failed to send cost tracker invoice.",
-				"error"
-			);
-		} else {
-			window.showNotification(
-				"Cost tracker invoice sent as a task successfully!"
-			);
-			window.hideCostTracker();
-			await window.fetchTasksInitial();
+
+		try {
+			const { error: taskError } = await window.supabase
+				.from("tasks")
+				.insert([task]);
+
+			if (taskError) {
+				console.error(
+					"Error creating cost tracker invoice:",
+					taskError
+				);
+				window.showNotification("Failed to send invoice.", "error");
+			} else {
+				window.showNotification(
+					`Invoice sent successfully! Total: ${costDetails.grandTotal} (Penalty for non-payment: 100 points)`
+				);
+				window.hideCostTracker();
+				await window.fetchTasksInitial();
+
+				// Store the detailed cost info for admin reference
+				try {
+					localStorage.setItem(
+						`invoice_${Date.now()}`,
+						JSON.stringify({
+							timestamp: new Date().toISOString(),
+							createdBy: window.currentUser,
+							assignedTo: "schinken",
+							totalAmount: costDetails.grandTotal,
+							penaltyPoints: 100,
+							costDetails: costDetails,
+						})
+					);
+				} catch (storageError) {
+					console.warn(
+						"Could not store invoice details in localStorage:",
+						storageError
+					);
+				}
+			}
+		} catch (error) {
+			console.error("Error creating cost tracker invoice:", error);
+			window.showNotification("Failed to send invoice.", "error");
 		}
 	}
 
 	// Expose public functions
 	return {
 		init,
-		removePenalty: (id) => costTrackerInstance.removePenalty(id),
+		removePenalty: (id) => costTrackerInstance?.removePenalty(id),
 		sendCostConfigAsTask,
 	};
 })();

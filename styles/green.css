@@ -1205,3 +1205,67 @@ button {
 #cost-tracker-app .bill-amount {
 	color: var(--terminal-green);
 }
+
+/* Add these styles to styles/green.css for better negative points display */
+
+/* Points badge styling for different point values */
+.points-badge.negative {
+	background: linear-gradient(45deg, #ff6b6b, #cc0000) !important;
+	color: white !important;
+	box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+	animation: pulse-red 2s infinite;
+}
+
+.points-badge.zero {
+	background: linear-gradient(45deg, #ffff00, #cccc00) !important;
+	color: #000 !important;
+}
+
+.points-badge.positive {
+	background: linear-gradient(45deg, #00ff00, #00cc00) !important;
+	color: #000 !important;
+}
+
+/* Stat numbers with negative values */
+.stat-number.negative {
+	color: #ff6b6b !important;
+	text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+}
+
+.stat-number.zero {
+	color: #ffff00 !important;
+}
+
+.stat-number.positive {
+	color: #00ff00 !important;
+}
+
+/* Animation for negative points to draw attention */
+@keyframes pulse-red {
+	0% {
+		box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+	}
+	50% {
+		box-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+	}
+	100% {
+		box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+	}
+}
+
+/* User progress display for negative points */
+.user-stats .negative-points {
+	color: #ff6b6b;
+	font-weight: bold;
+	text-shadow: 0 0 5px rgba(255, 107, 107, 0.5);
+}
+
+/* Dashboard stats card for negative points */
+.stat-card .negative-stat {
+	color: #ff6b6b;
+	border-color: #ff6b6b;
+}
+
+.stat-card .negative-stat:hover {
+	box-shadow: 0 0 15px rgba(255, 107, 107, 0.3);
+}

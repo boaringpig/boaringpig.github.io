@@ -12,10 +12,10 @@ const users = {
 			"approve_task",
 			"delete_task",
 			"view_all_tasks",
-			"manage_users", // Keeping for now, but effectively unused
+			"manage_users", // For admin points control
 			"view_dashboard",
 			"approve_suggestions",
-			"manage_rewards", // RE-ADDED: Admin can now manage rewards
+			"manage_rewards", // Admin can manage rewards
 		],
 		points: 0, // Admin points should always remain 0 and not be tracked
 	},
@@ -30,7 +30,7 @@ let currentUser = null;
 let tasks = [];
 let suggestions = [];
 let userActivityLog = [];
-// NEW: Global variables for reward data
+// Global variables for reward data
 let rewards = [];
 let userRewardPurchases = [];
 let rewardSystemSettings = {};
@@ -45,9 +45,6 @@ let suggestionIdCounter = 1; // Will be initialized from DB max ID, but not used
 let overdueCheckIntervalId = null;
 const OVERDUE_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes (in milliseconds)
 
-// Current date for calendar view - NO LONGER NEEDED WITH FULLCALENDAR
-// let currentDate = new Date();
-
 // Active tab state
 let activeTab = "tasks";
 
@@ -57,7 +54,7 @@ window.currentUser = currentUser;
 window.tasks = tasks;
 window.suggestions = suggestions;
 window.userActivityLog = userActivityLog;
-// NEW: Expose reward data globally
+// Expose reward data globally
 window.rewards = rewards;
 window.userRewardPurchases = userRewardPurchases;
 window.rewardSystemSettings = rewardSystemSettings;
@@ -65,8 +62,7 @@ window.rewardSystemSettings = rewardSystemSettings;
 window.taskIdCounter = taskIdCounter; // Still exposed, but its role changes
 window.suggestionIdCounter = suggestionIdCounter; // Still exposed, but its role changes
 window.overdueCheckIntervalId = overdueCheckIntervalId;
-window.OVERDUE_CHECK_INTERVAL = OVERDUE_CHECK_INTERVAL; // Corrected typo here
-// window.currentDate = currentDate; // NO LONGER NEEDED
+window.OVERDUE_CHECK_INTERVAL = OVERDUE_CHECK_INTERVAL;
 window.activeTab = activeTab;
 
 /**
@@ -171,7 +167,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		});
 	}
 
-	// NEW: Event listeners for reward management form buttons
+	// Event listeners for reward management form buttons
 	const saveRewardBtn = document.getElementById("saveRewardBtn");
 	if (saveRewardBtn) {
 		saveRewardBtn.addEventListener("click", window.saveReward);
@@ -181,33 +177,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		cancelEditRewardBtn.addEventListener("click", window.cancelEditReward);
 	}
 
-	// NEW: Event listeners for the new tool buttons
-	const showSpiralGeneratorBtn = document.getElementById(
-		"showSpiralGeneratorBtn"
-	);
-	const showCostTrackerBtn = document.getElementById("showCostTrackerBtn");
-
-	if (showSpiralGeneratorBtn) {
-		showSpiralGeneratorBtn.addEventListener("click", () => {
-			if (window.showSpiralGenerator) {
-				window.showSpiralGenerator();
-			} else {
-				console.error("showSpiralGenerator function is not available.");
-			}
-		});
-	}
-
-	if (showCostTrackerBtn) {
-		showCostTrackerBtn.addEventListener("click", () => {
-			if (window.showCostTracker) {
-				window.showCostTracker();
-			} else {
-				console.error("showCostTracker function is not available.");
-			}
-		});
-	}
-
-	// >>> This is where the Flatpickr initialization function is called. <<<
+	// Initialize the Flatpickr date pickers
 	initializeDatePickers();
 });
 

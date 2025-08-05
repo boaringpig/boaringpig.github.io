@@ -236,6 +236,7 @@ window.checkOffTask = async function (taskId) {
 
 /**
  * Approves a completed task, changing its status to 'completed' and awarding points.
+ * For cost-tracker tasks (invoices), no points are awarded.
  * @param {number} taskId - The ID of the task to approve.
  */
 window.approveTask = async function (taskId) {
@@ -248,11 +249,13 @@ window.approveTask = async function (taskId) {
 	}
 	const task = window.tasks.find((t) => t.id === taskId);
 	if (!task) return;
+
 	const updates = {
 		status: "completed",
 		approvedAt: new Date().toISOString(),
 		approvedBy: window.currentUser,
 	};
+
 	const { error: taskError } = await window.supabase
 		.from("tasks")
 		.update(updates)
@@ -262,20 +265,36 @@ window.approveTask = async function (taskId) {
 		window.showNotification("Failed to approve task", "error");
 		return;
 	}
-	await window.updateUserPoints(task.completedBy, task.points, "add");
-	window.showNotification(
-		`Task approved! ${task.points} points awarded to ${
-			window.users[task.completedBy]?.displayName
-		}`
-	);
-	if (task.isRepeating && task.dueDate) {
-		window.createRepeatingTask(task);
+
+	// Handle different task types
+	if (task.type === "cost-tracker") {
+		// Cost tracker tasks (invoices) don't award points, just mark as paid
+		const totalAmount =
+			window.extractTotalFromTaskText(task.text) || "Unknown";
+		window.showNotification(
+			`Invoice approved and marked as paid! Amount: ${totalAmount}`
+		);
+	} else {
+		// Regular tasks award points
+		await window.updateUserPoints(task.completedBy, task.points, "add");
+		window.showNotification(
+			`Task approved! ${task.points} points awarded to ${
+				window.users[task.completedBy]?.displayName
+			}`
+		);
+
+		// Handle repeating tasks
+		if (task.isRepeating && task.dueDate) {
+			window.createRepeatingTask(task);
+		}
 	}
+
 	await window.fetchTasksInitial();
 };
 
 /**
  * Rejects a task, setting its status to 'failed' and applying a penalty.
+ * For cost-tracker tasks (invoices), this denies payment.
  * @param {number} taskId - The ID of the task to reject.
  */
 window.rejectTask = function (taskId) {
@@ -288,44 +307,50 @@ window.rejectTask = function (taskId) {
 	}
 	const task = window.tasks.find((t) => t.id === taskId);
 	if (!task) return;
-	window.showConfirmModal(
-		`Are you sure you want to reject this task? This will apply a ${
-			task.penaltyPoints
-		} point penalty to ${window.users[task.completedBy]?.displayName}.`,
-		async (confirmed) => {
-			if (!confirmed) {
-				return;
-			}
-			const updates = {
-				status: "failed",
-				rejectedAt: new Date().toISOString(),
-				rejectedBy: window.currentUser,
-			};
-			const { error: taskError } = await window.supabase
-				.from("tasks")
-				.update(updates)
-				.eq("id", taskId);
-			if (taskError) {
-				console.error("Error rejecting task:", taskError);
-				window.showNotification("Failed to reject task", "error");
-				return;
-			}
-			await window.updateUserPoints(
-				task.completedBy,
-				task.penaltyPoints,
-				"subtract"
-			);
-			window.showNotification(
-				`Task rejected! ${
-					task.penaltyPoints
-				} penalty points applied to ${
-					window.users[task.completedBy]?.displayName
-				}`,
-				"warning"
-			);
-			await window.fetchTasksInitial();
+
+	const isInvoice = task.type === "cost-tracker";
+	const confirmMessage = isInvoice
+		? `Are you sure you want to deny payment for this invoice? This will apply a ${
+				task.penaltyPoints
+		  } point penalty to ${window.users[task.assignedTo]?.displayName}.`
+		: `Are you sure you want to reject this task? This will apply a ${
+				task.penaltyPoints
+		  } point penalty to ${window.users[task.completedBy]?.displayName}.`;
+
+	window.showConfirmModal(confirmMessage, async (confirmed) => {
+		if (!confirmed) {
+			return;
 		}
-	);
+		const updates = {
+			status: "failed",
+			rejectedAt: new Date().toISOString(),
+			rejectedBy: window.currentUser,
+		};
+		const { error: taskError } = await window.supabase
+			.from("tasks")
+			.update(updates)
+			.eq("id", taskId);
+		if (taskError) {
+			console.error("Error rejecting task:", taskError);
+			window.showNotification("Failed to reject task", "error");
+			return;
+		}
+
+		// Apply penalty points
+		const targetUser = isInvoice ? task.assignedTo : task.completedBy;
+		await window.updateUserPoints(
+			targetUser,
+			task.penaltyPoints,
+			"subtract"
+		);
+
+		const actionText = isInvoice ? "Payment denied" : "Task rejected";
+		window.showNotification(
+			`${actionText}! ${task.penaltyPoints} penalty points applied to ${window.users[targetUser]?.displayName}`,
+			"warning"
+		);
+		await window.fetchTasksInitial();
+	});
 };
 
 /**

@@ -89,11 +89,17 @@ window.formatDate = function (dateString) {
  * Returns the appropriate CSS class for a task status badge.
  * @param {string} status - The primary status of the task.
  * @param {boolean} isOverdue - True if the task is overdue.
- * @param {string} type - The type of task ('regular' or 'demerit').
+ * @param {string} type - The type of task ('regular', 'demerit', 'cost-tracker').
  * @param {string} appealStatus - The appeal status of a demerit task.
  * @returns {string} The CSS class name for the status badge.
  */
 window.getStatusClass = function (status, isOverdue, type, appealStatus) {
+	if (type === "cost-tracker") {
+		if (status === "pending_approval") return "status-pending";
+		if (status === "completed") return "status-completed";
+		if (status === "failed") return "status-overdue";
+		return "status-pending";
+	}
 	if (type === "demerit") {
 		if (appealStatus === "pending") return "status-pending-appeal";
 		if (appealStatus === "approved") return "status-completed";
@@ -111,11 +117,18 @@ window.getStatusClass = function (status, isOverdue, type, appealStatus) {
  * Returns the human-readable text for a task status.
  * @param {string} status - The primary status of the task.
  * @param {boolean} isOverdue - True if the task is overdue.
- * @param {string} type - The type of task ('regular' or 'demerit').
+ * @param {string} type - The type of task ('regular', 'demerit', 'cost-tracker').
  * @param {string} appealStatus - The appeal status of a demerit task.
  * @returns {string} The display text for the task status.
  */
 window.getStatusText = function (status, isOverdue, type, appealStatus) {
+	if (type === "cost-tracker") {
+		if (status === "todo") return "Payment Required";
+		if (status === "pending_approval") return "Payment Pending Approval";
+		if (status === "completed") return "Payment Approved";
+		if (status === "failed") return "Payment Denied";
+		return "Invoice";
+	}
 	if (type === "demerit") {
 		if (appealStatus === "pending") return "Appeal Pending";
 		if (appealStatus === "approved") return "Appeal Approved";
@@ -154,4 +167,14 @@ window.getSuggestionStatusClass = function (status) {
 window.isTaskOverdue = function (task) {
 	if (!task.dueDate || task.status === "completed") return false;
 	return new Date(task.dueDate) < new Date();
+};
+
+/**
+ * Extracts the total amount from a cost tracker task text.
+ * @param {string} taskText - The task text containing cost information.
+ * @returns {string|null} The total amount string or null if not found.
+ */
+window.extractTotalFromTaskText = function (taskText) {
+	const totalMatch = taskText.match(/TOTAL AMOUNT DUE:\s*([€£$]\d+\.\d+)/);
+	return totalMatch ? totalMatch[1] : null;
 };

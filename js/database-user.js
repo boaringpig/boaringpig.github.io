@@ -85,6 +85,7 @@ window.fetchUserProfilesInitial = async function () {
 
 /**
  * Updates a user's points in the local 'users' object and in the Supabase 'userProfiles' table.
+ * Points can now go negative to properly handle penalties.
  * @param {string} username - The username whose points are to be updated.
  * @param {number} points - The amount of points to add, subtract, or set.
  * @param {string | null} operation - The operation to perform ('add', 'subtract', 'set', or null for UI refresh).
@@ -94,43 +95,52 @@ window.updateUserPoints = async function (
 	points = 0,
 	operation = null
 ) {
+	// Admin points are always kept at 0 and not tracked
 	if (username === "skeen") {
 		if (operation === "set") {
-			window.users[username].points = points;
+			window.users[username].points = 0; // Always keep admin at 0
 		} else if (operation === "add") {
-			window.users[username].points =
-				(window.users[username].points || 0) + points;
+			window.users[username].points = 0; // Always keep admin at 0
 		} else if (operation === "subtract") {
-			window.users[username].points = Math.max(
-				0,
-				(window.users[username].points || 0) - points
-			);
+			window.users[username].points = 0; // Always keep admin at 0
 		}
 		const pointsBadge = document.getElementById("userPoints");
 		if (pointsBadge) {
-			pointsBadge.textContent = `${
-				window.users[window.currentUser].points || 0
-			} Points`;
+			pointsBadge.textContent = `0 Points`;
 		}
 		const myPointsStat = document.getElementById("myPointsStat");
 		if (myPointsStat) {
-			myPointsStat.textContent =
-				window.users[window.currentUser].points || 0;
+			myPointsStat.textContent = 0;
 		}
 		return;
 	}
+
+	// For regular users, allow negative points
+	var oldPoints = window.users[username].points || 0; // Declare oldPoints here for all operations
+
 	if (operation === "set") {
 		window.users[username].points = points;
 	} else if (operation === "add") {
-		window.users[username].points =
-			(window.users[username].points || 0) + points;
+		window.users[username].points = oldPoints + points;
 	} else if (operation === "subtract") {
-		window.users[username].points = Math.max(
-			0,
-			(window.users[username].points || 0) - points
-		);
+		// REMOVED Math.max(0, ...) to allow negative points
+		window.users[username].points = oldPoints - points;
+
+		// Show warning if points went negative
+		var newPoints = window.users[username].points;
+		if (
+			oldPoints >= 0 &&
+			newPoints < 0 &&
+			username === window.currentUser
+		) {
+			window.showNotification(
+				`⚠️ Your points are now negative: ${newPoints} points! Complete tasks to get back to positive.`,
+				"warning"
+			);
+		}
 	}
 
+	// Update database if this is a real operation (not just UI refresh)
 	if (operation !== null && window.supabase) {
 		const { error } = await window.supabase.from("userProfiles").upsert(
 			{
@@ -147,17 +157,90 @@ window.updateUserPoints = async function (
 			);
 		}
 	}
+
+	// Update UI if this is the current user
 	if (username === window.currentUser) {
 		const pointsBadge = document.getElementById("userPoints");
 		if (pointsBadge) {
-			pointsBadge.textContent = `${
-				window.users[window.currentUser].points || 0
-			} Points`;
+			const userPoints = window.users[window.currentUser].points || 0;
+			// Color-code the points badge based on value
+			let pointsColor = "#00ff00"; // Green for positive
+			if (userPoints < 0) {
+				pointsColor = "#ff6b6b"; // Red for negative
+			} else if (userPoints === 0) {
+				pointsColor = "#ffff00"; // Yellow for zero
+			}
+
+			pointsBadge.textContent = `${userPoints} Points`;
+			pointsBadge.style.color = pointsColor;
 		}
 		const myPointsStat = document.getElementById("myPointsStat");
 		if (myPointsStat) {
-			myPointsStat.textContent =
-				window.users[window.currentUser].points || 0;
+			const userPoints = window.users[window.currentUser].points || 0;
+			myPointsStat.textContent = userPoints;
+			// Color-code the stat as well
+			if (userPoints < 0) {
+				myPointsStat.style.color = "#ff6b6b"; // Red for negative
+			} else if (userPoints === 0) {
+				myPointsStat.style.color = "#ffff00"; // Yellow for zero
+			} else {
+				myPointsStat.style.color = "#00ff00"; // Green for positive
+			}
 		}
+	}
+
+	// Update admin points control if it exists (for any user update)
+	if (username === "schinken" && window.updateAdminPointsDisplay) {
+		window.updateAdminPointsDisplay();
+	}
+
+	// Update dashboard displays
+	if (window.updateStats) {
+		window.updateStats();
+	}
+	if (window.renderUserProgress) {
+		window.renderUserProgress();
+	}
+};
+
+/**
+ * Sets user points to exact value (admin only)
+ */
+window.setUserPoints = async function () {
+	if (!window.hasPermission("manage_users")) {
+		window.showNotification(
+			"You do not have permission to manage user points",
+			"error"
+		);
+		return;
+	}
+
+	const input = document.getElementById("adminPointsInput");
+	const newPoints = parseInt(input.value);
+
+	if (isNaN(newPoints)) {
+		window.showNotification("Please enter a valid number", "error");
+		return;
+	}
+
+	const oldPoints = window.users["schinken"].points || 0;
+	await window.updateUserPoints("schinken", newPoints, "set");
+
+	window.showNotification(
+		`User points changed from ${oldPoints} to ${newPoints}`,
+		"success"
+	);
+
+	// Log the change
+	try {
+		const activity = {
+			user: window.currentUser,
+			action: "points_changed",
+			details: `Changed schinken points from ${oldPoints} to ${newPoints}`,
+			timestamp: new Date().toISOString(),
+		};
+		await window.supabase.from("userActivity").insert([activity]);
+	} catch (error) {
+		console.error("Error logging points change:", error);
 	}
 };

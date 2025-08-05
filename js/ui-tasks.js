@@ -91,35 +91,61 @@ window.renderAdminView = function () {
 		} else {
 			pendingContainer.innerHTML = pendingTasks
 				.map(function (task) {
-					var taskType = "regular";
-					if (task.type === "cost-tracker") {
-						taskType = "cost-tracker";
-					}
+					var taskType = task.type || "regular";
 					var taskContent = "";
 
 					if (taskType === "cost-tracker") {
-						const costDetails = task.costDetails;
+						const totalAmount =
+							window.extractTotalFromTaskText(task.text) || "N/A";
 						taskContent = `
 							<div>
-								<span class="status-badge status-pending">Invoice Pending Approval</span>
-								<span class="task-text">${window.escapeHtml(task.text)}</span>
+								<span class="status-badge status-pending">Invoice Payment ${
+									task.status === "pending_approval"
+										? "Pending Admin Approval"
+										: "Required"
+								}</span>
+								<span class="task-text">💰 ${window.escapeHtml(task.text.split("\n")[0])}</span>
+								<span class="points-badge-small cost-badge">${totalAmount}</span>
 								<div class="task-meta">
-									${costDetails ? `<strong>Total:</strong> ${costDetails.grandTotal}<br>` : ""}
-									Completed by: ${
-										window.users[task.completedBy]
-											? window.users[task.completedBy]
+									<strong>Invoice Details:</strong><br>
+									Total Amount: ${totalAmount}<br>
+									Penalty if not paid: -100 points<br>
+									${
+										task.dueDate
+											? "Payment Due: " +
+											  window.formatDate(task.dueDate) +
+											  "<br>"
+											: ""
+									}
+									${
+										task.status === "pending_approval"
+											? "User marked as paid: " +
+											  window.formatDate(
+													task.completedAt
+											  ) +
+											  "<br>"
+											: ""
+									}
+									Created by: ${
+										window.users[task.createdBy]
+											? window.users[task.createdBy]
 													.displayName
-											: task.completedBy
+											: task.createdBy
 									}
 								</div>
 							</div>
 							<div class="task-actions">
-								<button class="action-btn approve-btn" onclick="approveTask(${
+								<button class="action-btn check-btn" onclick="window.viewCostTrackerTask(${
 									task.id
-								})">Approve & Confirm</button>
-								<button class="action-btn reject-btn" onclick="rejectTask(${
-									task.id
-								})">Reject & Cancel</button>
+								})">View Invoice</button>
+								${
+									task.status === "pending_approval"
+										? `
+									<button class="action-btn approve-btn" onclick="window.approveInvoice(${task.id})">Approve Payment</button>
+									<button class="action-btn reject-btn" onclick="rejectTask(${task.id})">Deny Payment</button>
+								`
+										: ""
+								}
 								<button class="action-btn delete-btn" onclick="deleteTask(${
 									task.id
 								})">Delete</button>
@@ -140,7 +166,7 @@ window.renderAdminView = function () {
 											: task.completedBy
 									}
 									${task.dueDate ? "<br>Due: " + window.formatDate(task.dueDate) : ""}
-									${task.isRepeating ? "<br>売 Repeating" : ""}
+									${task.isRepeating ? "<br>売 Repeating" : ""}
 								</div>
 							</div>
 							<div class="task-actions">
@@ -178,6 +204,12 @@ window.renderAdminView = function () {
 					if (task.type === "spiral") classes += "spiral-task ";
 					if (task.type === "cost-tracker")
 						classes += "cost-tracker-task ";
+
+					const totalAmount =
+						task.type === "cost-tracker"
+							? window.extractTotalFromTaskText(task.text)
+							: null;
+
 					return (
 						'<div class="task-item ' +
 						classes +
@@ -200,11 +232,11 @@ window.renderAdminView = function () {
 						) +
 						"</span>" +
 						'<span class="task-text">' +
-						window.escapeHtml(task.text) +
+						window.escapeHtml(task.text.split("\n")[0]) + // Show only first line for invoices
 						"</span>" +
-						(task.type === "cost-tracker" && task.costDetails
+						(task.type === "cost-tracker" && totalAmount
 							? '<span class="points-badge-small cost-badge">' +
-							  task.costDetails.grandTotal +
+							  totalAmount +
 							  "</span>"
 							: "") +
 						(task.type === "regular"
@@ -216,6 +248,9 @@ window.renderAdminView = function () {
 							? '<span class="points-badge-small">-' +
 							  task.penaltyPoints +
 							  " pts</span>"
+							: "") +
+						(task.type === "cost-tracker"
+							? '<span class="points-badge-small">-100 pts penalty</span>'
 							: "") +
 						(task.type === "demerit" && task.appealStatus
 							? '<span class="points-badge-small appeal-status ' +
@@ -241,14 +276,10 @@ window.renderAdminView = function () {
 						(task.dueDate
 							? "<br>Due: " + window.formatDate(task.dueDate)
 							: "") +
-						(task.isRepeating ? "<br>売 Repeating" : "") +
-						(task.type === "demerit"
-							? "<br>搭 Demerit Task"
-							: "") +
+						(task.isRepeating ? "<br>🔄 Repeating" : "") +
+						(task.type === "demerit" ? "<br>⚠️ Demerit Task" : "") +
 						(task.type === "spiral" ? "<br>🌀 Spiral Task" : "") +
-						(task.type === "cost-tracker"
-							? "<br>💰 Cost Tracker Task"
-							: "") +
+						(task.type === "cost-tracker" ? "<br>💰 Invoice" : "") +
 						(task.type === "demerit" && task.acceptedAt
 							? "<br>Accepted: " +
 							  window.formatDate(task.acceptedAt)
@@ -290,7 +321,7 @@ window.renderAdminView = function () {
 };
 
 /**
- * Renders the user's view of tasks, including regular tasks and demerit tasks.
+ * Renders the user's view of tasks, including regular tasks, demerit tasks, and invoices.
  */
 window.renderUserView = function () {
 	var userTasks = window.tasks.filter(function (t) {
@@ -315,9 +346,9 @@ window.renderUserView = function () {
 						classes += "appeal-pending ";
 
 					// New task types
-					if (task.type === "spiral") classes += "spiral-task-user";
+					if (task.type === "spiral") classes += "spiral-task-user ";
 					if (task.type === "cost-tracker")
-						classes += "cost-tracker-task-user";
+						classes += "cost-tracker-task-user ";
 
 					var actionButtons = "";
 					var taskDescription = window.escapeHtml(task.text);
@@ -325,7 +356,21 @@ window.renderUserView = function () {
 					if (task.type === "spiral") {
 						actionButtons = `<button class="action-btn check-btn" onclick="window.viewSpiralTask(${task.id})">View Spiral</button>`;
 					} else if (task.type === "cost-tracker") {
-						actionButtons = `<button class="action-btn check-btn" onclick="window.viewCostTrackerTask(${task.id})">View Invoice</button>`;
+						// Cost tracker tasks are invoices that need to be marked as paid by user
+						if (task.status === "todo") {
+							actionButtons = `<button class="action-btn check-btn" onclick="window.viewCostTrackerTask(${task.id})">View Invoice</button>
+											<button class="action-btn approve-btn" onclick="window.markInvoiceAsPaid(${task.id})">Mark as Paid</button>`;
+						} else if (task.status === "pending_approval") {
+							actionButtons = `<button class="action-btn check-btn" onclick="window.viewCostTrackerTask(${task.id})">View Invoice</button>
+											<span style="color: #fcd34d; font-weight: bold;">⏳ Payment Pending Admin Approval</span>`;
+						} else if (task.status === "completed") {
+							actionButtons = `<button class="action-btn check-btn" onclick="window.viewCostTrackerTask(${task.id})">View Paid Invoice</button>`;
+						} else if (task.status === "failed") {
+							actionButtons = `<button class="action-btn check-btn" onclick="window.viewCostTrackerTask(${task.id})">View Denied Invoice</button>
+											<span style="color: #f87171; font-weight: bold;">❌ Payment Denied</span>`;
+						} else {
+							actionButtons = `<button class="action-btn check-btn" onclick="window.viewCostTrackerTask(${task.id})">View Invoice</button>`;
+						}
 					} else if (
 						task.type === "regular" &&
 						task.status === "todo" &&
@@ -346,6 +391,11 @@ window.renderUserView = function () {
 						actionButtons = `<button class="action-btn accept-btn" onclick="acceptDemerit(${task.id})">Accept Demerit</button>
 										 <button class="action-btn appeal-btn" onclick="appealDemerit(${task.id})">Appeal Demerit</button>`;
 					}
+
+					const totalAmount =
+						task.type === "cost-tracker"
+							? window.extractTotalFromTaskText(task.text)
+							: null;
 
 					return (
 						'<div class="task-item ' +
@@ -369,11 +419,14 @@ window.renderUserView = function () {
 						) +
 						"</span>" +
 						'<span class="task-text">' +
-						taskDescription +
+						(task.type === "cost-tracker" ? "💰 " : "") +
+						(task.type === "cost-tracker"
+							? window.escapeHtml(task.text.split("\n")[0])
+							: taskDescription) +
 						"</span>" +
-						(task.type === "cost-tracker" && task.costDetails
+						(task.type === "cost-tracker" && totalAmount
 							? '<span class="points-badge-small cost-badge">' +
-							  task.costDetails.grandTotal +
+							  totalAmount +
 							  "</span>"
 							: "") +
 						(task.type === "regular"
@@ -385,6 +438,9 @@ window.renderUserView = function () {
 							? '<span class="points-badge-small">-' +
 							  task.penaltyPoints +
 							  " pts</span>"
+							: "") +
+						(task.type === "cost-tracker"
+							? '<span class="points-badge-small">-100 pts penalty</span>'
 							: "") +
 						(task.type === "demerit" && task.appealStatus
 							? '<span class="points-badge-small appeal-status ' +
@@ -402,20 +458,32 @@ window.renderUserView = function () {
 							  (window.users[task.createdBy]
 									? window.users[task.createdBy].displayName
 									: task.createdBy)
+							: task.type === "cost-tracker"
+							? "Invoice from: " +
+							  (window.users[task.createdBy]
+									? window.users[task.createdBy].displayName
+									: task.createdBy)
 							: "Created by: " +
 							  (window.users[task.createdBy]
 									? window.users[task.createdBy].displayName
 									: task.createdBy)) +
 						(task.dueDate
-							? "<br>Due: " + window.formatDate(task.dueDate)
+							? "<br>" +
+							  (task.type === "cost-tracker"
+									? "Payment Due: "
+									: "Due: ") +
+							  window.formatDate(task.dueDate)
 							: "") +
-						(task.isRepeating ? "<br>売 Repeating" : "") +
-						(task.type === "demerit"
-							? "<br>搭 Demerit Task"
-							: "") +
+						(task.isRepeating ? "<br>🔄 Repeating" : "") +
+						(task.type === "demerit" ? "<br>⚠️ Demerit Task" : "") +
 						(task.type === "spiral" ? "<br>🌀 Spiral Task" : "") +
 						(task.type === "cost-tracker"
-							? "<br>💰 Cost Tracker Task"
+							? "<br>💰 Invoice - " +
+							  (task.status === "pending_approval"
+									? "Payment Required"
+									: task.status === "completed"
+									? "Paid"
+									: "Invoice")
 							: "") +
 						(task.completedBy
 							? "<br>Completed by: " +
@@ -473,7 +541,7 @@ window.renderUserView = function () {
 	}, 0);
 };
 
-// New functions for the user to view the new task types
+// Functions for the user to view the new task types
 window.viewSpiralTask = function (taskId) {
 	const task = window.tasks.find((t) => t.id === taskId);
 	if (!task || task.type !== "spiral") {
@@ -497,27 +565,128 @@ window.viewSpiralTask = function (taskId) {
 
 window.viewCostTrackerTask = function (taskId) {
 	const task = window.tasks.find((t) => t.id === taskId);
-	if (!task || task.type !== "cost-tracker" || !task.costDetails) {
+	if (!task || task.type !== "cost-tracker") {
 		window.showNotification("This is not a cost tracker invoice.", "error");
 		return;
 	}
 
-	const modalContent = document.createElement("div");
-	modalContent.innerHTML = `
-		<h3>Cost Tracker Invoice</h3>
-		<p><strong>Issued by:</strong> ${task.createdBy}</p>
+	// Parse the cost information from the task text
+	const taskText = task.text;
+	const totalAmount = window.extractTotalFromTaskText(taskText) || "N/A";
+
+	let modalContent = `
+		<h3>💰 Cost Tracker Invoice</h3>
+		<p><strong>Invoice from:</strong> ${
+			window.users[task.createdBy]?.displayName || task.createdBy
+		}</p>
 		<p><strong>Issued on:</strong> ${window.formatDate(task.createdAt)}</p>
+		<p><strong>Status:</strong> ${window.getStatusText(
+			task.status,
+			false,
+			task.type
+		)}</p>
+		${
+			task.dueDate
+				? `<p><strong>Payment Due:</strong> ${window.formatDate(
+						task.dueDate
+				  )}</p>`
+				: ""
+		}
+		<p><strong>Penalty if not paid:</strong> -100 points</p>
 		<hr>
-		<h4>Breakdown:</h4>
-		<p>${task.costDetails.timeBasedCost.description}: <strong>${
-		task.costDetails.timeBasedCost.amount
-	}</strong></p>
-		${task.costDetails.penalties
-			.map((p) => `<p>${p.description}: <strong>${p.amount}</strong></p>`)
-			.join("")}
+		<div style="white-space: pre-line; font-family: monospace; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin: 15px 0;">
+			${window.escapeHtml(taskText)}
+		</div>
 		<hr>
-		<h3>Total: <strong>${task.costDetails.grandTotal}</strong></h3>
+		<h3 style="color: #ff6b6b;">Total Amount Due: <strong>${totalAmount}</strong></h3>
 	`;
 
-	window.showModal(modalContent.outerHTML);
+	window.showModal(modalContent);
+};
+
+/**
+ * User marks an invoice as paid (sets to pending_approval for admin review)
+ */
+window.markInvoiceAsPaid = function (taskId) {
+	const task = window.tasks.find((t) => t.id === taskId);
+	if (!task || task.type !== "cost-tracker") {
+		window.showNotification("This is not an invoice.", "error");
+		return;
+	}
+
+	const totalAmount = window.extractTotalFromTaskText(task.text) || "Unknown";
+
+	window.showConfirmModal(
+		`Mark this invoice as paid?\n\nAmount: ${totalAmount}\n\nThis will notify the admin that you have made the payment and request approval.`,
+		async (confirmed) => {
+			if (!confirmed) return;
+
+			const updates = {
+				status: "pending_approval",
+				completedAt: new Date().toISOString(),
+				completedBy: window.currentUser,
+			};
+
+			const { error: taskError } = await window.supabase
+				.from("tasks")
+				.update(updates)
+				.eq("id", taskId);
+
+			if (taskError) {
+				console.error("Error marking invoice as paid:", taskError);
+				window.showNotification(
+					"Failed to mark invoice as paid",
+					"error"
+				);
+				return;
+			}
+
+			window.showNotification(
+				`Invoice marked as paid! Awaiting admin approval. Amount: ${totalAmount}`
+			);
+			await window.fetchTasksInitial();
+		}
+	);
+};
+
+/**
+ * Admin approves an invoice payment
+ */
+window.approveInvoice = function (taskId) {
+	const task = window.tasks.find((t) => t.id === taskId);
+	if (!task || task.type !== "cost-tracker") {
+		window.showNotification("This is not an invoice.", "error");
+		return;
+	}
+
+	const totalAmount = window.extractTotalFromTaskText(task.text) || "Unknown";
+
+	window.showConfirmModal(
+		`Approve this invoice payment?\n\nAmount: ${totalAmount}\n\nThis confirms the payment has been received.`,
+		async (confirmed) => {
+			if (!confirmed) return;
+
+			const updates = {
+				status: "completed",
+				approvedAt: new Date().toISOString(),
+				approvedBy: window.currentUser,
+			};
+
+			const { error: taskError } = await window.supabase
+				.from("tasks")
+				.update(updates)
+				.eq("id", taskId);
+
+			if (taskError) {
+				console.error("Error approving invoice:", taskError);
+				window.showNotification("Failed to approve invoice", "error");
+				return;
+			}
+
+			window.showNotification(
+				`Invoice payment approved! Amount: ${totalAmount}`
+			);
+			await window.fetchTasksInitial();
+		}
+	);
 };
