@@ -136,6 +136,10 @@ window.hideSpiralGenerator = function () {
 	const modal = document.getElementById("spiralModal");
 	if (modal) {
 		modal.classList.add("hidden");
+		// Add this line to stop the animation when the modal is closed
+		if (window.spiral && window.spiral.stop) {
+			window.spiral.stop();
+		}
 	}
 };
 

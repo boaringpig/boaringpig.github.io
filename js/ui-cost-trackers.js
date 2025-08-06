@@ -161,7 +161,7 @@ window.initializeLiveCostTracker = function () {
 
 /**
  * Updates the live cost tracker display for users
- * IMPROVED VERSION with better tracking logic
+ * IMPROVED VERSION with better tracking logic and fix for the issue
  */
 window.updateLiveCostTracker = function () {
 	const liveCostTracker = document.getElementById("liveCostTracker");
@@ -207,25 +207,19 @@ window.updateLiveCostTracker = function () {
 		return;
 	}
 
-	// IMPROVED LOGIC: Check if current tracker is still running first
-	if (window.currentLiveTracker) {
-		const stillRunning = window.activeCostTrackers.find(
-			(t) =>
-				t.id === window.currentLiveTracker.id && t.status === "running"
-		);
+	// FIX: Check if the current live tracker is still present and running in the database data.
+	// This is the core logic to address the popup staying visible after an admin stops it.
+	let foundActiveTracker = window.activeCostTrackers.find(
+		(t) => t.status === "running"
+	);
 
-		if (stillRunning) {
-			console.log("Current tracker still running, keeping display");
-			// Update the tracker data but keep the same tracker
-			window.currentLiveTracker = stillRunning;
-			return; // Don't change anything, keep current display
-		} else {
-			console.log("Current tracker no longer running, clearing display");
-			liveCostTracker.classList.add("hidden");
-			window.clearLiveCostTrackerIntervals();
-			window.currentLiveTracker = null;
-			// Don't return yet, check for new trackers below
-		}
+	// Check if the current live tracker is no longer active
+	if (window.currentLiveTracker && !foundActiveTracker) {
+		console.log("Current tracker no longer active, clearing display");
+		liveCostTracker.classList.add("hidden");
+		window.clearLiveCostTrackerIntervals();
+		window.currentLiveTracker = null;
+		return; // No need to proceed, nothing to show
 	}
 
 	// Find a tracker for the current user
@@ -273,15 +267,23 @@ window.updateLiveCostTracker = function () {
 		return;
 	}
 
-	// IMPROVED: Only show if it's a different tracker or no tracker was shown before
-	const isDifferentTracker =
+	// FIX: Only show if it's a different tracker or no tracker was shown before,
+	// or if the tracker's status changed
+	const isDifferentOrUpdatedTracker =
 		!window.currentLiveTracker ||
-		window.currentLiveTracker.id !== userTracker.id;
+		window.currentLiveTracker.id !== userTracker.id ||
+		window.currentLiveTracker.status !== userTracker.status;
 
-	if (isDifferentTracker) {
-		console.log("Found new/different tracker, showing display");
+	if (isDifferentOrUpdatedTracker) {
+		console.log("Found new/different or updated tracker, showing display");
 		console.log("Previous tracker ID:", window.currentLiveTracker?.id);
 		console.log("New tracker ID:", userTracker.id);
+		console.log(
+			"Status changed:",
+			window.currentLiveTracker?.status,
+			"->",
+			userTracker.status
+		);
 
 		// Clear any existing intervals before starting new ones
 		window.clearLiveCostTrackerIntervals();
@@ -295,7 +297,9 @@ window.updateLiveCostTracker = function () {
 		// Start updating the display
 		window.startLiveCostTrackerUpdates(userTracker);
 	} else {
-		console.log("Same tracker already displayed, no change needed");
+		console.log(
+			"Same tracker already displayed and status is the same, no change needed"
+		);
 	}
 };
 

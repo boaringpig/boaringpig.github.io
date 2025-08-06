@@ -40,11 +40,10 @@ window.renderCalendar = function () {
 						}
 						return {
 							id: task.id,
-							title: task.text,
+							title: task.text + " (Repeating)",
 							rrule: {
 								freq: rruleFreq,
 								dtstart: task.dueDate,
-								count: 10,
 							},
 							duration: "01:00",
 							description: task.text,
@@ -54,6 +53,7 @@ window.renderCalendar = function () {
 							},
 						};
 					} else {
+						// Fallback if RRule is not defined, though it should be
 						return {
 							id: task.id,
 							title: task.text + " (Repeating)",

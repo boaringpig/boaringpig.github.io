@@ -280,7 +280,19 @@ window.renderAdminView = function () {
 						(task.type === "demerit" ? "<br>⚠️ Demerit Task" : "") +
 						(task.type === "spiral" ? "<br>🌀 Spiral Task" : "") +
 						(task.type === "cost-tracker" ? "<br>💰 Invoice" : "") +
-						(task.type === "demerit" && task.acceptedAt
+						(task.completedAt
+							? "<br>Completed: " +
+							  window.formatDate(task.completedAt)
+							: "") +
+						(task.approvedBy
+							? "<br>Approved: " +
+							  window.formatDate(task.approvedBy)
+							: "") +
+						(task.rejectedBy
+							? "<br>Rejected: " +
+							  window.formatDate(task.rejectedBy)
+							: "") +
+						(task.acceptedAt
 							? "<br>Accepted: " +
 							  window.formatDate(task.acceptedAt)
 							: "") +
@@ -396,6 +408,11 @@ window.renderUserView = function () {
 						task.type === "cost-tracker"
 							? window.extractTotalFromTaskText(task.text)
 							: null;
+
+					// Correctly handle the Mark Complete button for repeating tasks.
+					if (task.isRepeating && task.status === "todo") {
+						actionButtons += `<button class="action-btn check-btn" onclick="checkOffTask(${task.id})">Mark Complete</button>`;
+					}
 
 					return (
 						'<div class="task-item ' +
