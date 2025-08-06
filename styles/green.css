@@ -1269,3 +1269,228 @@ button {
 .stat-card .negative-stat:hover {
 	box-shadow: 0 0 15px rgba(255, 107, 107, 0.3);
 }
+
+/* Add these styles to styles/green.css for better negative points display */
+
+/* Points badge styling for different point values */
+.points-badge.negative {
+	background: linear-gradient(45deg, #ff6b6b, #cc0000) !important;
+	color: white !important;
+	box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+	animation: pulse-red 2s infinite;
+}
+
+.points-badge.zero {
+	background: linear-gradient(45deg, #ffff00, #cccc00) !important;
+	color: #000 !important;
+}
+
+.points-badge.positive {
+	background: linear-gradient(45deg, #00ff00, #00cc00) !important;
+	color: #000 !important;
+}
+
+/* Stat numbers with negative values */
+.stat-number.negative {
+	color: #ff6b6b !important;
+	text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+}
+
+.stat-number.zero {
+	color: #ffff00 !important;
+}
+
+.stat-number.positive {
+	color: #00ff00 !important;
+}
+
+/* Animation for negative points to draw attention */
+@keyframes pulse-red {
+	0% {
+		box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+	}
+	50% {
+		box-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+	}
+	100% {
+		box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+	}
+}
+
+/* User progress display for negative points */
+.user-stats .negative-points {
+	color: #ff6b6b;
+	font-weight: bold;
+	text-shadow: 0 0 5px rgba(255, 107, 107, 0.5);
+}
+
+/* Dashboard stats card for negative points */
+.stat-card .negative-stat {
+	color: #ff6b6b;
+	border-color: #ff6b6b;
+}
+
+.stat-card .negative-stat:hover {
+	box-shadow: 0 0 15px rgba(255, 107, 107, 0.3);
+}
+
+/* Live Cost Tracker Styles */
+.live-cost-tracker {
+	position: fixed;
+	top: 20px;
+	right: 20px;
+	background: var(--card-bg);
+	border: 2px solid var(--terminal-green);
+	border-radius: 0;
+	padding: 15px;
+	box-shadow: 0 0 25px rgba(0, 255, 0, 0.5);
+	z-index: 1000;
+	min-width: 280px;
+	max-width: 350px;
+	font-family: "PT Mono", "Monaco", "Menlo", "Consolas", monospace !important;
+}
+
+.live-cost-tracker.hidden {
+	display: none;
+}
+
+.live-tracker-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--terminal-green);
+}
+
+.live-tracker-title {
+	color: var(--terminal-green);
+	font-weight: var(--font-weight-bold);
+	font-size: var(--font-size-base);
+}
+
+.live-tracker-close {
+	color: var(--status-error);
+	font-size: 18px;
+	font-weight: var(--font-weight-bold);
+	cursor: pointer;
+	background: none;
+	border: none;
+	padding: 0;
+	line-height: 1;
+}
+
+.live-tracker-close:hover {
+	color: var(--terminal-green-light);
+	text-shadow: 0 0 5px var(--status-error);
+}
+
+.live-tracker-content {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.live-tracker-time {
+	font-size: var(--font-size-xl);
+	font-weight: var(--font-weight-bold);
+	color: var(--status-info);
+	text-align: center;
+	font-family: "PT Mono", monospace !important;
+}
+
+.live-tracker-cost {
+	font-size: var(--font-size-lg);
+	font-weight: var(--font-weight-bold);
+	color: var(--terminal-green);
+	text-align: center;
+	border: 1px solid var(--terminal-green);
+	padding: 8px;
+	background: rgba(0, 255, 0, 0.1);
+}
+
+.live-tracker-rate {
+	font-size: var(--font-size-sm);
+	color: var(--terminal-gray-light);
+	text-align: center;
+	font-style: italic;
+}
+
+.live-tracker-penalties {
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px dashed var(--status-error);
+}
+
+.live-tracker-penalty {
+	font-size: var(--font-size-sm);
+	color: var(--status-error);
+	margin-bottom: 3px;
+}
+
+/* Cost Tracker Admin Items */
+.cost-tracker-admin-item {
+	border-left: 3px solid var(--status-warning) !important;
+}
+
+.cost-tracker-details {
+	margin-top: 5px;
+	font-size: var(--font-size-sm);
+	color: var(--terminal-gray-light);
+}
+
+.cost-tracker-time,
+.cost-tracker-cost,
+.cost-tracker-penalties {
+	margin-bottom: 3px;
+}
+
+.cost-tracker-actions {
+	margin-top: 8px;
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.cost-tracker-actions .action-btn {
+	font-size: var(--font-size-sm);
+	padding: 6px 12px;
+}
+
+/* Penalty display items */
+.penalty-display-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 10px;
+	margin-bottom: 8px;
+	background: var(--card-bg);
+	border: 1px solid var(--terminal-green);
+	border-radius: 0;
+}
+
+.penalty-info {
+	flex: 1;
+	text-align: left;
+}
+
+.penalty-info strong {
+	color: var(--terminal-green);
+	font-weight: var(--font-weight-bold);
+}
+
+.penalty-info span {
+	color: var(--status-error);
+	font-weight: var(--font-weight-bold);
+}
+
+.penalty-info small {
+	color: var(--terminal-gray-light);
+}
+
+/* Penalties list in modal */
+.penalties-list {
+	max-height: 300px;
+	overflow-y: auto;
+	margin-bottom: 15px;
+}

@@ -49,18 +49,20 @@ window.renderDashboard = function () {
 	if (demeritsIssuedCountEl)
 		demeritsIssuedCountEl.textContent = demeritTasksCount;
 
+	// Update active cost trackers count
+	window.updateActiveCostTrackersCount();
+
 	// Add admin points control to the dashboard stats
 	window.addAdminPointsControl();
 
 	window.renderUserActivityLog();
 	window.renderUserProgress();
+	window.renderActiveCostTrackersAdmin();
 };
 
 /**
  * Adds the admin points control to the dashboard
  */
-// In js/ui-dashboard.js, update the addAdminPointsControl function:
-
 window.addAdminPointsControl = function () {
 	if (!window.hasPermission("manage_users")) return;
 
@@ -112,29 +114,6 @@ window.addAdminPointsControl = function () {
 	dashboardStats.insertBefore(pointsControlCard, dashboardStats.firstChild);
 };
 
-// Update the updateAdminPointsDisplay function to ensure input shows current points:
-window.updateAdminPointsDisplay = function () {
-	const pointsControl = document.getElementById("adminPointsControl");
-	if (!pointsControl) return;
-
-	const userPoints = window.users["schinken"].points || 0;
-	let pointsColor =
-		userPoints < 0 ? "#ff6b6b" : userPoints === 0 ? "#ffff00" : "#00ff00";
-
-	const statNumber = pointsControl.querySelector(".stat-number");
-	const input = pointsControl.querySelector("#adminPointsInput");
-
-	if (statNumber) {
-		statNumber.textContent = userPoints;
-		statNumber.style.color = pointsColor;
-	}
-	if (input) {
-		input.value = userPoints;
-		// Also update placeholder to show current value
-		input.placeholder = `Current: ${userPoints}`;
-	}
-};
-
 /**
  * Updates the points display in the admin control
  */
@@ -155,6 +134,8 @@ window.updateAdminPointsDisplay = function () {
 	}
 	if (input) {
 		input.value = userPoints;
+		// Also update placeholder to show current value
+		input.placeholder = `Current: ${userPoints}`;
 	}
 };
 

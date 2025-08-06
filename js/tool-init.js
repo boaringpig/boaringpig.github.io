@@ -133,6 +133,13 @@ window.ensureModalFunctions = function () {
 				if (window.costTracker && window.costTracker.init) {
 					window.costTracker.init();
 				}
+
+				// Add click outside to close functionality
+				modal.onclick = function (e) {
+					if (e.target === modal) {
+						window.hideCostTracker();
+					}
+				};
 			} else {
 				console.error("Cost tracker modal not found");
 			}
@@ -143,7 +150,12 @@ window.ensureModalFunctions = function () {
 		window.hideCostTracker = function () {
 			const modal = document.getElementById("costTrackerModal");
 			if (modal) {
+				// Reset the cost tracker before hiding
+				if (window.costTracker && window.costTracker.resetOnClose) {
+					window.costTracker.resetOnClose();
+				}
 				modal.classList.add("hidden");
+				console.log("Cost tracker modal closed and reset");
 			}
 		};
 	}

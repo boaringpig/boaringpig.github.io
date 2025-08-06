@@ -45,6 +45,8 @@ window.loadData = async function () {
 			supabase.removeChannel(window.unsubscribe.userRewardPurchases);
 		if (window.unsubscribe.rewardSystemSettings)
 			supabase.removeChannel(window.unsubscribe.rewardSystemSettings);
+		if (window.unsubscribe.activeCostTrackers)
+			supabase.removeChannel(window.unsubscribe.activeCostTrackers);
 
 		window.unsubscribe = {}; // Clear the unsubscribe object
 	}
@@ -77,6 +79,7 @@ window.loadData = async function () {
 	await window.fetchRewardsInitial();
 	await window.fetchUserRewardPurchasesInitial();
 	await window.fetchRewardSystemSettingsInitial();
+	await window.fetchActiveCostTrackersInitial();
 
 	// --- Real-time Listeners ---
 	// Set up real-time subscriptions for immediate UI updates on data changes.
@@ -322,6 +325,48 @@ window.loadData = async function () {
 		)
 		.subscribe();
 
+	const activeCostTrackersChannel = supabase
+		.channel("active_cost_trackers_channel")
+		.on(
+			"postgres_changes",
+			{ event: "*", schema: "public", table: "active_cost_trackers" },
+			async (payload) => {
+				console.log("Active cost tracker change received!", payload);
+
+				// Always refresh data first
+				await window.fetchActiveCostTrackersInitial();
+
+				// Handle tracker stopping - clear user display immediately
+				if (
+					payload.eventType === "UPDATE" &&
+					payload.new.status === "stopped"
+				) {
+					console.log("Tracker stopped - clearing user display");
+					if (window.currentUser === "schinken") {
+						const liveCostTracker =
+							document.getElementById("liveCostTracker");
+						if (liveCostTracker) {
+							liveCostTracker.classList.add("hidden");
+						}
+						window.clearLiveCostTrackerIntervals();
+						window.currentLiveTracker = null;
+					}
+				}
+
+				// Update UI for both admin and user views
+				if (window.currentUser === "skeen") {
+					window.renderActiveCostTrackersAdmin();
+					window.updateActiveCostTrackersCount();
+				} else if (window.currentUser === "schinken") {
+					// Use setTimeout to ensure UI update happens after data refresh
+					setTimeout(() => {
+						window.updateLiveCostTracker();
+					}, 100);
+				}
+			}
+		)
+		.subscribe();
+
 	window.unsubscribe = {
 		tasks: tasksChannel,
 		suggestions: suggestionsChannel,
@@ -330,6 +375,7 @@ window.loadData = async function () {
 		rewards: rewardsChannel,
 		userRewardPurchases: userRewardPurchasesChannel,
 		rewardSystemSettings: rewardSystemSettingsChannel,
+		activeCostTrackers: activeCostTrackersChannel,
 	};
 
 	window.checkForRewardLimitReset();

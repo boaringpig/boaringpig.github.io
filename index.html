@@ -35,6 +35,20 @@
 		<script src="js/cost-tracker-integration.js"></script>
 	</head>
 	<body>
+		<!-- Live Cost Tracker Display (for users) -->
+		<div id="liveCostTracker" class="live-cost-tracker hidden">
+			<div class="live-tracker-header">
+				<div class="live-tracker-title">💰 Cost Tracker Running</div>
+				<div class="live-tracker-close" onclick="window.dismissLiveCostTracker()">×</div>
+			</div>
+			<div class="live-tracker-content">
+				<div class="live-tracker-time" id="liveCostTime">00:00:00</div>
+				<div class="live-tracker-cost" id="liveCostAmount">€0.00</div>
+				<div class="live-tracker-rate" id="liveCostRate">€50.00 per minute</div>
+				<div class="live-tracker-penalties" id="liveCostPenalties"></div>
+			</div>
+		</div>
+
 		<div class="container">
 			<!-- Login Screen -->
 			<div id="loginScreen" class="login-container">
@@ -358,7 +372,7 @@
 					<div class="dashboard-container">
 						<div class="dashboard-stats">
 							<div class="stat-card">
-								<h3>User Login Status </h3>
+								<h3>User Login Status </h3>
 								<div class="stat-number" id="userStatus">
 									Offline
 								</div>
@@ -385,6 +399,16 @@
 									0
 								</div>
 							</div>
+							<!-- NEW STAT CARD FOR ACTIVE COST TRACKERS -->
+							<div class="stat-card">
+								<h3>Active Cost Trackers</h3>
+								<div
+									class="stat-number"
+									id="activeCostTrackersCount"
+								>
+									0
+								</div>
+							</div>
 						</div>
 
 						<div class="user-progress">
@@ -400,6 +424,15 @@
 							<div
 								id="userProgressList"
 								class="progress-list"
+							></div>
+						</div>
+
+						<!-- NEW: Active Cost Trackers Management -->
+						<div class="user-progress">
+							<h2>Active Cost Trackers</h2>
+							<div
+								id="activeCostTrackersList"
+								class="activity-log"
 							></div>
 						</div>
 					</div>
@@ -1033,6 +1066,10 @@ Final text"
 								<button id="resetBtn" class="reset-btn">
 									Reset
 								</button>
+								<!-- NEW: Start Live Tracker Button -->
+								<button id="startLiveBtn" class="action-btn check-btn">
+									Start Live Tracker
+								</button>
 							</div>
 						</div>
 
@@ -1110,6 +1147,7 @@ Final text"
 		<script src="js/database-suggestions.js"></script>
 		<script src="js/database-rewards.js"></script>
 		<script src="js/database-user.js"></script>
+		<script src="js/database-cost-trackers.js"></script>
 		<!-- UI rendering modules -->
 		<script src="js/ui.js"></script>
 		<script src="js/ui-tasks.js"></script>
@@ -1117,7 +1155,9 @@ Final text"
 		<script src="js/ui-calendar.js"></script>
 		<script src="js/ui-dashboard.js"></script>
 		<script src="js/ui-rewards.js"></script>
+		<script src="js/ui-cost-trackers.js"></script>
 		<!-- New file for tool initialization -->
 		<script src="js/tool-init.js"></script>
 	</body>
 </html>
+							</div

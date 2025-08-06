@@ -96,13 +96,30 @@ window.logout = function () {
 			window.supabase.removeChannel(
 				window.unsubscribe.rewardSystemSettings
 			);
+		if (window.unsubscribe.activeCostTrackers)
+			window.supabase.removeChannel(
+				window.unsubscribe.activeCostTrackers
+			);
 		window.unsubscribe = null; // Clear the unsubscribe object
 	}
+
 	// Clear overdue check interval
 	if (window.overdueCheckIntervalId) {
 		clearInterval(window.overdueCheckIntervalId);
 		window.overdueCheckIntervalId = null;
 	}
+
+	// Clear cost tracker intervals
+	if (window.liveCostTrackerInterval) {
+		clearInterval(window.liveCostTrackerInterval);
+		window.liveCostTrackerInterval = null;
+	}
+	if (window.liveCostTrackerUpdateInterval) {
+		clearInterval(window.liveCostTrackerUpdateInterval);
+		window.liveCostTrackerUpdateInterval = null;
+	}
+	window.currentLiveTracker = null;
+
 	window.currentUser = null; // Clear the current user
 	// Reset login form fields
 	document.getElementById("username").value = "";

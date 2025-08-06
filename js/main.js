@@ -34,6 +34,12 @@ let userActivityLog = [];
 let rewards = [];
 let userRewardPurchases = [];
 let rewardSystemSettings = {};
+// Global variables for cost tracker data
+let activeCostTrackers = [];
+let liveCostTrackerInterval = null;
+let liveCostTrackerUpdateInterval = null;
+let activeLiveTrackerId = null;
+let currentLiveTracker = null;
 
 // Counters for client-side ID generation (REMOVED FOR TASKS/SUGGESTIONS - Supabase will handle)
 // taskIdCounter and suggestionIdCounter are no longer managed client-side for inserts.
@@ -58,6 +64,12 @@ window.userActivityLog = userActivityLog;
 window.rewards = rewards;
 window.userRewardPurchases = userRewardPurchases;
 window.rewardSystemSettings = rewardSystemSettings;
+// Expose cost tracker data globally
+window.activeCostTrackers = activeCostTrackers;
+window.liveCostTrackerInterval = liveCostTrackerInterval;
+window.liveCostTrackerUpdateInterval = liveCostTrackerUpdateInterval;
+window.activeLiveTrackerId = activeLiveTrackerId;
+window.currentLiveTracker = currentLiveTracker;
 
 window.taskIdCounter = taskIdCounter; // Still exposed, but its role changes
 window.suggestionIdCounter = suggestionIdCounter; // Still exposed, but its role changes

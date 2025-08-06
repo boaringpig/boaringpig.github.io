@@ -128,6 +128,11 @@ window.switchTab = function (tabName) {
 
 	window.activeTab = tabName;
 
+	// Clear live cost tracker intervals when switching tabs (except for schinken user)
+	if (window.currentUser !== "schinken") {
+		window.clearLiveCostTrackerIntervals();
+	}
+
 	if (tabName === "calendar") {
 		window.renderCalendar();
 	} else if (

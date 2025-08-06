@@ -13,10 +13,12 @@ window.costTracker = (function () {
 			this.isRunning = false;
 			this.totalCost = 0;
 			this.penalties = [];
+			this.activeLiveTrackerId = null;
 
 			this.initializeElements();
 			this.bindEvents();
 			this.updateDisplay();
+			this.checkForActiveLiveTracker();
 		}
 
 		initializeElements() {
@@ -28,6 +30,7 @@ window.costTracker = (function () {
 			this.startBtn = document.getElementById("startBtn");
 			this.stopBtn = document.getElementById("stopBtn");
 			this.resetBtn = document.getElementById("resetBtn");
+			this.startLiveBtn = document.getElementById("startLiveBtn");
 
 			this.rateInput = document.getElementById("rate");
 			this.currencySelect = document.getElementById("currency");
@@ -47,6 +50,10 @@ window.costTracker = (function () {
 				this.stopBtn.addEventListener("click", () => this.stop());
 			if (this.resetBtn)
 				this.resetBtn.addEventListener("click", () => this.reset());
+			if (this.startLiveBtn)
+				this.startLiveBtn.addEventListener("click", () =>
+					this.startLive()
+				);
 
 			if (this.currencySelect)
 				this.currencySelect.addEventListener("change", () =>
@@ -74,6 +81,77 @@ window.costTracker = (function () {
 				});
 		}
 
+		resetOnOpen() {
+			// Reset everything when modal opens, but don't reset if there's an active live tracker
+			if (!this.activeLiveTrackerId) {
+				this.stop();
+				this.elapsedTime = 0;
+				this.totalCost = 0;
+				this.penalties = [];
+				this.updateTimer();
+				this.calculateCurrentCost();
+				this.updatePenaltyList();
+				if (this.finalTotalDiv)
+					this.finalTotalDiv.classList.remove("show");
+				if (this.startBtn) this.startBtn.disabled = false;
+				if (this.stopBtn) this.stopBtn.disabled = true;
+				console.log("Cost tracker reset on modal open");
+			} else {
+				console.log(
+					"Cost tracker not reset - active live tracker present"
+				);
+			}
+		}
+
+		checkForActiveLiveTracker() {
+			// Check if there's already an active live tracker when opening the modal
+			if (
+				window.activeCostTrackers &&
+				Array.isArray(window.activeCostTrackers)
+			) {
+				const runningTrackers = window.activeCostTrackers.filter(
+					(t) =>
+						t.status === "running" &&
+						t.created_by === window.currentUser
+				);
+
+				if (runningTrackers.length > 0) {
+					const tracker = runningTrackers[0];
+					this.activeLiveTrackerId = tracker.id;
+
+					// Update UI to reflect active live tracker
+					if (this.startLiveBtn) {
+						this.startLiveBtn.textContent = "Stop Live Tracker";
+						this.startLiveBtn.className = "action-btn delete-btn";
+						this.startLiveBtn.onclick = () => this.stopLive();
+					}
+
+					// Start local timer to sync with live tracker
+					const startTime = new Date(tracker.started_at);
+					const elapsed = Date.now() - startTime.getTime();
+					this.elapsedTime = Math.max(0, elapsed);
+					this.start();
+
+					// Load existing penalties from live tracker
+					try {
+						const existingPenalties = JSON.parse(
+							tracker.penalties || "[]"
+						);
+						this.penalties = existingPenalties.map((p) => ({
+							id: p.id || Date.now(),
+							description: p.description,
+							amount: parseFloat(p.amount) || 0,
+						}));
+						this.updatePenaltyList();
+					} catch (e) {
+						console.warn("Error loading existing penalties:", e);
+					}
+
+					console.log("Resumed existing live tracker:", tracker.id);
+				}
+			}
+		}
+
 		start() {
 			if (!this.isRunning) {
 				this.startTime = Date.now() - this.elapsedTime;
@@ -83,8 +161,13 @@ window.costTracker = (function () {
 					() => this.incrementCost(),
 					parseInt(this.intervalSelect.value)
 				);
-				if (this.startBtn) this.startBtn.disabled = true;
-				if (this.stopBtn) this.stopBtn.disabled = false;
+
+				// Update button states - but don't disable if live tracker is running
+				if (!this.activeLiveTrackerId) {
+					if (this.startBtn) this.startBtn.disabled = true;
+					if (this.stopBtn) this.stopBtn.disabled = false;
+				}
+
 				if (this.finalTotalDiv)
 					this.finalTotalDiv.classList.remove("show");
 			}
@@ -95,9 +178,112 @@ window.costTracker = (function () {
 				this.isRunning = false;
 				clearInterval(this.timerInterval);
 				clearInterval(this.costInterval);
-				if (this.startBtn) this.startBtn.disabled = false;
-				if (this.stopBtn) this.stopBtn.disabled = true;
-				this.showFinalTotal();
+
+				// Update button states - but don't enable if live tracker is running
+				if (!this.activeLiveTrackerId) {
+					if (this.startBtn) this.startBtn.disabled = false;
+					if (this.stopBtn) this.stopBtn.disabled = true;
+					this.showFinalTotal();
+				}
+			}
+		}
+
+		async startLive() {
+			if (!window.hasPermission("create_task")) {
+				window.showNotification(
+					"You do not have permission to start live trackers",
+					"error"
+				);
+				return;
+			}
+
+			// Stop any existing live tracker first
+			await window.stopAllActiveCostTrackers();
+
+			const description = "Live Cost Tracker";
+			const rate = parseFloat(this.rateInput.value) || 50;
+			const currency = this.currencySelect.value || "€";
+			const interval = parseInt(this.intervalSelect.value) || 60000;
+
+			// Include any existing local penalties when starting live tracker
+			const existingPenalties = this.penalties.map((p) => ({
+				id: p.id,
+				description: p.description,
+				amount: p.amount,
+				added_at: new Date().toISOString(),
+			}));
+
+			try {
+				const trackerId = await window.startLiveCostTracker(
+					description,
+					rate,
+					currency,
+					interval,
+					existingPenalties
+				);
+
+				if (trackerId) {
+					this.activeLiveTrackerId = trackerId;
+
+					// Start the local timer when starting live tracker
+					this.start();
+
+					if (this.startLiveBtn) {
+						this.startLiveBtn.textContent = "Stop Live Tracker";
+						this.startLiveBtn.className = "action-btn delete-btn";
+						this.startLiveBtn.onclick = () => this.stopLive();
+					}
+
+					// Disable regular start/stop buttons while live tracker is running
+					if (this.startBtn) this.startBtn.disabled = true;
+					if (this.stopBtn) this.stopBtn.disabled = true;
+
+					window.showNotification(
+						"Live cost tracker started with local timer!"
+					);
+				}
+			} catch (error) {
+				console.error("Error starting live tracker:", error);
+				window.showNotification(
+					"Failed to start live tracker",
+					"error"
+				);
+			}
+		}
+
+		async stopLive() {
+			if (this.activeLiveTrackerId) {
+				try {
+					// Stop the local timer first
+					this.stop();
+
+					// Then stop the live tracker in the database
+					await window.stopLiveCostTracker(
+						this.activeLiveTrackerId,
+						true
+					);
+					this.activeLiveTrackerId = null;
+
+					if (this.startLiveBtn) {
+						this.startLiveBtn.textContent = "Start Live Tracker";
+						this.startLiveBtn.className = "action-btn check-btn";
+						this.startLiveBtn.onclick = () => this.startLive();
+					}
+
+					// Re-enable regular start/stop buttons
+					if (this.startBtn) this.startBtn.disabled = false;
+					if (this.stopBtn) this.stopBtn.disabled = true;
+
+					window.showNotification(
+						"Live cost tracker stopped and invoice created!"
+					);
+				} catch (error) {
+					console.error("Error stopping live tracker:", error);
+					window.showNotification(
+						"Failed to stop live tracker",
+						"error"
+					);
+				}
 			}
 		}
 
@@ -112,6 +298,16 @@ window.costTracker = (function () {
 			if (this.finalTotalDiv) this.finalTotalDiv.classList.remove("show");
 			if (this.startBtn) this.startBtn.disabled = false;
 			if (this.stopBtn) this.stopBtn.disabled = true;
+
+			// Reset live tracker button if it exists
+			if (this.startLiveBtn) {
+				this.startLiveBtn.textContent = "Start Live Tracker";
+				this.startLiveBtn.className = "action-btn check-btn";
+				this.startLiveBtn.onclick = () => this.startLive();
+			}
+			this.activeLiveTrackerId = null;
+
+			console.log("Cost tracker reset to initial state");
 		}
 
 		updateTimer() {
@@ -276,20 +472,65 @@ window.costTracker = (function () {
 			const amount = this.penaltyAmountInput
 				? parseFloat(this.penaltyAmountInput.value) || 0
 				: 0;
+
 			if (description && amount > 0) {
-				this.penalties.push({
-					description: description,
-					amount: amount,
-					id: Date.now(),
-				});
+				if (this.activeLiveTrackerId) {
+					// Add penalty to live tracker in database
+					window.addPenaltyToLiveTracker(
+						this.activeLiveTrackerId,
+						description,
+						amount
+					);
+					// Also add to local penalties array for immediate UI feedback
+					this.penalties.push({
+						description: description,
+						amount: amount,
+						id: Date.now(),
+					});
+				} else {
+					// Add penalty to local tracker only
+					this.penalties.push({
+						description: description,
+						amount: amount,
+						id: Date.now(),
+					});
+				}
+
+				// Always update local penalty list for immediate feedback
+				this.updatePenaltyList();
+
+				// Clear input fields
 				if (this.penaltyDescriptionInput)
 					this.penaltyDescriptionInput.value = "";
 				if (this.penaltyAmountInput) this.penaltyAmountInput.value = "";
-				this.updatePenaltyList();
+
+				// Show success notification
+				window.showNotification(
+					`Penalty added: ${description} (${this.formatCurrency(
+						amount,
+						this.currencySelect?.value || "€"
+					)})`,
+					"success"
+				);
+			} else {
+				// Show error if fields are invalid
+				window.showNotification(
+					"Please enter a valid description and amount",
+					"error"
+				);
 			}
 		}
 
 		removePenalty(id) {
+			if (this.activeLiveTrackerId) {
+				// Try to remove from live tracker first
+				window.removePenaltyFromLiveTracker(
+					this.activeLiveTrackerId,
+					id
+				);
+			}
+
+			// Always remove from local penalties array
 			this.penalties = this.penalties.filter(
 				(penalty) => penalty.id !== id
 			);
@@ -300,22 +541,42 @@ window.costTracker = (function () {
 			const currency = this.currencySelect
 				? this.currencySelect.value
 				: "€";
+
+			if (!this.penaltyListDiv) {
+				console.warn("Penalty list div not found");
+				return;
+			}
+
 			let html = "";
-			this.penalties.forEach((penalty) => {
-				html += `
-					<div class="penalty-item">
-						<div class="penalty-description">${penalty.description}</div>
-						<div class="penalty-amount">${this.formatCurrency(
-							penalty.amount,
-							currency
-						)}</div>
-						<button class="remove-penalty" onclick="window.costTracker.removePenalty(${
-							penalty.id
-						})">×</button>
-					</div>
-				`;
-			});
-			if (this.penaltyListDiv) this.penaltyListDiv.innerHTML = html;
+
+			if (this.penalties.length === 0) {
+				html =
+					'<div class="empty-penalty-state" style="color: var(--terminal-gray); font-style: italic; padding: 10px; text-align: center;">No penalties added yet</div>';
+			} else {
+				this.penalties.forEach((penalty) => {
+					html += `
+						<div class="penalty-item">
+							<div class="penalty-description">${
+								window.escapeHtml
+									? window.escapeHtml(penalty.description)
+									: penalty.description
+							}</div>
+							<div class="penalty-amount">${this.formatCurrency(
+								penalty.amount,
+								currency
+							)}</div>
+							<button class="remove-penalty" onclick="window.costTracker.removePenalty(${
+								penalty.id
+							})" title="Remove penalty">×</button>
+						</div>
+					`;
+				});
+			}
+
+			this.penaltyListDiv.innerHTML = html;
+			console.log(
+				`Updated penalty list with ${this.penalties.length} penalties`
+			);
 		}
 
 		formatCurrency(amount, currency) {
@@ -327,7 +588,15 @@ window.costTracker = (function () {
 		// Initialize the application only if the elements exist
 		const container = document.getElementById("cost-tracker-app");
 		if (container) {
+			console.log("Initializing cost tracker...");
 			costTrackerInstance = new CostTracker();
+
+			// Reset tracker when modal is opened (init is called each time modal opens)
+			costTrackerInstance.resetOnOpen();
+
+			console.log("Cost tracker initialized successfully");
+		} else {
+			console.warn("Cost tracker container not found");
 		}
 	}
 
@@ -354,19 +623,15 @@ Time-based Cost: ${costDetails.timeBasedCost.description} = ${costDetails.timeBa
 			penaltiesText +
 			`\n\n💸 TOTAL AMOUNT DUE: ${costDetails.grandTotal}\n\n⚠️ This is an invoice that must be approved for payment. Failure to approve will result in penalty points.`;
 
-		// Fixed penalty points for all invoices
-		const penaltyPoints = 100; // All invoices carry a 100 point penalty for non-payment
-
 		const task = {
 			text: finalDescription,
-			status: "todo", // Starts as "todo" - user must mark as paid first
+			status: "todo",
 			type: "cost-tracker",
 			createdAt: new Date().toISOString(),
 			createdBy: window.currentUser,
-			assignedTo: "schinken", // Invoice is sent to the user
-			points: 0, // Invoices don't give reward points
-			penaltyPoints: penaltyPoints, // Fixed 100 point penalty for non-payment
-			// Set due date for payment (optional - 7 days from now)
+			assignedTo: "schinken",
+			points: 0,
+			penaltyPoints: 100,
 			dueDate: new Date(
 				Date.now() + 7 * 24 * 60 * 60 * 1000
 			).toISOString(),
@@ -389,28 +654,11 @@ Time-based Cost: ${costDetails.timeBasedCost.description} = ${costDetails.timeBa
 				window.showNotification(
 					`Invoice sent successfully! Total: ${costDetails.grandTotal} (Penalty for non-payment: 100 points)`
 				);
+
+				// Reset and close the cost tracker after sending
+				costTrackerInstance.reset();
 				window.hideCostTracker();
 				await window.fetchTasksInitial();
-
-				// Store the detailed cost info for admin reference
-				try {
-					localStorage.setItem(
-						`invoice_${Date.now()}`,
-						JSON.stringify({
-							timestamp: new Date().toISOString(),
-							createdBy: window.currentUser,
-							assignedTo: "schinken",
-							totalAmount: costDetails.grandTotal,
-							penaltyPoints: 100,
-							costDetails: costDetails,
-						})
-					);
-				} catch (storageError) {
-					console.warn(
-						"Could not store invoice details in localStorage:",
-						storageError
-					);
-				}
 			}
 		} catch (error) {
 			console.error("Error creating cost tracker invoice:", error);
@@ -423,5 +671,18 @@ Time-based Cost: ${costDetails.timeBasedCost.description} = ${costDetails.timeBa
 		init,
 		removePenalty: (id) => costTrackerInstance?.removePenalty(id),
 		sendCostConfigAsTask,
+		resetOnClose: () => {
+			if (costTrackerInstance) {
+				// Don't reset if there's an active live tracker
+				if (!costTrackerInstance.activeLiveTrackerId) {
+					costTrackerInstance.reset();
+					console.log("Cost tracker reset on modal close");
+				} else {
+					console.log(
+						"Cost tracker not reset on close - active live tracker present"
+					);
+				}
+			}
+		},
 	};
 })();
