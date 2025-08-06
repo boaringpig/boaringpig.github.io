@@ -541,7 +541,9 @@ window.renderUserView = function () {
 	}, 0);
 };
 
-// Functions for the user to view the new task types
+// js/ui-tasks.js - Enhanced spiral task viewing
+// Replace the viewSpiralTask function with this enhanced version
+
 window.viewSpiralTask = function (taskId) {
 	const task = window.tasks.find((t) => t.id === taskId);
 	if (!task || task.type !== "spiral") {
@@ -549,17 +551,102 @@ window.viewSpiralTask = function (taskId) {
 		return;
 	}
 
+	console.log("Viewing spiral task:", task);
+	console.log("Spiral config:", task.spiralConfig || task.spiralconfig);
+
 	const modal = document.getElementById("spiralModal");
 	if (modal) {
 		modal.classList.remove("hidden");
-		// Initialize spiral viewer in read-only mode
-		if (window.spiral) {
-			window.spiral.init();
-			window.spiral.applyConfiguration(task.spiralConfig);
+
+		// Initialize spiral viewer
+		if (window.spiral && window.spiral.init) {
+			// Small delay to ensure modal is visible before initializing
+			setTimeout(() => {
+				console.log("Initializing spiral viewer...");
+				window.spiral.init();
+
+				// Apply the saved configuration if it exists
+				const config = task.spiralConfig || task.spiralconfig;
+				if (config) {
+					console.log("Applying saved spiral configuration:", config);
+					window.spiral.applyConfiguration(config);
+				} else {
+					console.log("No saved configuration found, using default");
+					window.spiral.initDefaultText();
+				}
+
+				// Hide or disable controls for user view to make it read-only
+				const controls = document.getElementById("controls");
+				if (controls && window.currentUser !== "skeen") {
+					// For regular users, hide the controls to make it view-only
+					controls.style.display = "none";
+
+					// Add a notice that this is view-only
+					const notice = document.createElement("div");
+					notice.style.cssText = `
+						position: fixed;
+						top: 60px;
+						right: 20px;
+						background: var(--terminal-bg);
+						border: 1px solid var(--terminal-green);
+						color: var(--terminal-green);
+						padding: 15px;
+						z-index: 1001;
+						font-weight: bold;
+						border-radius: 0;
+					`;
+					notice.textContent =
+						"👁️ View-Only Mode - Enjoy the spiral!";
+					notice.id = "spiralViewNotice";
+					document.body.appendChild(notice);
+				} else if (controls) {
+					// For admin users, show controls but add a different notice
+					controls.style.display = "block";
+
+					const notice = document.createElement("div");
+					notice.style.cssText = `
+						position: fixed;
+						top: 60px;
+						right: 20px;
+						background: var(--terminal-bg);
+						border: 1px solid var(--terminal-green);
+						color: var(--terminal-green);
+						padding: 15px;
+						z-index: 1001;
+						font-weight: bold;
+						border-radius: 0;
+					`;
+					notice.textContent =
+						"🔧 Admin Mode - You can modify the spiral";
+					notice.id = "spiralViewNotice";
+					document.body.appendChild(notice);
+				}
+			}, 100);
+		} else {
+			console.error("Spiral integration not available");
+			window.showNotification("Spiral viewer not available", "error");
 		}
-		// Hide controls for the user
-		const controls = document.getElementById("controls");
-		if (controls) controls.style.display = "none";
+
+		// Modify the close button to clean up the notice
+		const originalHideSpiralGenerator = window.hideSpiralGenerator;
+		window.hideSpiralGenerator = function () {
+			// Remove the notice if it exists
+			const notice = document.getElementById("spiralViewNotice");
+			if (notice) {
+				document.body.removeChild(notice);
+			}
+
+			// Call the original hide function
+			if (originalHideSpiralGenerator) {
+				originalHideSpiralGenerator();
+			}
+
+			// Restore the original function
+			window.hideSpiralGenerator = originalHideSpiralGenerator;
+		};
+	} else {
+		console.error("Spiral modal not found");
+		window.showNotification("Spiral modal not available", "error");
 	}
 };
 
