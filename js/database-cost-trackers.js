@@ -117,9 +117,16 @@ window.startLiveCostTracker = async function (
 
 /**
  * Stops a live cost tracker and optionally creates an invoice task
+ * FIXED VERSION with proper error handling and logging
  */
 window.stopLiveCostTracker = async function (trackerId, createInvoice = true) {
+	console.log("=== stopLiveCostTracker called ===");
+	console.log("Tracker ID:", trackerId);
+	console.log("Create invoice:", createInvoice);
+	console.log("Current user:", window.currentUser);
+
 	if (!window.hasPermission("create_task")) {
+		console.log("Permission denied");
 		window.showNotification(
 			"You do not have permission to stop cost trackers",
 			"error"
@@ -127,18 +134,39 @@ window.stopLiveCostTracker = async function (trackerId, createInvoice = true) {
 		return;
 	}
 
+	// Add logging to see what's in the database
+	console.log("Fetching tracker from database...");
 	const { data: tracker, error: fetchError } = await window.supabase
 		.from("active_cost_trackers")
 		.select("*")
 		.eq("id", trackerId)
 		.single();
 
+	console.log("Database fetch result:");
+	console.log("- Data:", tracker);
+	console.log("- Error:", fetchError);
+
 	if (fetchError) {
 		console.error("Error fetching tracker:", fetchError);
+		// FIX: Add proper notification instead of silent return
+		window.showNotification(
+			`Failed to find cost tracker: ${fetchError.message}`,
+			"error"
+		);
 		return;
 	}
 
+	if (!tracker) {
+		console.error("No tracker found with ID:", trackerId);
+		window.showNotification("Cost tracker not found in database", "error");
+		return;
+	}
+
+	console.log("Found tracker:", tracker);
+	console.log("Tracker status:", tracker.status);
+
 	// Update tracker status to stopped
+	console.log("Updating tracker status to stopped...");
 	const { error: updateError } = await window.supabase
 		.from("active_cost_trackers")
 		.update({
@@ -147,113 +175,145 @@ window.stopLiveCostTracker = async function (trackerId, createInvoice = true) {
 		})
 		.eq("id", trackerId);
 
+	console.log("Update result - Error:", updateError);
+
 	if (updateError) {
 		console.error("Error stopping tracker:", updateError);
-		window.showNotification("Failed to stop cost tracker.", "error");
+		window.showNotification(
+			`Failed to stop cost tracker: ${updateError.message}`,
+			"error"
+		);
 		return;
 	}
 
+	console.log("Tracker successfully updated to stopped status");
+
 	if (createInvoice) {
-		// Calculate final cost
-		const startTime = new Date(tracker.started_at);
-		const endTime = new Date();
-		const elapsedMs = endTime - startTime;
-		const fractionalUnits = elapsedMs / tracker.increment_interval;
-		const timeCost = fractionalUnits * tracker.rate;
-
-		// Calculate penalties total - FIX: properly parse JSON
-		let penalties = [];
+		console.log("Creating invoice...");
 		try {
-			penalties = JSON.parse(tracker.penalties || "[]");
-		} catch (e) {
-			console.error("Error parsing penalties:", e);
-			penalties = [];
-		}
-		const penaltyTotal = penalties.reduce(
-			(sum, penalty) => sum + (penalty.amount || 0),
-			0
-		);
-		const grandTotal = timeCost + penaltyTotal;
+			// Calculate final cost
+			const startTime = new Date(tracker.started_at);
+			const endTime = new Date();
+			const elapsedMs = endTime - startTime;
+			const fractionalUnits = elapsedMs / tracker.increment_interval;
+			const timeCost = fractionalUnits * tracker.rate;
 
-		// Create invoice task
-		const hours = Math.floor(elapsedMs / (1000 * 60 * 60));
-		const minutes = Math.floor(
-			(elapsedMs % (1000 * 60 * 60)) / (1000 * 60)
-		);
-		const seconds = Math.floor((elapsedMs % (1000 * 60)) / 1000);
-		const timeText =
-			hours > 0
-				? `${hours}h ${minutes}m ${seconds}s`
-				: minutes > 0
-				? `${minutes}m ${seconds}s`
-				: `${seconds}s`;
+			console.log("Cost calculation:");
+			console.log("- Start time:", startTime);
+			console.log("- End time:", endTime);
+			console.log("- Elapsed ms:", elapsedMs);
+			console.log("- Time cost:", timeCost);
 
-		const intervalText =
-			tracker.increment_interval === 1000
-				? "second"
-				: tracker.increment_interval === 60000
-				? "minute"
-				: "hour";
+			// Calculate penalties total - FIX: properly parse JSON
+			let penalties = [];
+			try {
+				penalties = JSON.parse(tracker.penalties || "[]");
+				console.log("Parsed penalties:", penalties);
+			} catch (e) {
+				console.error("Error parsing penalties:", e);
+				penalties = [];
+			}
 
-		let taskDescription = `💰 INVOICE - ${tracker.description}
+			const penaltyTotal = penalties.reduce(
+				(sum, penalty) => sum + (penalty.amount || 0),
+				0
+			);
+			const grandTotal = timeCost + penaltyTotal;
+
+			console.log("Final totals:");
+			console.log("- Time cost:", timeCost);
+			console.log("- Penalty total:", penaltyTotal);
+			console.log("- Grand total:", grandTotal);
+
+			// Create invoice task
+			const hours = Math.floor(elapsedMs / (1000 * 60 * 60));
+			const minutes = Math.floor(
+				(elapsedMs % (1000 * 60 * 60)) / (1000 * 60)
+			);
+			const seconds = Math.floor((elapsedMs % (1000 * 60)) / 1000);
+			const timeText =
+				hours > 0
+					? `${hours}h ${minutes}m ${seconds}s`
+					: minutes > 0
+					? `${minutes}m ${seconds}s`
+					: `${seconds}s`;
+
+			const intervalText =
+				tracker.increment_interval === 1000
+					? "second"
+					: tracker.increment_interval === 60000
+					? "minute"
+					: "hour";
+
+			let taskDescription = `💰 INVOICE - ${tracker.description}
 
 Time-based Cost: ${timeText} @ ${tracker.currency}${tracker.rate.toFixed(
-			2
-		)} per ${intervalText} = ${tracker.currency}${timeCost.toFixed(2)}`;
+				2
+			)} per ${intervalText} = ${tracker.currency}${timeCost.toFixed(2)}`;
 
-		// FIX: Add penalties to invoice description
-		if (penalties.length > 0) {
-			taskDescription +=
-				"\n\nAdditional Costs:\n" +
-				penalties
-					.map(
-						(p) =>
-							`• ${p.description}: ${tracker.currency}${(
-								p.amount || 0
-							).toFixed(2)}`
-					)
-					.join("\n");
-		}
+			// FIX: Add penalties to invoice description
+			if (penalties.length > 0) {
+				taskDescription +=
+					"\n\nAdditional Costs:\n" +
+					penalties
+						.map(
+							(p) =>
+								`• ${p.description}: ${tracker.currency}${(
+									p.amount || 0
+								).toFixed(2)}`
+						)
+						.join("\n");
+			}
 
-		taskDescription += `\n\n💸 TOTAL AMOUNT DUE: ${
-			tracker.currency
-		}${grandTotal.toFixed(
-			2
-		)}\n\n⚠️ This is an invoice that must be approved for payment. Failure to approve will result in penalty points.`;
+			taskDescription += `\n\n💸 TOTAL AMOUNT DUE: ${
+				tracker.currency
+			}${grandTotal.toFixed(
+				2
+			)}\n\n⚠️ This is an invoice that must be approved for payment. Failure to approve will result in penalty points.`;
 
-		const task = {
-			text: taskDescription,
-			status: "todo",
-			type: "cost-tracker",
-			createdAt: new Date().toISOString(),
-			createdBy: window.currentUser,
-			assignedTo: "schinken",
-			points: 0,
-			penaltyPoints: 100,
-			dueDate: new Date(
-				Date.now() + 7 * 24 * 60 * 60 * 1000
-			).toISOString(),
-			isRepeating: false,
-			repeatInterval: null,
-		};
+			console.log("Creating task with description:", taskDescription);
 
-		const { error: taskError } = await window.supabase
-			.from("tasks")
-			.insert([task]);
+			const task = {
+				text: taskDescription,
+				status: "todo",
+				type: "cost-tracker",
+				createdAt: new Date().toISOString(),
+				createdBy: window.currentUser,
+				assignedTo: "schinken",
+				points: 0,
+				penaltyPoints: 100,
+				dueDate: new Date(
+					Date.now() + 7 * 24 * 60 * 60 * 1000
+				).toISOString(),
+				isRepeating: false,
+				repeatInterval: null,
+			};
 
-		if (taskError) {
-			console.error("Error creating invoice task:", taskError);
+			const { error: taskError } = await window.supabase
+				.from("tasks")
+				.insert([task]);
+
+			if (taskError) {
+				console.error("Error creating invoice task:", taskError);
+				window.showNotification(
+					"Tracker stopped but failed to create invoice.",
+					"warning"
+				);
+			} else {
+				console.log("Invoice task created successfully");
+				window.showNotification(
+					`Cost tracker stopped and invoice created! Total: ${
+						tracker.currency
+					}${grandTotal.toFixed(2)}`
+				);
+				await window.fetchTasksInitial();
+			}
+		} catch (invoiceError) {
+			console.error("Error in invoice creation process:", invoiceError);
 			window.showNotification(
-				"Tracker stopped but failed to create invoice.",
+				"Tracker stopped but invoice creation failed",
 				"warning"
 			);
-		} else {
-			window.showNotification(
-				`Cost tracker stopped and invoice created! Total: ${
-					tracker.currency
-				}${grandTotal.toFixed(2)}`
-			);
-			await window.fetchTasksInitial();
 		}
 	} else {
 		window.showNotification("Cost tracker stopped.");
@@ -262,9 +322,21 @@ Time-based Cost: ${timeText} @ ${tracker.currency}${tracker.rate.toFixed(
 	// Clear active tracker ID
 	if (window.activeLiveTrackerId === trackerId) {
 		window.activeLiveTrackerId = null;
+		console.log("Cleared activeLiveTrackerId");
 	}
 
+	// Clear current live tracker
+	if (
+		window.currentLiveTracker &&
+		window.currentLiveTracker.id === trackerId
+	) {
+		window.currentLiveTracker = null;
+		console.log("Cleared currentLiveTracker");
+	}
+
+	console.log("Refreshing cost tracker data...");
 	await window.fetchActiveCostTrackersInitial();
+	console.log("=== stopLiveCostTracker completed ===");
 };
 
 /**

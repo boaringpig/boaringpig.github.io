@@ -42,7 +42,7 @@ window.renderActiveCostTrackersAdmin = function () {
 				.padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 
 			// Calculate current cost
-			const intervalMs = parseInt(tracker.interval_ms) || 60000;
+			const intervalMs = parseInt(tracker.increment_interval) || 60000;
 			const rate = parseFloat(tracker.rate) || 0;
 			const fractionalUnits = elapsed / intervalMs;
 			const currentCost = fractionalUnits * rate;
@@ -95,7 +95,7 @@ window.renderActiveCostTrackersAdmin = function () {
 					<button class="action-btn check-btn" onclick="window.viewLiveCostTracker(${
 						tracker.id
 					})">View Details</button>
-					<button class="action-btn delete-btn" onclick="window.stopLiveCostTrackerAdmin(${
+					<button class="action-btn delete-btn" onclick="window.window.handleStopTrackerClick((${
 						tracker.id
 					})">Stop & Invoice</button>
 				</div>
@@ -108,7 +108,7 @@ window.renderActiveCostTrackersAdmin = function () {
 
 /**
  * Initializes live cost tracker for the current user
- * This should be called when the app loads and when switching to user views
+ * Enhanced version with better state management
  */
 window.initializeLiveCostTracker = function () {
 	console.log("Initializing live cost tracker for user:", window.currentUser);
@@ -119,7 +119,17 @@ window.initializeLiveCostTracker = function () {
 		if (liveCostTracker) {
 			liveCostTracker.classList.add("hidden");
 		}
+		// Clear any user-specific state
+		window.userManuallyStoppedTracker = false;
 		return;
+	}
+
+	// Initialize flags if they don't exist
+	if (typeof window.userManuallyStoppedTracker === "undefined") {
+		window.userManuallyStoppedTracker = false;
+	}
+	if (typeof window.stoppingTracker === "undefined") {
+		window.stoppingTracker = false;
 	}
 
 	// Ensure cost tracker data is loaded first
@@ -129,7 +139,12 @@ window.initializeLiveCostTracker = function () {
 			.fetchActiveCostTrackersInitial()
 			.then(() => {
 				console.log("Cost tracker data loaded, updating display");
-				window.updateLiveCostTracker();
+				if (
+					!window.userManuallyStoppedTracker &&
+					!window.stoppingTracker
+				) {
+					window.updateLiveCostTracker();
+				}
 			})
 			.catch((err) => {
 				console.error("Error fetching cost tracker data:", err);
@@ -137,13 +152,16 @@ window.initializeLiveCostTracker = function () {
 	} else {
 		// Small delay to ensure DOM is ready
 		setTimeout(() => {
-			window.updateLiveCostTracker();
+			if (!window.userManuallyStoppedTracker && !window.stoppingTracker) {
+				window.updateLiveCostTracker();
+			}
 		}, 100);
 	}
 };
 
 /**
  * Updates the live cost tracker display for users
+ * IMPROVED VERSION with better tracking logic
  */
 window.updateLiveCostTracker = function () {
 	const liveCostTracker = document.getElementById("liveCostTracker");
@@ -159,14 +177,23 @@ window.updateLiveCostTracker = function () {
 		return;
 	}
 
-	// Debug: Log all available data
-	console.log("=== Live Cost Tracker Debug ===");
+	// Check if user manually stopped a tracker recently
+	if (window.userManuallyStoppedTracker) {
+		console.log(
+			"User manually stopped tracker recently, not showing new trackers"
+		);
+		liveCostTracker.classList.add("hidden");
+		window.clearLiveCostTrackerIntervals();
+		window.currentLiveTracker = null;
+		return;
+	}
+
+	// Debug logging
+	console.log("=== updateLiveCostTracker Debug ===");
 	console.log("Current user:", window.currentUser);
 	console.log("Active cost trackers:", window.activeCostTrackers);
-	console.log(
-		"Active cost trackers length:",
-		window.activeCostTrackers ? window.activeCostTrackers.length : 0
-	);
+	console.log("Current live tracker:", window.currentLiveTracker);
+	console.log("Manual stop flag:", window.userManuallyStoppedTracker);
 
 	// Check if user has an active tracker
 	if (
@@ -180,25 +207,29 @@ window.updateLiveCostTracker = function () {
 		return;
 	}
 
-	// Debug: Show all trackers and their details
-	window.activeCostTrackers.forEach((tracker, index) => {
-		console.log(`Tracker ${index}:`, tracker); // Show full object first
-		console.log(`Tracker ${index} details:`, {
-			id: tracker.id,
-			created_by: tracker.created_by,
-			createdBy: tracker.createdBy, // Try both field names
-			user_id: tracker.user_id, // Try this too
-			assigned_to: tracker.assigned_to, // Check for assignment field
-			status: tracker.status,
-			description: tracker.description,
-			all_keys: Object.keys(tracker), // Show all available fields
-		});
-	});
+	// IMPROVED LOGIC: Check if current tracker is still running first
+	if (window.currentLiveTracker) {
+		const stillRunning = window.activeCostTrackers.find(
+			(t) =>
+				t.id === window.currentLiveTracker.id && t.status === "running"
+		);
 
+		if (stillRunning) {
+			console.log("Current tracker still running, keeping display");
+			// Update the tracker data but keep the same tracker
+			window.currentLiveTracker = stillRunning;
+			return; // Don't change anything, keep current display
+		} else {
+			console.log("Current tracker no longer running, clearing display");
+			liveCostTracker.classList.add("hidden");
+			window.clearLiveCostTrackerIntervals();
+			window.currentLiveTracker = null;
+			// Don't return yet, check for new trackers below
+		}
+	}
+
+	// Find a tracker for the current user
 	const userTracker = window.activeCostTrackers.find((tracker) => {
-		// For this system: Admin (skeen) creates trackers FOR user (schinken)
-		// So we need to show trackers created by admin to the user
-
 		const trackerUser =
 			tracker.created_by ||
 			tracker.createdBy ||
@@ -208,10 +239,6 @@ window.updateLiveCostTracker = function () {
 		const isRunning = tracker.status === "running";
 
 		// Check if this tracker should be visible to current user:
-		// 1. Tracker assigned to current user (if assignment field exists)
-		// 2. Admin created tracker and current user is the target user (schinken)
-		// 3. User created their own tracker (fallback case)
-
 		const isAssignedTracker = assignedTo === window.currentUser;
 		const isAdminTrackerForUser =
 			window.currentUser === "schinken" && trackerUser === "skeen";
@@ -238,15 +265,6 @@ window.updateLiveCostTracker = function () {
 
 	console.log("User tracker found:", userTracker ? "Yes" : "No");
 
-	if (userTracker) {
-		console.log("Found tracker details:", {
-			id: userTracker.id,
-			description: userTracker.description,
-			created_by: userTracker.created_by,
-			status: userTracker.status,
-		});
-	}
-
 	if (!userTracker) {
 		console.log("No active tracker for current user, hiding display");
 		liveCostTracker.classList.add("hidden");
@@ -255,24 +273,30 @@ window.updateLiveCostTracker = function () {
 		return;
 	}
 
-	// Clear any existing intervals before starting new ones
-	window.clearLiveCostTrackerIntervals();
+	// IMPROVED: Only show if it's a different tracker or no tracker was shown before
+	const isDifferentTracker =
+		!window.currentLiveTracker ||
+		window.currentLiveTracker.id !== userTracker.id;
 
-	// Store current live tracker - MAKE SURE THIS IS SET!
-	window.currentLiveTracker = userTracker;
-	console.log("SETTING window.currentLiveTracker to:", userTracker);
-	console.log(
-		"Showing live tracker for user:",
-		window.currentUser,
-		"Tracker ID:",
-		userTracker.id
-	);
+	if (isDifferentTracker) {
+		console.log("Found new/different tracker, showing display");
+		console.log("Previous tracker ID:", window.currentLiveTracker?.id);
+		console.log("New tracker ID:", userTracker.id);
 
-	// Show the tracker
-	liveCostTracker.classList.remove("hidden");
+		// Clear any existing intervals before starting new ones
+		window.clearLiveCostTrackerIntervals();
 
-	// Start updating the display
-	window.startLiveCostTrackerUpdates(userTracker);
+		// Store current live tracker
+		window.currentLiveTracker = userTracker;
+
+		// Show the tracker
+		liveCostTracker.classList.remove("hidden");
+
+		// Start updating the display
+		window.startLiveCostTrackerUpdates(userTracker);
+	} else {
+		console.log("Same tracker already displayed, no change needed");
+	}
 };
 
 /**
@@ -318,7 +342,7 @@ window.startLiveCostTrackerUpdates = function (tracker) {
 			liveCostTime.textContent = timeText;
 
 			// Calculate current cost
-			const intervalMs = parseInt(tracker.interval_ms) || 60000;
+			const intervalMs = parseInt(tracker.increment_interval) || 60000;
 			const rate = parseFloat(tracker.rate) || 0;
 			const fractionalUnits = elapsed / intervalMs;
 			const currentCost = Math.max(0, fractionalUnits * rate);
@@ -418,9 +442,10 @@ window.startLiveCostTrackerUpdates = function (tracker) {
 
 /**
  * Clears live cost tracker update intervals
+ * Enhanced version with better logging
  */
 window.clearLiveCostTrackerIntervals = function () {
-	console.log("Clearing live cost tracker intervals");
+	console.log("=== Clearing Live Cost Tracker Intervals ===");
 
 	if (window.liveCostTrackerInterval) {
 		console.log("Clearing liveCostTrackerInterval");
@@ -434,12 +459,14 @@ window.clearLiveCostTrackerIntervals = function () {
 		window.liveCostTrackerUpdateInterval = null;
 	}
 
-	// Also clear any intervals that might be stored globally
+	// Clear any other cost tracker intervals
 	if (window.costTrackerDisplayInterval) {
 		console.log("Clearing costTrackerDisplayInterval");
 		clearInterval(window.costTrackerDisplayInterval);
 		window.costTrackerDisplayInterval = null;
 	}
+
+	console.log("All cost tracker intervals cleared");
 };
 
 /**
@@ -459,16 +486,26 @@ window.updateActiveCostTrackersCount = function () {
 };
 
 /**
- * Dismisses the live cost tracker display (hides it temporarily)
+ * Enhanced dismiss function that sets the manual stop flag
  */
 window.dismissLiveCostTracker = function () {
-	console.log("Dismissing live cost tracker display");
+	console.log("Dismissing live cost tracker display (manual user action)");
 	const liveCostTracker = document.getElementById("liveCostTracker");
 	if (liveCostTracker) {
 		liveCostTracker.classList.add("hidden");
 	}
+
+	// Set flag to prevent auto-showing other trackers
+	window.userManuallyStoppedTracker = true;
+	setTimeout(() => {
+		// Clear the flag after 10 seconds to allow showing new trackers
+		window.userManuallyStoppedTracker = false;
+		console.log("Manual stop flag cleared, allowing new trackers");
+	}, 10000);
+
 	// Don't stop the actual tracker, just hide the display
-	// The user can still see it in the modal if they open the cost tracker
+	window.clearLiveCostTrackerIntervals();
+	// Keep currentLiveTracker for reference but stop updates
 };
 
 /**
@@ -481,85 +518,21 @@ window.refreshLiveCostTracker = function () {
 };
 
 /**
- * Debug function to show current cost tracker state
+ * Function to force show tracker (for testing)
  */
-window.debugCostTracker = function () {
-	console.log("=== Cost Tracker Debug Info ===");
-	console.log("Current user:", window.currentUser);
-	console.log("Active cost trackers:", window.activeCostTrackers);
-	console.log("Current live tracker:", window.currentLiveTracker);
-	console.log("liveCostTrackerInterval:", window.liveCostTrackerInterval);
-	console.log(
-		"liveCostTrackerUpdateInterval:",
-		window.liveCostTrackerUpdateInterval
-	);
-
-	const liveCostTracker = document.getElementById("liveCostTracker");
-	console.log("Live tracker element exists:", !!liveCostTracker);
-	console.log(
-		"Live tracker element hidden:",
-		liveCostTracker ? liveCostTracker.classList.contains("hidden") : "N/A"
-	);
-
-	// Check available stop functions
-	console.log("=== Available Functions ===");
-	console.log("stopLiveCostTracker:", typeof window.stopLiveCostTracker);
-	console.log(
-		"stopLiveCostTrackerAdmin:",
-		typeof window.stopLiveCostTrackerAdmin
-	);
-	console.log("forceStopCostTracker:", typeof window.forceStopCostTracker);
-	console.log(
-		"stopAllActiveCostTrackers:",
-		typeof window.stopAllActiveCostTrackers
-	);
+window.forceShowLiveCostTracker = function () {
+	console.log("Force showing live cost tracker (clearing manual stop flag)");
+	window.userManuallyStoppedTracker = false;
+	window.updateLiveCostTracker();
 };
 
 /**
- * Test function to try stopping the current tracker
- */
-window.testStopTracker = async function () {
-	console.log("=== Testing Stop Tracker ===");
-
-	// Method 1: Try with currentLiveTracker
-	if (window.currentLiveTracker) {
-		console.log(
-			"Attempting to stop using currentLiveTracker:",
-			window.currentLiveTracker.id
-		);
-		try {
-			await window.forceStopCostTracker(window.currentLiveTracker.id);
-			return;
-		} catch (error) {
-			console.error("Method 1 failed:", error);
-		}
-	}
-
-	// Method 2: Find any running tracker
-	const runningTracker = window.activeCostTrackers?.find(
-		(t) => t.status === "running"
-	);
-	if (runningTracker) {
-		console.log(
-			"Attempting to stop found running tracker:",
-			runningTracker.id
-		);
-		try {
-			await window.forceStopCostTracker(runningTracker.id);
-			return;
-		} catch (error) {
-			console.error("Method 2 failed:", error);
-		}
-	}
-
-	console.log("No trackers found to stop");
-};
-
-/**
- * Admin function to stop a live cost tracker from the dashboard
+ * Enhanced stopLiveCostTrackerAdmin with proper state clearing
  */
 window.stopLiveCostTrackerAdmin = async function (trackerId) {
-	console.log("Admin attempting to stop tracker:", trackerId);
+	console.log("=== Admin Stop Tracker Called ===");
+	console.log("Tracker ID:", trackerId);
+	console.log("Current user:", window.currentUser);
 
 	if (!window.hasPermission("create_task")) {
 		window.showNotification(
@@ -570,21 +543,56 @@ window.stopLiveCostTrackerAdmin = async function (trackerId) {
 	}
 
 	try {
+		// Set flag to prevent auto-restart during stop process
+		window.stoppingTracker = true;
+
+		console.log("Setting manual stop flag to prevent restart");
+		window.userManuallyStoppedTracker = true;
+
 		console.log("Calling stopLiveCostTracker with trackerId:", trackerId);
 		await window.stopLiveCostTracker(trackerId, true);
+
+		// Clear local state immediately to prevent conflicts
+		if (
+			window.currentLiveTracker &&
+			window.currentLiveTracker.id === trackerId
+		) {
+			console.log("Clearing currentLiveTracker for stopped tracker");
+			window.currentLiveTracker = null;
+		}
+
+		if (window.activeLiveTrackerId === trackerId) {
+			console.log("Clearing activeLiveTrackerId for stopped tracker");
+			window.activeLiveTrackerId = null;
+		}
+
 		window.showNotification(
 			"Cost tracker stopped and invoice created!",
 			"success"
 		);
 
 		// Force refresh of cost tracker data
+		console.log("Forcing data refresh...");
 		await window.fetchActiveCostTrackersInitial();
+
+		// Clear the stopping flag
+		window.stoppingTracker = false;
+
+		// Reset manual stop flag after a delay to allow new trackers
+		setTimeout(() => {
+			console.log("Clearing manual stop flag after admin stop");
+			window.userManuallyStoppedTracker = false;
+		}, 3000);
 	} catch (error) {
 		console.error("Error stopping cost tracker:", error);
 		window.showNotification(
 			`Failed to stop cost tracker: ${error.message}`,
 			"error"
 		);
+
+		// Clear flags on error too
+		window.stoppingTracker = false;
+		window.userManuallyStoppedTracker = false;
 	}
 };
 
@@ -674,7 +682,7 @@ window.viewLiveCostTracker = function (trackerId) {
 		.toString()
 		.padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 
-	const intervalMs = parseInt(tracker.interval_ms) || 60000;
+	const intervalMs = parseInt(tracker.increment_interval) || 60000;
 	const rate = parseFloat(tracker.rate) || 0;
 	const fractionalUnits = elapsed / intervalMs;
 	const currentCost = fractionalUnits * rate;
@@ -736,6 +744,140 @@ window.viewLiveCostTracker = function (trackerId) {
 };
 
 /**
+ * Function to completely reset cost tracker state (for debugging)
+ */
+window.resetCostTrackerState = function () {
+	console.log("=== Resetting Cost Tracker State ===");
+
+	// Clear all intervals
+	window.clearLiveCostTrackerIntervals();
+
+	// Clear state variables
+	window.currentLiveTracker = null;
+	window.activeLiveTrackerId = null;
+	window.userManuallyStoppedTracker = false;
+	window.stoppingTracker = false;
+
+	// Hide display
+	const liveCostTracker = document.getElementById("liveCostTracker");
+	if (liveCostTracker) {
+		liveCostTracker.classList.add("hidden");
+	}
+
+	console.log("Cost tracker state reset complete");
+};
+
+/**
+ * Enhanced debugging function for the restart issue
+ */
+window.debugTrackerRestart = function () {
+	console.log("=== TRACKER RESTART DEBUG ===");
+	console.log("Current user:", window.currentUser);
+	console.log(
+		"userManuallyStoppedTracker:",
+		window.userManuallyStoppedTracker
+	);
+	console.log("stoppingTracker:", window.stoppingTracker);
+	console.log("currentLiveTracker:", window.currentLiveTracker);
+	console.log("activeLiveTrackerId:", window.activeLiveTrackerId);
+	console.log("activeCostTrackers array:", window.activeCostTrackers);
+
+	// Check for running trackers
+	const runningTrackers =
+		window.activeCostTrackers?.filter((t) => t.status === "running") || [];
+	console.log("Running trackers:", runningTrackers);
+
+	// Check live display
+	const liveCostTracker = document.getElementById("liveCostTracker");
+	console.log(
+		"Live tracker element hidden:",
+		liveCostTracker ? liveCostTracker.classList.contains("hidden") : "N/A"
+	);
+
+	// Check intervals
+	console.log("Active intervals:", {
+		liveCostTrackerInterval: !!window.liveCostTrackerInterval,
+		liveCostTrackerUpdateInterval: !!window.liveCostTrackerUpdateInterval,
+		costTrackerDisplayInterval: !!window.costTrackerDisplayInterval,
+	});
+};
+
+/**
+ * Debug function to show current cost tracker state
+ */
+window.debugCostTracker = function () {
+	console.log("=== Cost Tracker Debug Info ===");
+	console.log("Current user:", window.currentUser);
+	console.log("Active cost trackers:", window.activeCostTrackers);
+	console.log("Current live tracker:", window.currentLiveTracker);
+	console.log("liveCostTrackerInterval:", window.liveCostTrackerInterval);
+	console.log(
+		"liveCostTrackerUpdateInterval:",
+		window.liveCostTrackerUpdateInterval
+	);
+
+	const liveCostTracker = document.getElementById("liveCostTracker");
+	console.log("Live tracker element exists:", !!liveCostTracker);
+	console.log(
+		"Live tracker element hidden:",
+		liveCostTracker ? liveCostTracker.classList.contains("hidden") : "N/A"
+	);
+
+	// Check available stop functions
+	console.log("=== Available Functions ===");
+	console.log("stopLiveCostTracker:", typeof window.stopLiveCostTracker);
+	console.log(
+		"stopLiveCostTrackerAdmin:",
+		typeof window.stopLiveCostTrackerAdmin
+	);
+	console.log("forceStopCostTracker:", typeof window.forceStopCostTracker);
+	console.log(
+		"stopAllActiveCostTrackers:",
+		typeof window.stopAllActiveCostTrackers
+	);
+};
+
+/**
+ * Test function to try stopping the current tracker
+ */
+window.testStopTracker = async function () {
+	console.log("=== Testing Stop Tracker ===");
+
+	// Method 1: Try with currentLiveTracker
+	if (window.currentLiveTracker) {
+		console.log(
+			"Attempting to stop using currentLiveTracker:",
+			window.currentLiveTracker.id
+		);
+		try {
+			await window.forceStopCostTracker(window.currentLiveTracker.id);
+			return;
+		} catch (error) {
+			console.error("Method 1 failed:", error);
+		}
+	}
+
+	// Method 2: Find any running tracker
+	const runningTracker = window.activeCostTrackers?.find(
+		(t) => t.status === "running"
+	);
+	if (runningTracker) {
+		console.log(
+			"Attempting to stop found running tracker:",
+			runningTracker.id
+		);
+		try {
+			await window.forceStopCostTracker(runningTracker.id);
+			return;
+		} catch (error) {
+			console.error("Method 2 failed:", error);
+		}
+	}
+
+	console.log("No trackers found to stop");
+};
+
+/**
  * Helper function to convert interval to readable text
  */
 function getIntervalText(intervalMs) {
@@ -750,3 +892,12 @@ function getIntervalText(intervalMs) {
 			return "unit";
 	}
 }
+
+console.log("=== UI Cost Trackers Functions Loaded ===");
+console.log("Enhanced cost tracker functions with restart prevention");
+console.log("Available debugging functions:");
+console.log("- window.debugTrackerRestart()");
+console.log("- window.debugCostTracker()");
+console.log("- window.resetCostTrackerState()");
+console.log("- window.forceShowLiveCostTracker()");
+console.log("- window.testStopTracker()");

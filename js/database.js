@@ -325,6 +325,9 @@ window.loadData = async function () {
 		)
 		.subscribe();
 
+	// Fixed real-time listener for active_cost_trackers
+	// Replace the existing listener in database.js with this version
+
 	const activeCostTrackersChannel = supabase
 		.channel("active_cost_trackers_channel")
 		.on(
@@ -332,25 +335,79 @@ window.loadData = async function () {
 			{ event: "*", schema: "public", table: "active_cost_trackers" },
 			async (payload) => {
 				console.log("Active cost tracker change received!", payload);
+				console.log("Event type:", payload.eventType);
+				console.log("Old data:", payload.old);
+				console.log("New data:", payload.new);
 
 				// Always refresh data first
+				await new Promise((resolve) => setTimeout(resolve, 5000));
 				await window.fetchActiveCostTrackersInitial();
 
-				// Handle tracker stopping - clear user display immediately
+				// Handle tracker stopping - IMPROVED LOGIC
 				if (
 					payload.eventType === "UPDATE" &&
 					payload.new.status === "stopped"
 				) {
 					console.log("Tracker stopped - clearing user display");
+					const stoppedTrackerId = payload.new.id;
+
+					// Clear the display ONLY if the stopped tracker was the one being displayed
 					if (window.currentUser === "schinken") {
 						const liveCostTracker =
 							document.getElementById("liveCostTracker");
-						if (liveCostTracker) {
-							liveCostTracker.classList.add("hidden");
+
+						// Check if the stopped tracker is the one currently displayed
+						const wasDisplayingThisTracker =
+							window.currentLiveTracker &&
+							window.currentLiveTracker.id === stoppedTrackerId;
+
+						console.log("Stopped tracker ID:", stoppedTrackerId);
+						console.log(
+							"Currently displayed tracker ID:",
+							window.currentLiveTracker?.id
+						);
+						console.log(
+							"Was displaying this tracker:",
+							wasDisplayingThisTracker
+						);
+
+						if (wasDisplayingThisTracker) {
+							console.log(
+								"Hiding live tracker display for stopped tracker"
+							);
+							if (liveCostTracker) {
+								liveCostTracker.classList.add("hidden");
+							}
+							window.clearLiveCostTrackerIntervals();
+							window.currentLiveTracker = null;
+							window.activeLiveTrackerId = null;
+
+							// Add a flag to prevent auto-showing other trackers
+							window.userManuallyStoppedTracker = true;
+							setTimeout(() => {
+								// Clear the flag after 5 seconds to allow showing new trackers
+								window.userManuallyStoppedTracker = false;
+							}, 5000);
+
+							console.log(
+								"Set userManuallyStoppedTracker flag to prevent auto-restart"
+							);
+						} else {
+							console.log(
+								"Stopped tracker was not the displayed one, no action needed"
+							);
 						}
-						window.clearLiveCostTrackerIntervals();
-						window.currentLiveTracker = null;
 					}
+				}
+
+				// Handle new tracker starting
+				else if (
+					payload.eventType === "INSERT" &&
+					payload.new.status === "running"
+				) {
+					console.log("New tracker started:", payload.new.id);
+					// Clear the manual stop flag when a new tracker is explicitly started
+					window.userManuallyStoppedTracker = false;
 				}
 
 				// Update UI for both admin and user views
@@ -358,10 +415,17 @@ window.loadData = async function () {
 					window.renderActiveCostTrackersAdmin();
 					window.updateActiveCostTrackersCount();
 				} else if (window.currentUser === "schinken") {
-					// Use setTimeout to ensure UI update happens after data refresh
-					setTimeout(() => {
-						window.updateLiveCostTracker();
-					}, 100);
+					// IMPROVED: Don't auto-show trackers if user just manually stopped one
+					if (!window.userManuallyStoppedTracker) {
+						// Use setTimeout to ensure UI update happens after data refresh
+						setTimeout(() => {
+							window.updateLiveCostTracker();
+						}, 100);
+					} else {
+						console.log(
+							"Skipping updateLiveCostTracker due to manual stop flag"
+						);
+					}
 				}
 			}
 		)
