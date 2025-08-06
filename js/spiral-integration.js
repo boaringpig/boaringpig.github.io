@@ -606,7 +606,7 @@ window.spiral = (function () {
 			createdAt: new Date().toISOString(),
 			createdBy: window.currentUser,
 			assignedTo: "schinken",
-			spiralConfig: config,
+			spiralconfig: config,
 		};
 		const { error: taskError } = await window.supabase
 			.from("tasks")
