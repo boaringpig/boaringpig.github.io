@@ -70,6 +70,7 @@ window.submitTaskSuggestion = async function () {
 		window.showNotification("Please enter a task description", "error");
 		return;
 	}
+
 	const suggestion = {
 		description: description.value.trim(),
 		justification: justification ? justification.value.trim() : "",
@@ -80,7 +81,9 @@ window.submitTaskSuggestion = async function () {
 		status: "pending",
 		reviewedBy: null,
 		reviewedAt: null,
+		// No task-specific fields here, as it's a suggestion, not a task.
 	};
+
 	const { error: suggestionError } = await window.supabase
 		.from("suggestions")
 		.insert([suggestion]);
@@ -100,47 +103,81 @@ window.submitTaskSuggestion = async function () {
  * @param {number} suggestionId - The ID of the suggestion to approve.
  */
 window.approveSuggestion = async function (suggestionId) {
-	const suggestion = window.suggestions.find((s) => s.id === suggestionId);
-	if (!suggestion) return;
-	const task = {
-		text: suggestion.description,
-		status: "todo",
-		type: "regular",
-		createdAt: new Date().toISOString(),
-		createdBy: window.currentUser,
-		assignedTo: "schinken",
-		points: suggestion.suggestedPoints,
-		penaltyPoints: Math.floor(suggestion.suggestedPoints / 2),
-		dueDate: suggestion.suggestedDueDate,
-		isRepeating: false,
-		repeatInterval: null,
-		completedAt: null,
-		completedBy: null,
-		approvedAt: null,
-		approvedBy: null,
-		isOverdue: false,
-	};
-	const suggestionUpdates = {
-		status: "approved",
-		reviewedBy: window.currentUser,
-		reviewedAt: new Date().toISOString(),
-	};
-	const { error: taskError } = await window.supabase
-		.from("tasks")
-		.insert([task]);
-	const { error: suggestionError } = await window.supabase
-		.from("suggestions")
-		.update(suggestionUpdates)
-		.eq("id", suggestionId);
-	if (taskError || suggestionError) {
-		console.error(
-			"Error approving suggestion:",
-			taskError || suggestionError
+	try {
+		const suggestion = window.suggestions.find(
+			(s) => s.id === suggestionId
 		);
-		window.showNotification("Failed to approve suggestion", "error");
-	} else {
-		window.showNotification(`Suggestion approved and converted to task!`);
+		if (!suggestion) {
+			console.error("Suggestion not found:", suggestionId);
+			window.showNotification("Suggestion not found.", "error");
+			return;
+		}
+
+		// Build the task object dynamically to avoid sending null values unnecessarily.
+		const task = {
+			text: suggestion.description,
+			status: "todo",
+			type: "regular",
+			createdAt: new Date().toISOString(),
+			createdBy: window.currentUser,
+			assignedTo: "schinken",
+			points: suggestion.suggestedPoints,
+			penaltyPoints: Math.floor(suggestion.suggestedPoints / 2),
+			isRepeating: false,
+			repeatInterval: null,
+			isOverdue: false,
+			originalSuggestionid: suggestion.id,
+			originalSuggestedby: suggestion.suggestedBy,
+		};
+
+		// Add dueDate only if it exists
+		if (suggestion.suggestedDueDate) {
+			task.dueDate = suggestion.suggestedDueDate;
+		}
+
+		const { error: taskError } = await window.supabase
+			.from("tasks")
+			.insert([task]);
+
+		if (taskError) {
+			console.error("Error creating task from suggestion:", taskError);
+			window.showNotification(
+				"Failed to approve suggestion: Task creation failed.",
+				"error"
+			);
+			return;
+		}
+
+		const suggestionUpdates = {
+			status: "approved",
+			reviewedBy: window.currentUser,
+			reviewedAt: new Date().toISOString(),
+		};
+
+		const { error: suggestionError } = await window.supabase
+			.from("suggestions")
+			.update(suggestionUpdates)
+			.eq("id", suggestionId);
+
+		if (suggestionError) {
+			console.error("Error updating suggestion status:", suggestionError);
+			window.showNotification(
+				"Failed to approve suggestion: Status update failed.",
+				"error"
+			);
+		} else {
+			window.showNotification(
+				`Suggestion approved and converted to task!`
+			);
+		}
+
 		await window.fetchTasksInitial();
 		await window.fetchSuggestionsInitial();
+	} catch (e) {
+		console.error(
+			"An unexpected error occurred during suggestion approval:",
+			e
+		);
+		window.showNotification("An unexpected error occurred.", "error");
 	}
 };

@@ -76,6 +76,9 @@ window.createTask = async function () {
 				appealReviewedBy: null,
 				acceptedAt: null,
 				appealText: null,
+				// Add the new fields here, setting them to null for tasks not from a suggestion
+				originalSuggestionId: null,
+				originalSuggestedBy: null,
 			};
 			await window.updateUserPoints(
 				"schinken",
@@ -136,6 +139,9 @@ window.createTask = async function () {
 				approvedAt: null,
 				approvedBy: null,
 				isOverdue: false,
+				// Add the new fields here, setting them to null for tasks not from a suggestion
+				originalSuggestionId: null,
+				originalSuggestedBy: null,
 			};
 		}
 
@@ -577,6 +583,8 @@ window.createRepeatingTask = async function (originalTask) {
 		approvedAt: null,
 		approvedBy: null,
 		isOverdue: false,
+		originalsuggestionid: null, // Add this line
+		originalsuggestedby: null, // Add this line
 	};
 	const { error: taskError } = await window.supabase
 		.from("tasks")
