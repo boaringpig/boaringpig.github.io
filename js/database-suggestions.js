@@ -123,8 +123,10 @@ window.approveSuggestion = async function (suggestionId) {
 			assignedTo: "schinken",
 			points: suggestion.suggestedPoints,
 			penaltyPoints: Math.floor(suggestion.suggestedPoints / 2),
-			isRepeating: false,
-			repeatInterval: null,
+			isRepeating: suggestion.isRepeating || false, // Use suggestion's repeat setting or default to false
+			repeatInterval: suggestion.isRepeating
+				? suggestion.repeatInterval || null
+				: null, // Use suggestion's interval if repeating
 			isOverdue: false,
 			originalSuggestionid: suggestion.id,
 			originalSuggestedby: suggestion.suggestedBy,
