@@ -20,7 +20,7 @@
 // loading/empty/error states required by the design spec (see
 // src/beta/components/common/README or any List component for the pattern).
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * @param {object} opts
@@ -42,6 +42,17 @@ export function useRealtimeList(opts) {
 	var [items, setItems] = useState([]);
 	var [status, setStatus] = useState("loading");
 	var [error, setError] = useState(null);
+
+	// Supabase reuses a channel object for a given topic name rather than
+	// creating a second one, so two hook instances subscribed to the same
+	// table+masterUsername (e.g. a banner mounted globally plus a page using
+	// the same hook, as with MotdBanner/MotdManageList or
+	// LiveTrackerBanner/CostTrackerPanel) would otherwise collide: the
+	// second `.channel(name).on(...)` call throws "cannot add
+	// postgres_changes callbacks ... after subscribe()" because it's really
+	// the same already-subscribed channel. A random per-instance suffix
+	// keeps every hook instance's channel topic unique.
+	var instanceId = useRef(Math.random().toString(36).slice(2)).current;
 
 	var load = useCallback(
 		async function () {
@@ -83,7 +94,7 @@ export function useRealtimeList(opts) {
 			}
 
 			var channel = window.supabase
-				.channel("beta_" + table + "_" + masterUsername)
+				.channel("beta_" + table + "_" + masterUsername + "_" + instanceId)
 				.on(
 					"postgres_changes",
 					{
