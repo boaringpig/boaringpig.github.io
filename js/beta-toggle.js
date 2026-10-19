@@ -40,7 +40,19 @@ window.enterBetaMode = async function () {
 	if (!betaRoot) return;
 
 	if (!betaMountFn) {
-		var mod = await import("../src/beta/main.jsx");
+		// Loads the pre-built bundle in beta-dist/ (run `npm run build:beta`
+		// to regenerate it after any change under src/beta/), not the raw
+		// .jsx source -- GitHub Pages serves this repo's files as-is, with no
+		// build step, and a browser can neither parse JSX syntax nor resolve
+		// a bare specifier like `import ... from "react"` on its own.
+		if (!document.getElementById("betaBundleStyles")) {
+			var link = document.createElement("link");
+			link.id = "betaBundleStyles";
+			link.rel = "stylesheet";
+			link.href = "beta-dist/beta-bundle.css";
+			document.head.appendChild(link);
+		}
+		var mod = await import("../beta-dist/beta-bundle.js");
 		betaMountFn = mod.mountBetaApp;
 		betaUnmountFn = mod.unmountBetaApp;
 	}
