@@ -22,3 +22,8 @@
 	margin-bottom: var(--space-2);
 	flex-wrap: wrap;
 }
+
+.statusMessage {
+	color: var(--color-text-secondary);
+	font-style: italic;
+}

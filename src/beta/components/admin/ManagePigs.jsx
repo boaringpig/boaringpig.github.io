@@ -98,6 +98,9 @@ export function ManagePigs() {
 								</Badge>{" "}
 								<strong>{slave.displayName}</strong> ({slave.username}) &middot;{" "}
 								{slave.points} pts
+								{slave.statusMessage ? (
+									<span className={styles.statusMessage}> &middot; {slave.statusMessage}</span>
+								) : null}
 							</div>
 							{isActive ? (
 								<Button

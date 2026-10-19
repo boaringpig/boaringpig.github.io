@@ -2430,3 +2430,25 @@ button {
 		transform: rotate(360deg);
 	}
 }
+
+/* Message of the Day banner */
+.motd-banner {
+	background: var(--status-pending-bg);
+	color: var(--status-pending-text);
+	border: 1px solid var(--border-color-light);
+	border-radius: 4px;
+	padding: 10px 16px;
+	margin: 0 20px 10px;
+	font-size: 14px;
+}
+
+.motd-icon {
+	margin-right: 6px;
+}
+
+/* Slave-set status message, shown next to a display name */
+.status-message-text {
+	color: var(--text-color-medium);
+	font-style: italic;
+	font-size: 0.9em;
+}

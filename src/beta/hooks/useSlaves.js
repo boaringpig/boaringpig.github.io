@@ -47,7 +47,7 @@ export function useSlaves() {
 
 				usersResult = await window.supabase
 					.from("users")
-					.select("username, display_name")
+					.select("username, display_name, status_message")
 					.in("username", usernames);
 			}
 
@@ -56,14 +56,17 @@ export function useSlaves() {
 				pointsMap[p.username] = p.points || 0;
 			});
 			var nameMap = {};
+			var statusMessageMap = {};
 			(usersResult.data || []).forEach(function (u) {
 				nameMap[u.username] = u.display_name || u.username;
+				statusMessageMap[u.username] = u.status_message || "";
 			});
 
 			var merged = (relResult.data || []).map(function (rel) {
 				return {
 					username: rel.slave_username,
 					displayName: nameMap[rel.slave_username] || rel.slave_username,
+					statusMessage: statusMessageMap[rel.slave_username] || "",
 					points: pointsMap[rel.slave_username] || 0,
 					status: rel.status,
 				};

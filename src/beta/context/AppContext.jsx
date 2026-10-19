@@ -24,6 +24,7 @@ function snapshotFromWindow() {
 	return {
 		currentUser: window.currentUser,
 		displayName: user.displayName || window.currentUser,
+		statusMessage: user.statusMessage || "",
 		isMaster: window.isMaster(),
 		isSlave: window.isSlave(),
 		isAdmin: window.isAdmin(),

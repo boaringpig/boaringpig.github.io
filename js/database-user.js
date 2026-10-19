@@ -208,6 +208,33 @@ window.updateUserPoints = async function (
 };
 
 /**
+ * Updates the logged-in user's own short status message (emoji-friendly,
+ * visible to other members of their group(s)). Global per-user, like
+ * display_name, not per-group.
+ */
+window.updateMyStatusMessage = async function (text) {
+	var trimmed = (text || "").trim().slice(0, 100);
+	var { error } = await window.supabase
+		.from("users")
+		.update({ status_message: trimmed })
+		.eq("username", window.currentUser);
+
+	if (error) {
+		console.error("Error updating status message:", error);
+		window.showNotification("Failed to update status.", "error");
+		return;
+	}
+
+	if (window.users[window.currentUser]) {
+		window.users[window.currentUser].statusMessage = trimmed;
+	}
+	window.showNotification("Status updated!", "success");
+	if (window.renderPigList) window.renderPigList();
+	if (window.renderUserProgress) window.renderUserProgress();
+	if (window.renderChatMessages) window.renderChatMessages();
+};
+
+/**
  * Sets user points to exact value (admin only)
  */
 window.setUserPoints = async function () {

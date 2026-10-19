@@ -116,6 +116,14 @@ window.logout = function () {
 			window.supabase.removeChannel(
 				window.unsubscribe.activeCostTrackers
 			);
+		if (window.unsubscribe.chatMessages)
+			window.supabase.removeChannel(window.unsubscribe.chatMessages);
+		if (window.unsubscribe.invites)
+			window.supabase.removeChannel(window.unsubscribe.invites);
+		if (window.unsubscribe.motdMessages)
+			window.supabase.removeChannel(window.unsubscribe.motdMessages);
+		if (window.unsubscribe.motdState)
+			window.supabase.removeChannel(window.unsubscribe.motdState);
 		window.unsubscribe = null; // Clear the unsubscribe object
 	}
 
