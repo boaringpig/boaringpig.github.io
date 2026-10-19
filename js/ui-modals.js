@@ -113,3 +113,38 @@ window.showAppealModal = function (task, onSubmit) {
 		document.body.removeChild(modal);
 	};
 };
+
+/**
+ * Displays a modal for the logged-in user to set their own short status
+ * message (emoji-friendly, visible to the rest of their group).
+ */
+window.showEditStatusModal = function () {
+	var currentValue =
+		(window.users[window.currentUser] && window.users[window.currentUser].statusMessage) || "";
+
+	var modal = document.createElement("div");
+	modal.className = "modal-overlay";
+	modal.innerHTML =
+		'<div class="modal-content">' +
+		"<h3>Set Status Message</h3>" +
+		'<div class="form-group">' +
+		'<input type="text" id="statusMessageInput" class="form-input" maxlength="100" placeholder="e.g. 🐷 feeling good today" value="' +
+		window.escapeHtml(currentValue).replace(/"/g, "&quot;") +
+		'" />' +
+		"</div>" +
+		'<div class="modal-actions">' +
+		'<button id="modalSaveStatus" class="action-btn approve-btn">Save</button>' +
+		'<button id="modalCancelStatus" class="action-btn delete-btn">Cancel</button>' +
+		"</div>" +
+		"</div>";
+	document.body.appendChild(modal);
+
+	document.getElementById("modalSaveStatus").onclick = function () {
+		var value = document.getElementById("statusMessageInput").value;
+		window.updateMyStatusMessage(value);
+		document.body.removeChild(modal);
+	};
+	document.getElementById("modalCancelStatus").onclick = function () {
+		document.body.removeChild(modal);
+	};
+};

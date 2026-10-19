@@ -47,6 +47,14 @@ window.loadData = async function () {
 			supabase.removeChannel(window.unsubscribe.rewardSystemSettings);
 		if (window.unsubscribe.activeCostTrackers)
 			supabase.removeChannel(window.unsubscribe.activeCostTrackers);
+		if (window.unsubscribe.chatMessages)
+			supabase.removeChannel(window.unsubscribe.chatMessages);
+		if (window.unsubscribe.invites)
+			supabase.removeChannel(window.unsubscribe.invites);
+		if (window.unsubscribe.motdMessages)
+			supabase.removeChannel(window.unsubscribe.motdMessages);
+		if (window.unsubscribe.motdState)
+			supabase.removeChannel(window.unsubscribe.motdState);
 
 		window.unsubscribe = {}; // Clear the unsubscribe object
 	}
@@ -80,6 +88,9 @@ window.loadData = async function () {
 	await window.fetchUserRewardPurchasesInitial();
 	await window.fetchRewardSystemSettingsInitial();
 	await window.fetchActiveCostTrackersInitial();
+	await window.fetchChatMessagesInitial();
+	await window.fetchInvitesInitial();
+	await window.fetchMotdInitial();
 
 	// --- Real-time Listeners ---
 	// Set up real-time subscriptions for immediate UI updates on data changes.
@@ -471,6 +482,95 @@ window.loadData = async function () {
 		)
 		.subscribe();
 
+	const chatMessagesChannel = supabase
+		.channel("chat_channel")
+		.on(
+			"postgres_changes",
+			{
+				event: "*",
+				schema: "public",
+				table: "chat_messages",
+				filter: "master_username=eq." + window.activeMasterContext,
+			},
+			(payload) => {
+				if (payload.eventType === "INSERT") {
+					window.chatMessages.push(payload.new);
+					window.chatMessages.sort(
+						(a, b) => new Date(a.created_at) - new Date(b.created_at)
+					);
+					if (window.activeTab === "chat" && window.renderChatMessages) {
+						window.renderChatMessages();
+					}
+				}
+			}
+		)
+		.subscribe();
+
+	const invitesChannel = supabase
+		.channel("invites_channel")
+		.on(
+			"postgres_changes",
+			{
+				event: "*",
+				schema: "public",
+				table: "invites",
+				filter: "master_username=eq." + window.activeMasterContext,
+			},
+			async (payload) => {
+				await window.fetchInvitesInitial();
+				if (window.isMaster() && window.renderInvitesList) {
+					window.renderInvitesList();
+				}
+			}
+		)
+		.subscribe();
+
+	const motdMessagesChannel = supabase
+		.channel("motd_messages_channel")
+		.on(
+			"postgres_changes",
+			{
+				event: "*",
+				schema: "public",
+				table: "motd_messages",
+				filter: "master_username=eq." + window.activeMasterContext,
+			},
+			async (payload) => {
+				await window.fetchMotdInitial();
+				if (window.renderMotdBanner) window.renderMotdBanner();
+				if (window.isMaster() && window.renderMotdManageList) {
+					window.renderMotdManageList();
+				}
+			}
+		)
+		.subscribe();
+
+	const motdStateChannel = supabase
+		.channel("motd_state_channel")
+		.on(
+			"postgres_changes",
+			{
+				event: "*",
+				schema: "public",
+				table: "motd_state",
+				filter: "master_username=eq." + window.activeMasterContext,
+			},
+			async (payload) => {
+				if (
+					payload.eventType === "UPDATE" ||
+					payload.eventType === "INSERT"
+				) {
+					window.motdState = {
+						currentIndex: payload.new.current_index,
+						lastAdvancedAt: payload.new.last_advanced_at,
+					};
+					window.checkForMotdAdvance();
+					if (window.renderMotdBanner) window.renderMotdBanner();
+				}
+			}
+		)
+		.subscribe();
+
 	window.unsubscribe = {
 		tasks: tasksChannel,
 		suggestions: suggestionsChannel,
@@ -480,9 +580,14 @@ window.loadData = async function () {
 		userRewardPurchases: userRewardPurchasesChannel,
 		rewardSystemSettings: rewardSystemSettingsChannel,
 		activeCostTrackers: activeCostTrackersChannel,
+		chatMessages: chatMessagesChannel,
+		invites: invitesChannel,
+		motdMessages: motdMessagesChannel,
+		motdState: motdStateChannel,
 	};
 
 	window.checkForRewardLimitReset();
+	window.checkForMotdAdvance();
 };
 
 /**

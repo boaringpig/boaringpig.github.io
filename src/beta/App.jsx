@@ -15,7 +15,9 @@ import { SuggestionsPage } from "./components/suggestions/SuggestionsPage";
 import { ShopPage } from "./components/rewards/ShopPage";
 import { AdminPage } from "./components/admin/AdminPage";
 import { MastersPage } from "./components/admin/MastersPage";
+import { ChatPage } from "./components/chat/ChatPage";
 import { LiveTrackerBanner } from "./components/costTrackers/LiveTrackerBanner";
+import { MotdBanner } from "./components/motd/MotdBanner";
 import "./styles/tokens.css";
 import "./styles/global.css";
 
@@ -32,6 +34,8 @@ function PageSwitch({ activeTab }) {
 			return <SuggestionsPage />;
 		case "shop":
 			return <ShopPage />;
+		case "chat":
+			return <ChatPage />;
 		case "admin":
 			return app.isMaster ? <AdminPage /> : null;
 		case "masters":
@@ -58,6 +62,7 @@ function AppShell() {
 			<Header />
 			<NavTabs activeTab={activeTab} onChange={setActiveTab} />
 			<main className="betaContainer">
+				<MotdBanner />
 				<PageSwitch activeTab={activeTab} />
 			</main>
 			<LiveTrackerBanner />

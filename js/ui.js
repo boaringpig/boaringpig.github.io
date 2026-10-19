@@ -154,6 +154,8 @@ window.switchTab = function (tabName) {
 			window.renderPendingAuthorizations();
 			window.renderAdminRewardSettings();
 			if (window.renderPigList) window.renderPigList();
+			if (window.renderInvitesList) window.renderInvitesList();
+			if (window.renderMotdManageList) window.renderMotdManageList();
 		} else {
 			const adminRewardManagement = document.getElementById(
 				"adminRewardManagement"
@@ -170,6 +172,8 @@ window.switchTab = function (tabName) {
 		if (window.isAdmin()) {
 			window.renderMastersList();
 		}
+	} else if (tabName === "chat") {
+		window.renderChatMessages();
 	}
 };
 
@@ -220,6 +224,8 @@ window.showMainApp = async function () {
 	);
 
 	var managePigsSection = document.getElementById("managePigsSection");
+	var manageInvitesSection = document.getElementById("manageInvitesSection");
+	var manageMotdSection = document.getElementById("manageMotdSection");
 	var pigAssignmentRow = document.getElementById("pigAssignmentRow");
 
 	if (window.isMaster()) {
@@ -241,6 +247,8 @@ window.showMainApp = async function () {
 				? "block"
 				: "none";
 		if (managePigsSection) managePigsSection.style.display = "block";
+		if (manageInvitesSection) manageInvitesSection.style.display = "block";
+		if (manageMotdSection) manageMotdSection.style.display = "block";
 		if (pigAssignmentRow) pigAssignmentRow.style.display = "flex";
 		window.renderPigCheckboxes();
 	} else {
@@ -252,6 +260,8 @@ window.showMainApp = async function () {
 		if (userView) userView.style.display = "block";
 		if (adminRewardManagement) adminRewardManagement.style.display = "none";
 		if (managePigsSection) managePigsSection.style.display = "none";
+		if (manageInvitesSection) manageInvitesSection.style.display = "none";
+		if (manageMotdSection) manageMotdSection.style.display = "none";
 		if (pigAssignmentRow) pigAssignmentRow.style.display = "none";
 	}
 
@@ -337,6 +347,7 @@ window.showMainApp = async function () {
 				if (window.isMaster()) {
 					window.renderTasks();
 				}
+				if (window.renderMotdBanner) window.renderMotdBanner();
 			})
 			.catch(function (error) {
 				console.error("Error loading data:", error);

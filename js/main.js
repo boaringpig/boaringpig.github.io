@@ -89,9 +89,17 @@ window.addEventListener("load", function () {
 		window.supabaseConfig.supabaseUrl,
 		window.supabaseConfig.supabaseAnonKey
 	);
-	// Then attempt auto-login
-	// This function is defined in auth.js
-	window.attemptAutoLogin();
+	// If this page load carries an invite code, show the join form instead of
+	// attempting auto-login -- otherwise a remembered session on a shared
+	// device would silently skip the invite flow.
+	var inviteCode = new URLSearchParams(window.location.search).get("invite");
+	if (inviteCode) {
+		window.showInviteSignup(inviteCode);
+	} else {
+		// Then attempt auto-login
+		// This function is defined in auth.js
+		window.attemptAutoLogin();
+	}
 });
 
 // Event listeners for UI elements, consolidated here

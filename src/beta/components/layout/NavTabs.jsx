@@ -6,7 +6,11 @@ import styles from "./NavTabs.module.css";
 export function NavTabs({ activeTab, onChange }) {
 	var app = useApp();
 
-	var tabs = [{ key: "tasks", label: "Tasks" }, { key: "calendar", label: "Calendar" }];
+	var tabs = [
+		{ key: "tasks", label: "Tasks" },
+		{ key: "chat", label: "Chat" },
+		{ key: "calendar", label: "Calendar" },
+	];
 
 	if (app.isMaster) {
 		tabs.push({ key: "dashboard", label: "Dashboard" });

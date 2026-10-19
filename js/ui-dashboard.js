@@ -255,6 +255,9 @@ window.renderUserProgress = function () {
 			'<div class="user-name">' +
 			window.escapeHtml(user.displayName) +
 			" (" + window.escapeHtml(pigUsername) + ")" +
+			(user.statusMessage
+				? ' <span class="status-message-text">' + window.escapeHtml(user.statusMessage) + "</span>"
+				: "") +
 			"</div>" +
 			'<div class="progress-bar">' +
 			'<div class="progress-fill" style="width: ' + completionRate + '%"></div>' +

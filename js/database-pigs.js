@@ -75,7 +75,7 @@ window.loadUsersFromDB = async function () {
 
 	var { data: allUsers, error: usersError } = await window.supabase
 		.from("users")
-		.select("username, role, display_name, is_admin, status");
+		.select("username, role, display_name, is_admin, status, status_message");
 
 	if (usersError) {
 		console.error("Error fetching users:", usersError);
@@ -111,6 +111,7 @@ window.loadUsersFromDB = async function () {
 				displayName: u.display_name || u.username,
 				isAdmin: !!u.is_admin,
 				status: u.status || "active",
+				statusMessage: u.status_message || "",
 				permissions:
 					role === "master"
 						? MASTER_PERMISSIONS.slice()
@@ -173,6 +174,69 @@ window.loadUsersFromDB = async function () {
 	) {
 		window.selectedPig = null;
 	}
+};
+
+/**
+ * Creates the three records that make someone a slave in a group: the
+ * `users` row, their `userProfiles` row for that group, and the
+ * `master_slave_relationships` row linking them. Shared by `addNewPig`
+ * (master-initiated) and invite redemption (self-service) so there's one
+ * implementation of "what it means to join a group" -- `masterUsername` is
+ * taken explicitly rather than read off `window.activeMasterContext`, since
+ * the invite-redemption caller has no logged-in group context of its own.
+ * Returns `{ error }` (matching the Supabase client's own shape) so callers
+ * can share one error-handling path.
+ */
+window.createSlaveAccountRecords = async function ({
+	username,
+	password,
+	displayName,
+	masterUsername,
+}) {
+	var { error: userError } = await window.supabase.from("users").insert([
+		{
+			username: username,
+			password: password,
+			role: "slave",
+			display_name: displayName,
+		},
+	]);
+
+	if (userError) {
+		console.error("Error creating user:", userError);
+		return { error: userError };
+	}
+
+	var { error: profileError } = await window.supabase
+		.from("userProfiles")
+		.insert([
+			{
+				username: username,
+				master_username: masterUsername,
+				points: 0,
+				updatedAt: new Date().toISOString(),
+			},
+		]);
+
+	if (profileError) {
+		console.error("Error creating profile:", profileError);
+	}
+
+	var { error: relError } = await window.supabase
+		.from("master_slave_relationships")
+		.insert([
+			{
+				master_username: masterUsername,
+				slave_username: username,
+				status: "active",
+			},
+		]);
+
+	if (relError) {
+		console.error("Error creating relationship:", relError);
+	}
+
+	return { error: null };
 };
 
 /**
@@ -256,56 +320,19 @@ window.addNewPig = async function (overrides) {
 	}
 
 	try {
-		// Insert into users table
-		var { error: userError } = await window.supabase
-			.from("users")
-			.insert([
-				{
-					username: username,
-					password: password,
-					role: "slave",
-					display_name: displayName,
-				},
-			]);
+		var { error: createError } = await window.createSlaveAccountRecords({
+			username: username,
+			password: password,
+			displayName: displayName,
+			masterUsername: window.activeMasterContext,
+		});
 
-		if (userError) {
-			console.error("Error creating user:", userError);
+		if (createError) {
 			window.showNotification(
-				"Failed to create user: " + userError.message,
+				"Failed to create user: " + createError.message,
 				"error"
 			);
 			return;
-		}
-
-		// Insert into userProfiles
-		var { error: profileError } = await window.supabase
-			.from("userProfiles")
-			.insert([
-				{
-					username: username,
-					master_username: window.activeMasterContext,
-					points: 0,
-					updatedAt: new Date().toISOString(),
-				},
-			]);
-
-		if (profileError) {
-			console.error("Error creating profile:", profileError);
-		}
-
-		// Create relationship
-		var { error: relError } = await window.supabase
-			.from("master_slave_relationships")
-			.insert([
-				{
-					master_username: window.activeMasterContext,
-					slave_username: username,
-					status: "active",
-				},
-			]);
-
-		if (relError) {
-			console.error("Error creating relationship:", relError);
 		}
 
 		// Reload users
@@ -445,6 +472,9 @@ window.renderPigList = async function () {
 				" (" +
 				window.escapeHtml(rel.slave_username) +
 				")</span>" +
+				(pig && pig.statusMessage
+					? ' <span class="status-message-text">' + window.escapeHtml(pig.statusMessage) + "</span>"
+					: "") +
 				'<div class="task-meta">' +
 				"Points: " +
 				points +

@@ -3,7 +3,15 @@
 // classic app's AdminRewardManager), and cross-group management lives on
 // the admin-only Masters tab.
 import { ManagePigs } from "./ManagePigs";
+import { InvitesPanel } from "./InvitesPanel";
+import { MotdManageList } from "../motd/MotdManageList";
 
 export function AdminPage() {
-	return <ManagePigs />;
+	return (
+		<div>
+			<ManagePigs />
+			<InvitesPanel />
+			<MotdManageList />
+		</div>
+	);
 }
