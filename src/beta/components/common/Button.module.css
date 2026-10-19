@@ -1,0 +1,75 @@
+/*
+ * Button states, explicitly, per the design spec:
+ *   default -> :hover -> :focus-visible -> :disabled -> [loading]
+ * Every other interactive component in this app follows this same pattern.
+ */
+
+.button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	border: 1px solid transparent;
+	border-radius: var(--radius-sm);
+	padding: var(--space-2) var(--space-4);
+	min-height: 40px; /* comfortable touch target on mobile */
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 0.15s ease, border-color 0.15s ease,
+		opacity 0.15s ease;
+}
+
+.primary {
+	background: var(--color-accent);
+	color: var(--color-accent-text);
+}
+.primary:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--color-accent) 85%, white 15%);
+}
+
+.secondary {
+	background: var(--color-elevated);
+	color: var(--color-text-primary);
+	border-color: var(--color-border-strong);
+}
+.secondary:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--color-elevated) 85%, white 15%);
+}
+
+.danger {
+	background: var(--color-danger);
+	color: var(--color-danger-text);
+}
+.danger:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--color-danger) 85%, black 15%);
+}
+
+.button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.spinner {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	border: 2px solid currentColor;
+	border-top-color: transparent;
+	animation: spin 0.7s linear infinite;
+}
+
+.labelLoading {
+	opacity: 0.8;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.spinner {
+		animation: none;
+	}
+}

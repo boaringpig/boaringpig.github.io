@@ -441,7 +441,7 @@ window.costTracker = (function () {
 					this.stop();
 					await window.stopLiveCostTracker(
 						this.activeLiveTrackerId,
-						true
+						false
 					);
 					this.activeLiveTrackerId = null;
 
@@ -454,9 +454,7 @@ window.costTracker = (function () {
 					if (this.startBtn) this.startBtn.disabled = false;
 					if (this.stopBtn) this.stopBtn.disabled = true;
 
-					window.showNotification(
-						"Live cost tracker stopped and invoice created!"
-					);
+					window.showNotification("Live cost tracker stopped!");
 				} catch (error) {
 					console.error("Error stopping live tracker:", error);
 					window.showNotification(
@@ -725,7 +723,8 @@ Time-based Cost: ${costDetails.timeBasedCost.description} = ${costDetails.timeBa
 				type: "cost-tracker",
 				createdAt: new Date().toISOString(),
 				createdBy: window.currentUser,
-				assignedTo: "schinken",
+				master_username: window.activeMasterContext,
+				assignedTo: window.getSlaves()[0] || window.currentUser,
 				points: 0,
 				penaltyPoints: 100,
 				dueDate: new Date(

@@ -1,63 +1,51 @@
 // ui.dashboard.js
 // This file contains all the UI rendering functions for the dashboard.
 
-/**
- * Renders the dashboard view with user stats, activity log, and admin controls.
- */
-window.renderDashboard = function () {
-	if (!window.hasPermission("view_dashboard")) return;
-
-	var userActivity = window.userActivityLog.filter(function (a) {
-		return a.user === "schinken";
-	});
-	var lastActivity = userActivity[0];
-	var isUserOnline = lastActivity && lastActivity.action === "login";
-	var activeTasks = window.tasks.filter(function (t) {
-		return (
-			t.status !== "completed" &&
-			t.type !== "demerit" &&
-			t.assignedTo === "schinken"
-		);
-	});
-	var completedTasks = window.tasks.filter(function (t) {
-		return t.status === "completed" && t.assignedTo === "schinken";
-	});
-	var allNonDemeritTasks = window.tasks.filter(function (t) {
-		return t.type !== "demerit" && t.assignedTo === "schinken";
-	});
-	var completionRate =
-		allNonDemeritTasks.length > 0
-			? Math.round(
-					(completedTasks.length / allNonDemeritTasks.length) * 100
-			  )
-			: 0;
-	var demeritTasksCount = window.tasks.filter(function (t) {
-		return t.type === "demerit";
-	}).length;
-
-	var userStatusEl = document.getElementById("userStatus");
-	var activeTasksEl = document.getElementById("activeTasks");
-	var completionRateEl = document.getElementById("completionRate");
-	var demeritsIssuedCountEl = document.getElementById("demeritsIssuedCount");
-
-	if (userStatusEl) {
-		userStatusEl.textContent = isUserOnline ? "Online" : "Offline";
-		userStatusEl.style.color = isUserOnline ? "#059669" : "#dc2626";
+// Helper: checks if a username matches the currently selected pig filter
+window.matchesSelectedPig = function (username) {
+	if (!window.selectedPig) {
+		return window.getSlaves().indexOf(username) !== -1;
 	}
-	if (activeTasksEl) activeTasksEl.textContent = activeTasks.length;
-	if (completionRateEl) completionRateEl.textContent = completionRate + "%";
-	if (demeritsIssuedCountEl)
-		demeritsIssuedCountEl.textContent = demeritTasksCount;
+	return username === window.selectedPig;
+};
 
-	// Update active cost trackers count
-	window.updateActiveCostTrackersCount();
+// Render pig tabs at top of dashboard
+window.renderPigTabs = function () {
+	var tabContainer = document.getElementById("pigTabContainer");
+	if (!tabContainer) return;
 
-	// Add admin points control to the dashboard stats
-	window.addAdminPointsControl();
+	var slaves = window.getSlaves();
+	if (slaves.length <= 1) {
+		tabContainer.innerHTML = "";
+		return;
+	}
 
-	window.renderUserActivityLog();
-	window.renderUserProgress();
-	window.renderActiveCostTrackersAdmin();
+	var tabsHtml =
+		'<button class="nav-tab ' +
+		(!window.selectedPig ? "active" : "") +
+		'" onclick="window.selectPig(null)" style="padding: 6px 16px; font-size: 13px;">All</button>';
+
+	slaves.forEach(function (pig) {
+		var isActive = window.selectedPig === pig;
+		var displayName = window.users[pig]
+			? window.users[pig].displayName
+			: pig;
+		tabsHtml +=
+			'<button class="nav-tab ' +
+			(isActive ? "active" : "") +
+			'" onclick="window.selectPig(\'' +
+			pig +
+			'\')" style="padding: 6px 16px; font-size: 13px;">' +
+			window.escapeHtml(displayName) +
+			"</button>";
+	});
+	tabContainer.innerHTML = tabsHtml;
+};
+
+window.selectPig = function (pigUsername) {
+	window.selectedPig = pigUsername;
+	window.renderPigTabs();
+	window.renderDashboard();
 };
 
 /**
@@ -68,7 +56,6 @@ window.addAdminPointsControl = function () {
 
 	// Check if control already exists
 	if (document.getElementById("adminPointsControl")) {
-		// If it exists, just update it
 		window.updateAdminPointsDisplay();
 		return;
 	}
@@ -76,41 +63,43 @@ window.addAdminPointsControl = function () {
 	const dashboardStats = document.querySelector(".dashboard-stats");
 	if (!dashboardStats) return;
 
-	const userPoints = window.users["schinken"].points || 0;
-	let pointsColor =
+	var slaves = window.getSlaves();
+	var targetPig = window.selectedPig || slaves[0];
+	if (!targetPig || !window.users[targetPig]) return;
+
+	var userPoints = window.users[targetPig].points || 0;
+	var pointsColor =
 		userPoints < 0 ? "#ff6b6b" : userPoints === 0 ? "#ffff00" : "#00ff00";
+
+	var pigOptions = slaves
+		.map(function (pig) {
+			var dn = window.users[pig] ? window.users[pig].displayName : pig;
+			return (
+				'<option value="' +
+				pig +
+				'"' +
+				(pig === targetPig ? " selected" : "") +
+				">" +
+				window.escapeHtml(dn) +
+				"</option>"
+			);
+		})
+		.join("");
 
 	const pointsControlCard = document.createElement("div");
 	pointsControlCard.className = "stat-card";
 	pointsControlCard.id = "adminPointsControl";
-	pointsControlCard.innerHTML = `
-		<h3>👑 Admin: Set User Points</h3>
-		<div class="stat-number" style="color: ${pointsColor}; margin-bottom: 15px;">${userPoints}</div>
-		<div style="display: flex; gap: 10px; align-items: center;">
-			<input 
-				type="number" 
-				id="adminPointsInput" 
-				class="form-input" 
-				placeholder="New points value"
-				value="${userPoints}"
-				style="width: 120px; padding: 8px; font-size: 14px;"
-				onkeypress="if(event.key==='Enter') window.setUserPoints()"
-				onfocus="this.select()"
-			>
-			<button 
-				class="action-btn approve-btn" 
-				onclick="window.setUserPoints()"
-				style="padding: 8px 16px; font-size: 14px;"
-			>
-				Set
-			</button>
-		</div>
-		<div style="margin-top: 10px; font-size: 12px; color: var(--text-color-medium);">
-			Current: ${window.users["schinken"].displayName}
-		</div>
-	`;
+	pointsControlCard.innerHTML =
+		'<h3>Set ' + window.escapeHtml(window.termCap("slave")) + ' Points</h3>' +
+		'<div class="stat-number" style="color: ' + pointsColor + '; margin-bottom: 15px;">' + userPoints + '</div>' +
+		'<div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">' +
+		'<select id="adminPointsPigSelect" class="form-input" style="width: 120px; padding: 8px; font-size: 14px;" onchange="window.updateAdminPointsDisplay()">' +
+		pigOptions +
+		'</select>' +
+		'<input type="number" id="adminPointsInput" class="form-input" placeholder="New points" value="' + userPoints + '" style="width: 100px; padding: 8px; font-size: 14px;" onkeypress="if(event.key===\'Enter\') window.setUserPoints()" onfocus="this.select()">' +
+		'<button class="action-btn approve-btn" onclick="window.setUserPoints()" style="padding: 8px 16px; font-size: 14px;">Set</button>' +
+		'</div>';
 
-	// Insert the control card at the beginning of dashboard stats
 	dashboardStats.insertBefore(pointsControlCard, dashboardStats.firstChild);
 };
 
@@ -118,15 +107,19 @@ window.addAdminPointsControl = function () {
  * Updates the points display in the admin control
  */
 window.updateAdminPointsDisplay = function () {
-	const pointsControl = document.getElementById("adminPointsControl");
+	var pointsControl = document.getElementById("adminPointsControl");
 	if (!pointsControl) return;
 
-	const userPoints = window.users["schinken"].points || 0;
-	let pointsColor =
+	var pigSelect = document.getElementById("adminPointsPigSelect");
+	var targetPig = pigSelect ? pigSelect.value : window.selectedPig || window.getSlaves()[0];
+	if (!targetPig || !window.users[targetPig]) return;
+
+	var userPoints = window.users[targetPig].points || 0;
+	var pointsColor =
 		userPoints < 0 ? "#ff6b6b" : userPoints === 0 ? "#ffff00" : "#00ff00";
 
-	const statNumber = pointsControl.querySelector(".stat-number");
-	const input = pointsControl.querySelector("#adminPointsInput");
+	var statNumber = pointsControl.querySelector(".stat-number");
+	var input = pointsControl.querySelector("#adminPointsInput");
 
 	if (statNumber) {
 		statNumber.textContent = userPoints;
@@ -134,8 +127,7 @@ window.updateAdminPointsDisplay = function () {
 	}
 	if (input) {
 		input.value = userPoints;
-		// Also update placeholder to show current value
-		input.placeholder = `Current: ${userPoints}`;
+		input.placeholder = "Current: " + userPoints;
 	}
 };
 
@@ -146,8 +138,13 @@ window.renderUserActivityLog = function () {
 	var activityLogEl = document.getElementById("userActivityLog");
 	if (!activityLogEl) return;
 	var filteredActivityLog = window.userActivityLog.filter(function (a) {
-		return a.user === "schinken" || a.user === "skeen";
+		return window.users[a.user] !== undefined;
 	});
+	if (window.selectedPig) {
+		filteredActivityLog = filteredActivityLog.filter(function (a) {
+			return a.user === window.selectedPig || (window.users[a.user] && window.users[a.user].role === "master");
+		});
+	}
 	if (filteredActivityLog.length === 0) {
 		activityLogEl.innerHTML =
 			'<div class="empty-state">No user activity recorded</div>';
@@ -156,24 +153,26 @@ window.renderUserActivityLog = function () {
 			.slice(0, 20)
 			.map(function (activity) {
 				var actionText;
-				if (activity.user === "schinken") {
+				var isSlave = window.users[activity.user] && window.users[activity.user].role === "slave";
+				var displayName = window.users[activity.user] ? window.users[activity.user].displayName : activity.user;
+				if (isSlave) {
 					actionText =
 						activity.action === "login"
-							? "🔓 User Logged In"
+							? displayName + " Logged In"
 							: activity.action === "logout"
-							? "🔒 User Logged Out"
+							? displayName + " Logged Out"
 							: activity.action === "points_changed"
-							? "🎯 Points Changed"
-							: "📝 " + activity.action;
+							? displayName + " Points Changed"
+							: displayName + ": " + activity.action;
 				} else {
 					actionText =
 						activity.action === "login"
-							? "🔓 Admin Logged In"
+							? "Admin Logged In"
 							: activity.action === "logout"
-							? "🔒 Admin Logged Out"
+							? "Admin Logged Out"
 							: activity.action === "points_changed"
-							? "👑 Admin Changed Points"
-							: "👑 " + activity.action;
+							? "Admin Changed Points"
+							: "Admin: " + activity.action;
 				}
 
 				// Add details if available
@@ -207,74 +206,70 @@ window.renderUserActivityLog = function () {
 window.renderUserProgress = function () {
 	var progressList = document.getElementById("userProgressList");
 	if (!progressList) return;
-	var user = window.users["schinken"];
-	var userTasks = window.tasks.filter(function (t) {
-		return t.assignedTo === "schinken" && t.type !== "demerit";
-	});
-	var completed = userTasks.filter(function (t) {
-		return t.status === "completed";
-	});
-	var pending = userTasks.filter(function (t) {
-		return t.status === "todo" || t.status === "pending_approval";
-	});
-	var overdue = userTasks.filter(function (t) {
-		return window.isTaskOverdue(t) && t.status !== "completed";
-	});
-	var demeritTasks = window.tasks.filter(function (t) {
-		return t.type === "demerit" && t.assignedTo === "schinken";
-	});
-	var completionRate =
-		userTasks.length > 0
-			? Math.round((completed.length / userTasks.length) * 100)
-			: 0;
 
-	// Determine point styling based on value
-	var pointsClass = "";
-	var pointsStyle = "";
-	if (user.points < 0) {
-		pointsClass = "negative-points";
-		pointsStyle =
-			"color: #ff6b6b; font-weight: bold; text-shadow: 0 0 5px rgba(255, 107, 107, 0.5);";
-	} else if (user.points === 0) {
-		pointsStyle = "color: #ffff00; font-weight: bold;";
-	} else {
-		pointsStyle = "color: #00ff00; font-weight: bold;";
+	var pigsToShow = window.selectedPig ? [window.selectedPig] : window.getSlaves();
+	if (pigsToShow.length === 0) {
+		progressList.innerHTML =
+			'<div class="empty-state">No ' +
+			window.escapeHtml(window.term("slavePlural")) +
+			" to display</div>";
+		return;
 	}
 
-	progressList.innerHTML =
-		'<div class="progress-item">' +
-		"<div>" +
-		'<div class="user-name">' +
-		user.displayName +
-		"</div>" +
-		'<div class="progress-bar">' +
-		'<div class="progress-fill" style="width: ' +
-		completionRate +
-		'%"></div>' +
-		"</div>" +
-		"</div>" +
-		'<div class="user-stats">' +
-		'<span class="' +
-		pointsClass +
-		'" style="' +
-		pointsStyle +
-		'">' +
-		user.points +
-		" pts</span>" +
-		"<span>" +
-		completed.length +
-		" done</span>" +
-		"<span>" +
-		pending.length +
-		" pending</span>" +
-		"<span>" +
-		overdue.length +
-		" overdue</span>" +
-		"<span>" +
-		demeritTasks.length +
-		" demerits</span>" +
-		"</div>" +
-		"</div>";
+	progressList.innerHTML = pigsToShow.map(function (pigUsername) {
+		var user = window.users[pigUsername];
+		if (!user) return "";
+
+		var userTasks = window.tasks.filter(function (t) {
+			return t.assignedTo === pigUsername && t.type !== "demerit";
+		});
+		var completed = userTasks.filter(function (t) {
+			return t.status === "completed";
+		});
+		var pending = userTasks.filter(function (t) {
+			return t.status === "todo" || t.status === "pending_approval";
+		});
+		var overdue = userTasks.filter(function (t) {
+			return window.isTaskOverdue && window.isTaskOverdue(t) && t.status !== "completed";
+		});
+		var demeritTasks = window.tasks.filter(function (t) {
+			return t.type === "demerit" && t.assignedTo === pigUsername;
+		});
+		var completionRate =
+			userTasks.length > 0
+				? Math.round((completed.length / userTasks.length) * 100)
+				: 0;
+
+		var pointsStyle = "";
+		if (user.points < 0) {
+			pointsStyle = "color: #ff6b6b; font-weight: bold;";
+		} else if (user.points === 0) {
+			pointsStyle = "color: #ffff00; font-weight: bold;";
+		} else {
+			pointsStyle = "color: #00ff00; font-weight: bold;";
+		}
+
+		return (
+			'<div class="progress-item">' +
+			"<div>" +
+			'<div class="user-name">' +
+			window.escapeHtml(user.displayName) +
+			" (" + window.escapeHtml(pigUsername) + ")" +
+			"</div>" +
+			'<div class="progress-bar">' +
+			'<div class="progress-fill" style="width: ' + completionRate + '%"></div>' +
+			"</div>" +
+			"</div>" +
+			'<div class="user-stats">' +
+			'<span style="' + pointsStyle + '">' + user.points + " pts</span>" +
+			"<span>" + completed.length + " done</span>" +
+			"<span>" + pending.length + " pending</span>" +
+			"<span>" + overdue.length + " overdue</span>" +
+			"<span>" + demeritTasks.length + " demerits</span>" +
+			"</div>" +
+			"</div>"
+		);
+	}).join("");
 };
 
 /**
@@ -283,7 +278,7 @@ window.renderUserProgress = function () {
 window.updateStats = function () {
 	var relevantTasks = window.tasks.filter(function (t) {
 		return (
-			window.currentUser === "skeen" ||
+			window.isMaster() ||
 			t.assignedTo === window.currentUser
 		);
 	});
@@ -339,8 +334,15 @@ window.updateStats = function () {
 window.renderDashboard = function () {
 	if (!window.hasPermission("view_dashboard")) return;
 
+	// Render pig tabs
+	window.renderPigTabs();
+
+	// Remove old admin points control so it gets recreated with current pig
+	var oldControl = document.getElementById("adminPointsControl");
+	if (oldControl) oldControl.remove();
+
 	var userActivity = window.userActivityLog.filter(function (a) {
-		return a.user === "schinken";
+		return window.matchesSelectedPig(a.user);
 	});
 	var lastActivity = userActivity[0];
 	var isUserOnline = lastActivity && lastActivity.action === "login";
@@ -348,14 +350,14 @@ window.renderDashboard = function () {
 		return (
 			t.status !== "completed" &&
 			t.type !== "demerit" &&
-			t.assignedTo === "schinken"
+			window.matchesSelectedPig(t.assignedTo)
 		);
 	});
 	var completedTasks = window.tasks.filter(function (t) {
-		return t.status === "completed" && t.assignedTo === "schinken";
+		return t.status === "completed" && window.matchesSelectedPig(t.assignedTo);
 	});
 	var allNonDemeritTasks = window.tasks.filter(function (t) {
-		return t.type !== "demerit" && t.assignedTo === "schinken";
+		return t.type !== "demerit" && window.matchesSelectedPig(t.assignedTo);
 	});
 	var completionRate =
 		allNonDemeritTasks.length > 0
@@ -364,7 +366,7 @@ window.renderDashboard = function () {
 			  )
 			: 0;
 	var demeritTasksCount = window.tasks.filter(function (t) {
-		return t.type === "demerit";
+		return t.type === "demerit" && window.matchesSelectedPig(t.assignedTo);
 	}).length;
 
 	var userStatusEl = document.getElementById("userStatus");
@@ -373,21 +375,26 @@ window.renderDashboard = function () {
 	var demeritsIssuedCountEl = document.getElementById("demeritsIssuedCount");
 
 	if (userStatusEl) {
-		userStatusEl.textContent = isUserOnline ? "Online" : "Offline";
-		userStatusEl.style.color = isUserOnline ? "#059669" : "#dc2626";
+		if (window.selectedPig) {
+			userStatusEl.textContent = isUserOnline ? "Online" : "Offline";
+			userStatusEl.style.color = isUserOnline ? "#059669" : "#dc2626";
+		} else {
+			var onlineCount = 0;
+			window.getSlaves().forEach(function(pig) {
+				var pigActivity = window.userActivityLog.filter(function(a) { return a.user === pig; });
+				if (pigActivity[0] && pigActivity[0].action === "login") onlineCount++;
+			});
+			userStatusEl.textContent = onlineCount + "/" + window.getSlaves().length + " Online";
+			userStatusEl.style.color = onlineCount > 0 ? "#059669" : "#dc2626";
+		}
 	}
 	if (activeTasksEl) activeTasksEl.textContent = activeTasks.length;
 	if (completionRateEl) completionRateEl.textContent = completionRate + "%";
 	if (demeritsIssuedCountEl)
 		demeritsIssuedCountEl.textContent = demeritTasksCount;
 
-	// Update active cost trackers count
 	window.updateActiveCostTrackersCount();
-
-	// NEW: Update invoice totals
 	window.updateInvoiceTotals();
-
-	// Add admin points control to the dashboard stats
 	window.addAdminPointsControl();
 
 	window.renderUserActivityLog();

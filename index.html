@@ -115,10 +115,19 @@
 			<div id="mainApp" style="display: none">
 				<div class="header">
 					<div class="header-left">
-						<h1>Pig Management Tool</h1>
-						<p>A tool to improve pig obedience.</p>
+						<h1 id="appTitleHeading">Pig Management Tool</h1>
+						<p id="appTagline">A tool to improve pig obedience.</p>
 					</div>
 					<div class="user-info">
+						<span id="groupContextSwitcher" style="display: none"></span>
+						<button
+							id="betaToggleButton"
+							class="nav-tab"
+							style="display: none"
+							onclick="window.enterBetaMode()"
+						>
+							Try Beta Dashboard
+						</button>
 						<div id="userBadge" class="user-badge"></div>
 						<div id="userPoints" class="points-badge">0 Points</div>
 						<button class="logout-btn" onclick="logout()">
@@ -173,6 +182,15 @@
 					>
 						Admin Settings
 					</button>
+					<!-- NEW: Super-admin "Manage Masters" tab -->
+					<button
+						class="nav-tab"
+						onclick="switchTab('masters')"
+						id="mastersTab"
+						style="display: none"
+					>
+						Masters
+					</button>
 				</div>
 
 				<!-- Tasks View -->
@@ -206,8 +224,22 @@
 									maxlength="200"
 								/>
 
+								<!-- Pig assignment selector -->
+								<div class="form-row" id="pigAssignmentRow">
+									<div class="form-group">
+										<label class="form-label">Assign To</label>
+										<div id="pigCheckboxes" class="pig-checkboxes" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px;"></div>
+									</div>
+									<div class="form-group">
+										<label class="form-label">Assignment Mode</label>
+										<select id="assignmentMode" class="form-input">
+											<option value="individual">Individual Copies</option>
+											<option value="shared">Shared Task</option>
+										</select>
+									</div>
+								</div>
+
 								<div class="form-row">
-									<!-- Removed "Assign to User" dropdown -->
 									<div class="form-group">
 										<label class="form-label"
 											>Points (Reward)</label
@@ -378,6 +410,8 @@
 				<!-- Dashboard View (Admin Only) -->
 				<div id="dashboardView" class="tab-content">
 					<div class="dashboard-container">
+						<!-- Pig selector tabs for multi-pig dashboard -->
+						<div id="pigTabContainer" class="pig-tabs" style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;"></div>
 						<div class="dashboard-stats">
 							<div class="stat-card">
 								<h3>User Login Status</h3>
@@ -537,7 +571,39 @@
 
 				<!-- NEW: Admin Settings View (for reward management and settings) -->
 				<div id="adminSettingsView" class="tab-content">
-					<div id="adminRewardManagement" class="task-section">
+					<!-- Pig Management Section -->
+				<div id="managePigsSection" class="task-section" style="display: none;">
+					<div class="section-header">
+						<h2 class="section-title" id="managePigsHeading">Manage Pigs</h2>
+					</div>
+					<div class="task-creation-form">
+						<div class="form-row">
+							<div class="form-group">
+								<label class="form-label">Username</label>
+								<input type="text" id="newPigUsername" class="form-input" placeholder="Username (lowercase, min 3 chars)" maxlength="30" />
+							</div>
+							<div class="form-group">
+								<label class="form-label">Password</label>
+								<input type="password" id="newPigPassword" class="form-input" placeholder="Password (min 4 chars)" />
+							</div>
+							<div class="form-group">
+								<label class="form-label">Display Name</label>
+								<input type="text" id="newPigDisplayName" class="form-input" placeholder="Display name (optional)" maxlength="30" />
+							</div>
+						</div>
+						<button class="add-btn" id="addPigBtn" onclick="window.addNewPig()">Add Pig</button>
+					</div>
+					<div class="task-section">
+						<div class="section-header">
+							<h2 class="section-title" id="currentPigsHeading">Current Pigs</h2>
+						</div>
+						<div id="pigList" class="task-list">
+							<div class="empty-state">No pigs added yet.</div>
+						</div>
+					</div>
+				</div>
+
+				<div id="adminRewardManagement" class="task-section">
 						<div class="section-header">
 							<h2 class="section-title">Manage Rewards</h2>
 						</div>
@@ -696,6 +762,71 @@
 									No pending authorizations.
 								</div>
 							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- NEW: Super-admin "Manage Masters" View -->
+				<div id="mastersView" class="tab-content">
+					<div class="task-section">
+						<div class="section-header">
+							<h2 class="section-title">Create New Master</h2>
+						</div>
+						<div class="task-creation-form">
+							<div class="form-row">
+								<div class="form-group">
+									<label class="form-label">Username</label>
+									<input type="text" id="newMasterUsername" class="form-input" placeholder="Username (lowercase, min 3 chars)" maxlength="30" />
+								</div>
+								<div class="form-group">
+									<label class="form-label">Password</label>
+									<input type="password" id="newMasterPassword" class="form-input" placeholder="Password (min 4 chars)" />
+								</div>
+								<div class="form-group">
+									<label class="form-label">Display Name</label>
+									<input type="text" id="newMasterDisplayName" class="form-input" placeholder="Display name (optional)" maxlength="30" />
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-group">
+									<label class="form-label">Group Label</label>
+									<input type="text" id="newMasterGroupLabel" class="form-input" placeholder="e.g. The Polycule, The Drift, The Harem" maxlength="50" />
+								</div>
+								<div class="form-group">
+									<label class="form-label">Master Label</label>
+									<input type="text" id="newMasterLabel" class="form-input" placeholder="e.g. Master, Sir, Daddy" maxlength="30" />
+								</div>
+								<div class="form-group">
+									<label class="form-label">Master Label (Plural)</label>
+									<input type="text" id="newMasterLabelPlural" class="form-input" placeholder="e.g. Masters" maxlength="30" />
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-group">
+									<label class="form-label">Slave Label</label>
+									<input type="text" id="newSlaveLabel" class="form-input" placeholder="e.g. pig, pet, sub" maxlength="30" />
+								</div>
+								<div class="form-group">
+									<label class="form-label">Slave Label (Plural)</label>
+									<input type="text" id="newSlaveLabelPlural" class="form-input" placeholder="e.g. pigs, pets, subs" maxlength="30" />
+								</div>
+								<div class="form-group">
+									<label class="form-label">
+										<input type="checkbox" id="newMasterIsAdmin" />
+										Grant admin access
+									</label>
+								</div>
+							</div>
+							<button class="add-btn" onclick="window.handleCreateMaster()">Create Master</button>
+						</div>
+					</div>
+
+					<div class="task-section">
+						<div class="section-header">
+							<h2 class="section-title">All Masters</h2>
+						</div>
+						<div id="mastersList" class="task-list">
+							<div class="empty-state">No masters yet.</div>
 						</div>
 					</div>
 				</div>
@@ -1145,11 +1276,21 @@ Final text"
 		<script src="https://unpkg.com/@fullcalendar/list@6.1.18/index.global.min.js"></script>
 		<script src="https://unpkg.com/@fullcalendar/rrule@6.1.18/index.global.min.js"></script>
 
+		<!-- React beta dashboard mount point. Kept as a sibling of #mainApp
+		     (not nested inside it) so js/beta-toggle.js can show/hide one
+		     without affecting the other. -->
+		<div id="betaRoot" style="display: none"></div>
+
 		<!-- Consolidated Scripts -->
 		<!-- Load helper and modal functions first, so all other files can access them -->
 		<script type="module" src="js/ui-helpers.js"></script>
 		<script type="module" src="js/ui-modals.js"></script>
 		<!-- Then load core application logic -->
+		<script type="module" src="js/database-pigs.js"></script>
+		<script type="module" src="js/database-admin.js"></script>
+		<script type="module" src="js/contrast.js"></script>
+		<script type="module" src="js/terminology.js"></script>
+		<script type="module" src="js/beta-toggle.js"></script>
 		<script type="module" src="js/main.js"></script>
 		<script type="module" src="js/auth.js"></script>
 		<script type="module" src="js/database.js"></script>
@@ -1166,6 +1307,7 @@ Final text"
 		<script type="module" src="js/ui-calendar.js"></script>
 		<script type="module" src="js/ui-dashboard.js"></script>
 		<script type="module" src="js/ui-rewards.js"></script>
+		<script type="module" src="js/ui-admin.js"></script>
 		<script type="module" src="js/ui-cost-trackers.js"></script>
 		<!-- New file for tool initialization -->
 		<script type="module" src="js/tool-init.js"></script>

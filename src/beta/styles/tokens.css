@@ -1,0 +1,52 @@
+/*
+ * Design tokens for the beta dashboard.
+ *
+ * These are CSS custom properties (variables) scoped to .betaApp, the root
+ * element of the whole React tree (see App.jsx). Every component's
+ * .module.css file reads colors through var(--color-*) instead of hardcoding
+ * hex values, so a single place - AppContext's `theme` object, applied as
+ * inline styles on .betaApp - can re-theme the entire app per master group.
+ *
+ * The values below are just the fallback defaults (used if, for some reason,
+ * the inline overrides from AppContext haven't applied yet). The *real*
+ * per-group colors come from the group_settings table and are documented
+ * in src/beta/README.md along with their WCAG contrast numbers.
+ */
+
+.betaApp {
+	--color-bg: #09090b;
+	--color-card: #131316;
+	--color-elevated: #1a1a20;
+	--color-text-primary: #fafafa;
+	--color-text-secondary: #a1a1aa;
+
+	/* Fixed accent/status colors. These are NOT admin-configurable (only the
+	   five base theme colors are, per the product requirement) but they are
+	   still checked against the configurable backgrounds - see
+	   src/beta/contrastChecklist.js. */
+	--color-accent: #6366f1;
+	--color-accent-text: #ffffff;
+	--color-success: #22c55e;
+	--color-warning: #eab308;
+	--color-danger: #ef4444;
+	--color-danger-text: #ffffff;
+
+	--color-border: rgba(250, 250, 250, 0.08);
+	--color-border-strong: rgba(250, 250, 250, 0.16);
+	--focus-ring: #8183f4;
+
+	--radius-sm: 6px;
+	--radius-md: 10px;
+	--radius-lg: 16px;
+
+	--space-1: 4px;
+	--space-2: 8px;
+	--space-3: 12px;
+	--space-4: 16px;
+	--space-5: 24px;
+	--space-6: 32px;
+
+	color-scheme: dark;
+	background: var(--color-bg);
+	color: var(--color-text-primary);
+}

@@ -1,0 +1,26 @@
+name: Supabase keep-alive
+
+# Supabase pauses free-tier projects after 7 days with no API activity.
+# This just pings the REST API every few days so the project never pauses.
+# The URL/anon key here are the same ones already shipped publicly in
+# js/config.js and served as part of this GitHub Pages site, so there's
+# nothing new being exposed by having them in this workflow file too.
+
+on:
+  schedule:
+    - cron: "0 12 */3 * *" # every 3 days at 12:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        env:
+          SUPABASE_URL: https://ntbgccxxdhtlysjxtsou.supabase.co
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50YmdjY3h4ZGh0bHlzanh0c291Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4Mjg3MjYsImV4cCI6MjA2OTQwNDcyNn0.G-aOH8wGVY-Fo8_NI3giydakYnh1MR18-e78wF39OG8
+        run: |
+          curl --fail --silent --show-error \
+            "$SUPABASE_URL/rest/v1/metadata?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY"

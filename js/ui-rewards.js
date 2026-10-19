@@ -24,7 +24,7 @@ window.renderRewards = function () {
 						: "Authorization Required"
 				}</div>
                 ${
-					window.currentUser !== "skeen"
+					!window.isMaster()
 						? `<button class="purchase-btn" onclick="window.purchaseReward(${reward.id})">Purchase</button>`
 						: ""
 				}
@@ -75,7 +75,7 @@ window.renderUserRewardPurchases = function () {
 				.join("");
 		}
 	}
-	if (window.currentUser === "skeen" && pendingAuthorizationsContainer) {
+	if (window.isMaster() && pendingAuthorizationsContainer) {
 		window.renderPendingAuthorizations();
 	}
 };

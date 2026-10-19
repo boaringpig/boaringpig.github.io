@@ -6,7 +6,7 @@
  */
 window.renderTasks = function () {
 	var user = window.users[window.currentUser];
-	if (user.role === "skeen") {
+	if (user.role === "master") {
 		window.renderAdminView();
 	} else {
 		window.renderUserView();
@@ -336,8 +336,11 @@ window.renderAdminView = function () {
  * Renders the user's view of tasks, including regular tasks, demerit tasks, and invoices.
  */
 window.renderUserView = function () {
+	// Include directly assigned tasks AND shared tasks assigned via task_assignments
+	var sharedTaskIds = (window.mySharedTaskIds || []);
 	var userTasks = window.tasks.filter(function (t) {
-		return t.assignedTo === window.currentUser;
+		return t.assignedTo === window.currentUser ||
+			(t.assignment_mode === "shared" && sharedTaskIds.indexOf(t.id) !== -1);
 	});
 	var myTasksContainer = document.getElementById("myTasks");
 	if (myTasksContainer) {
@@ -594,7 +597,7 @@ window.viewSpiralTask = function (taskId) {
 
 				// Hide or disable controls for user view to make it read-only
 				const controls = document.getElementById("controls");
-				if (controls && window.currentUser !== "skeen") {
+				if (controls && !window.isMaster()) {
 					// For regular users, hide the controls to make it view-only
 					controls.style.display = "none";
 

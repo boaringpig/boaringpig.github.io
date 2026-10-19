@@ -114,7 +114,7 @@ window.initializeLiveCostTracker = function () {
 	console.log("Initializing live cost tracker for user:", window.currentUser);
 
 	// Only initialize for regular users, not admin
-	if (window.currentUser === "skeen") {
+	if (window.isMaster()) {
 		const liveCostTracker = document.getElementById("liveCostTracker");
 		if (liveCostTracker) {
 			liveCostTracker.classList.add("hidden");
@@ -171,7 +171,7 @@ window.updateLiveCostTracker = function () {
 	}
 
 	// Only show for regular users, not admin
-	if (window.currentUser === "skeen") {
+	if (window.isMaster()) {
 		liveCostTracker.classList.add("hidden");
 		window.clearLiveCostTrackerIntervals();
 		return;
@@ -235,7 +235,7 @@ window.updateLiveCostTracker = function () {
 		// Check if this tracker should be visible to current user:
 		const isAssignedTracker = assignedTo === window.currentUser;
 		const isAdminTrackerForUser =
-			window.currentUser === "schinken" && trackerUser === "skeen";
+			window.isSlave() && window.users[trackerUser] && window.users[trackerUser].role === "master";
 		const isOwnTracker = trackerUser === window.currentUser;
 
 		const isUserMatch =
@@ -648,10 +648,10 @@ window.forceStopCostTracker = async function (trackerId) {
 		// Force refresh data and UI
 		await window.fetchActiveCostTrackersInitial();
 
-		if (window.currentUser === "schinken") {
+		if (window.isSlave()) {
 			// Update user display
 			window.updateLiveCostTracker();
-		} else if (window.currentUser === "skeen") {
+		} else if (window.isMaster()) {
 			// Update admin display
 			window.renderActiveCostTrackersAdmin();
 			window.updateActiveCostTrackersCount();

@@ -1,0 +1,12 @@
+.wrap {
+	text-align: center;
+	padding: var(--space-5) var(--space-4);
+	border: 1px solid var(--color-danger);
+	border-radius: var(--radius-md);
+	background: color-mix(in srgb, var(--color-danger) 12%, var(--color-card) 88%);
+}
+
+.message {
+	color: var(--color-text-primary);
+	margin: 0 0 var(--space-3);
+}

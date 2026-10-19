@@ -7,7 +7,8 @@
 window.fetchSuggestionsInitial = async function () {
 	const { data, error } = await window.supabase
 		.from("suggestions")
-		.select("*");
+		.select("*")
+		.eq("master_username", window.activeMasterContext);
 	if (error) {
 		console.error("Error fetching suggestions:", error);
 		window.showError("Failed to load suggestions.");
@@ -59,24 +60,55 @@ window.rejectSuggestion = function (suggestionId) {
 
 /**
  * Submits a new task suggestion to Supabase.
+ *
+ * `overrides` is optional (see window.createTask's doc comment for why): a
+ * non-DOM caller like the React beta UI can pass
+ * `{ description, justification, points, dueDate }` directly instead of
+ * this function reading the classic HTML form's inputs. Called with no
+ * arguments, it behaves exactly as before.
  */
-window.submitTaskSuggestion = async function () {
-	const description = document.getElementById("suggestedTaskDescription");
-	const justification = document.getElementById("taskJustification");
-	const points = document.getElementById("suggestedPoints");
-	const dueDate = document.getElementById("suggestedDueDate");
+window.submitTaskSuggestion = async function (overrides) {
+	overrides = overrides || {};
 
-	if (!description || !description.value.trim()) {
+	const descriptionEl = document.getElementById("suggestedTaskDescription");
+	const justificationEl = document.getElementById("taskJustification");
+	const pointsEl = document.getElementById("suggestedPoints");
+	const dueDateEl = document.getElementById("suggestedDueDate");
+
+	const descriptionValue =
+		overrides.description !== undefined
+			? overrides.description
+			: descriptionEl
+			? descriptionEl.value
+			: "";
+
+	if (!descriptionValue || !descriptionValue.trim()) {
 		window.showNotification("Please enter a task description", "error");
 		return;
 	}
 
 	const suggestion = {
-		description: description.value.trim(),
-		justification: justification ? justification.value.trim() : "",
-		suggestedPoints: points ? parseInt(points.value) || 10 : 10,
-		suggestedDueDate: dueDate ? dueDate.value || null : null,
+		description: descriptionValue.trim(),
+		justification:
+			overrides.justification !== undefined
+				? overrides.justification.trim()
+				: justificationEl
+				? justificationEl.value.trim()
+				: "",
+		suggestedPoints:
+			overrides.points !== undefined
+				? parseInt(overrides.points) || 10
+				: pointsEl
+				? parseInt(pointsEl.value) || 10
+				: 10,
+		suggestedDueDate:
+			overrides.dueDate !== undefined
+				? overrides.dueDate || null
+				: dueDateEl
+				? dueDateEl.value || null
+				: null,
 		suggestedBy: window.currentUser,
+		master_username: window.activeMasterContext,
 		createdAt: new Date().toISOString(),
 		status: "pending",
 		reviewedBy: null,
@@ -100,6 +132,7 @@ window.submitTaskSuggestion = async function () {
 
 /**
  * Approves a task suggestion and converts it into a new task.
+ * This function creates a task from the suggestion and then DELETES the suggestion completely.
  * @param {number} suggestionId - The ID of the suggestion to approve.
  */
 window.approveSuggestion = async function (suggestionId) {
@@ -120,7 +153,8 @@ window.approveSuggestion = async function (suggestionId) {
 			type: "regular",
 			createdAt: new Date().toISOString(),
 			createdBy: window.currentUser,
-			assignedTo: "schinken",
+			master_username: window.activeMasterContext,
+			assignedTo: window.getSlaves()[0] || window.currentUser,
 			points: suggestion.suggestedPoints,
 			penaltyPoints: Math.floor(suggestion.suggestedPoints / 2),
 			isRepeating: suggestion.isRepeating || false, // Use suggestion's repeat setting or default to false
@@ -128,8 +162,9 @@ window.approveSuggestion = async function (suggestionId) {
 				? suggestion.repeatInterval || null
 				: null, // Use suggestion's interval if repeating
 			isOverdue: false,
-			originalSuggestionid: suggestion.id,
-			originalSuggestedby: suggestion.suggestedBy,
+			// NOTE: Since this is no longer a suggestion but a regular task,
+			// we don't include originalSuggestionid or originalSuggestedby fields
+			// The suggestion is being completely removed from the system
 		};
 
 		// Add dueDate only if it exists
@@ -150,30 +185,33 @@ window.approveSuggestion = async function (suggestionId) {
 			return;
 		}
 
-		const suggestionUpdates = {
-			status: "approved",
-			reviewedBy: window.currentUser,
-			reviewedAt: new Date().toISOString(),
-		};
-
-		const { error: suggestionError } = await window.supabase
+		// DELETE the suggestion completely (instead of updating status to "approved")
+		// This fulfills the requirement that approved suggestions are completely removed
+		const { error: suggestionDeleteError } = await window.supabase
 			.from("suggestions")
-			.update(suggestionUpdates)
+			.delete()
 			.eq("id", suggestionId);
 
-		if (suggestionError) {
-			console.error("Error updating suggestion status:", suggestionError);
+		if (suggestionDeleteError) {
+			console.error("Error deleting suggestion:", suggestionDeleteError);
 			window.showNotification(
-				"Failed to approve suggestion: Status update failed.",
-				"error"
+				"Task created but failed to remove suggestion",
+				"warning"
 			);
+			// Don't return here - the task was created successfully
 		} else {
-			window.showNotification(
-				`Suggestion approved and converted to task!`
+			// Immediately remove the suggestion from the local array to update UI instantly
+			window.suggestions = window.suggestions.filter(
+				(s) => s.id !== suggestionId
 			);
 		}
 
+		window.showNotification(
+			`Suggestion approved and converted to task! Original suggestion removed.`
+		);
+
 		await window.fetchTasksInitial();
+		window.renderTasks(); // This will call renderAdminView() which calls renderAdminSuggestions()
 		await window.fetchSuggestionsInitial();
 	} catch (e) {
 		console.error(

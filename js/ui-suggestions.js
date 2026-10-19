@@ -370,8 +370,10 @@ window.showEditSuggestionModal = function (suggestionId) {
 			<div class="form-group">
 				<label class="form-label">Assign To</label>
 				<select id="editSuggestionAssignee" class="form-input">
-					<option value="schinken">Pig (schinken)</option>
-					<!-- Add more users here if needed -->
+					${window.getSlaves().map(function(pig) {
+						var dn = window.users[pig] ? window.users[pig].displayName : pig;
+						return '<option value="' + pig + '">' + dn + ' (' + pig + ')</option>';
+					}).join('')}
 				</select>
 			</div>
 
@@ -532,9 +534,9 @@ window.previewSuggestionChanges = function (originalSuggestion) {
 		changesPreview.style.display = "block";
 	}
 };
-
 /**
  * Approve the edited suggestion and create the task
+ * This function creates a task from the edited suggestion and then DELETES the suggestion completely
  */
 window.approveEditedSuggestion = async function (suggestionId) {
 	const suggestion = window.suggestions.find((s) => s.id === suggestionId);
@@ -599,13 +601,14 @@ window.approveEditedSuggestion = async function (suggestionId) {
 	}
 
 	try {
-		// Create the task with edited values
+		// Create the task with edited values - this is now a normal task, not a suggestion
 		const task = {
 			text: description,
 			status: "todo",
 			type: "regular",
 			createdAt: new Date().toISOString(),
 			createdBy: window.currentUser, // Admin who approved it
+			master_username: window.activeMasterContext,
 			assignedTo: assignee,
 			points: points,
 			penaltyPoints: penalty,
@@ -617,56 +620,69 @@ window.approveEditedSuggestion = async function (suggestionId) {
 			approvedAt: null,
 			approvedBy: null,
 			isOverdue: false,
-			// Add reference to original suggestion
-			originalSuggestionid: suggestionId,
-			originalSuggestedby: suggestion.suggestedBy,
+			// NOTE: Since this is no longer a suggestion but a regular task,
+			// we don't include originalSuggestionid or originalSuggestedby fields
+			// The suggestion is being completely removed from the system
 		};
 
-		// Update the suggestion status with admin notes
-		const suggestionUpdates = {
-			status: "approved",
-			reviewedBy: window.currentUser,
-			reviewedAt: new Date().toISOString(),
-			adminnotes: `Edited before approval. Original points: ${
-				suggestion.suggestedPoints
-			}, Final points: ${points}. ${
-				justification ? "Admin notes: " + justification : ""
-			}`,
-		};
-
-		// Insert task and update suggestion
+		// Insert the new task
 		const { error: taskError } = await window.supabase
 			.from("tasks")
 			.insert([task]);
 
-		const { error: suggestionError } = await window.supabase
-			.from("suggestions")
-			.update(suggestionUpdates)
-			.eq("id", suggestionId);
-
-		if (taskError || suggestionError) {
+		if (taskError) {
 			console.error(
-				"Error approving edited suggestion:",
-				taskError || suggestionError
+				"Error creating task from edited suggestion:",
+				taskError
 			);
-			window.showNotification("Failed to approve suggestion", "error");
+			window.showNotification("Failed to create task", "error");
 			return;
 		}
 
-		// Close modal
+		// DELETE the suggestion completely (instead of updating status to "approved")
+		// This fulfills the requirement that edited suggestions are completely removed
+		const { error: suggestionDeleteError } = await window.supabase
+			.from("suggestions")
+			.delete()
+			.eq("id", suggestionId);
+
+		if (suggestionDeleteError) {
+			console.error("Error deleting suggestion:", suggestionDeleteError);
+			window.showNotification(
+				"Task created but failed to remove suggestion",
+				"warning"
+			);
+			// Don't return here - the task was created successfully
+		} else {
+			// Immediately remove the suggestion from the local array to update UI instantly
+			window.suggestions = window.suggestions.filter(
+				(s) => s.id !== suggestionId
+			);
+		}
+
+		// Close modal immediately after successful processing
 		const modal = document.querySelector(".modal-overlay");
-		if (modal) {
+		if (modal && modal.parentNode) {
 			document.body.removeChild(modal);
 		}
 
+		// Alternative method to ensure modal is closed - remove all modal overlays
+		const allModals = document.querySelectorAll(".modal-overlay");
+		allModals.forEach((modalElement) => {
+			if (modalElement.parentNode) {
+				modalElement.parentNode.removeChild(modalElement);
+			}
+		});
+
 		window.showNotification(
-			`Suggestion approved and edited! Task created with ${points} points${
+			`Suggestion converted to task! Created with ${points} points${
 				isRepeating ? " (Repeating)" : ""
-			}`
+			}. Original suggestion removed.`
 		);
 
-		// Refresh data
+		// Refresh data - call renderTasks first to update the admin view immediately
 		await window.fetchTasksInitial();
+		window.renderTasks(); // This will call renderAdminView() which calls renderAdminSuggestions()
 		await window.fetchSuggestionsInitial();
 	} catch (error) {
 		console.error("Error in approveEditedSuggestion:", error);

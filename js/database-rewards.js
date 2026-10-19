@@ -20,6 +20,7 @@ window.addReward = async function (title, description, cost, type) {
 			type,
 			createdAt: new Date().toISOString(),
 			createdBy: window.currentUser,
+			master_username: window.activeMasterContext,
 			lastUpdatedAt: new Date().toISOString(),
 		},
 	]);
@@ -151,6 +152,7 @@ window.purchaseReward = async function (rewardId) {
 					{
 						userId: window.currentUser,
 						rewardId: reward.id,
+						master_username: window.activeMasterContext,
 						purchaseCost: reward.cost,
 						purchaseDate: new Date().toISOString(),
 						status: purchaseStatus,
@@ -178,10 +180,10 @@ window.purchaseReward = async function (rewardId) {
 					.from("rewardSystemSettings")
 					.upsert(
 						{
-							id: "system_settings",
+							master_username: window.activeMasterContext,
 							currentInstantSpend: currentSpend + reward.cost,
 						},
-						{ onConflict: "id", ignoreDuplicates: false }
+						{ onConflict: "master_username", ignoreDuplicates: false }
 					);
 				if (settingsError) {
 					console.error(
@@ -313,11 +315,11 @@ window.resetInstantPurchaseLimit = async function () {
 				.from("rewardSystemSettings")
 				.upsert(
 					{
-						id: "system_settings",
+						master_username: window.activeMasterContext,
 						currentInstantSpend: 0,
 						lastResetAt: new Date().toISOString(),
 					},
-					{ onConflict: "id" }
+					{ onConflict: "master_username" }
 				);
 			if (error) {
 				console.error("Error resetting instant spend:", error);
@@ -355,13 +357,13 @@ window.updateRewardSystemSettings = async function (
 	}
 	const { error } = await window.supabase.from("rewardSystemSettings").upsert(
 		{
-			id: "system_settings",
+			master_username: window.activeMasterContext,
 			instantPurchaseLimit: limit,
 			resetDurationDays: resetDuration,
 			requiresAuthorizationAfterLimit: requiresAuthAfterLimit,
 			lastUpdatedAt: new Date().toISOString(),
 		},
-		{ onConflict: "id" }
+		{ onConflict: "master_username" }
 	);
 	if (error) {
 		console.error("Error updating reward settings:", error);
@@ -399,15 +401,18 @@ window.checkForRewardLimitReset = async function () {
  * NEW: Function to fetch all rewards
  */
 window.fetchRewardsInitial = async function () {
-	const { data, error } = await window.supabase.from("rewards").select("*");
+	const { data, error } = await window.supabase
+		.from("rewards")
+		.select("*")
+		.eq("master_username", window.activeMasterContext);
 	if (error) {
 		console.error("Error fetching rewards:", error);
 		window.showError("Failed to load rewards.");
 	} else {
 		window.rewards = data.sort((a, b) => a.title.localeCompare(b.title));
-		if (window.activeTab === "shop" || window.currentUser === "skeen") {
+		if (window.activeTab === "shop" || window.isMaster()) {
 			window.renderRewards();
-			if (window.currentUser === "skeen") {
+			if (window.isMaster()) {
 				window.renderAdminRewardManagement();
 			}
 		}
@@ -419,15 +424,17 @@ window.fetchRewardsInitial = async function () {
  */
 window.fetchUserRewardPurchasesInitial = async function () {
 	const query =
-		window.currentUser === "skeen"
+		window.isMaster()
 			? window.supabase
 					.from("userRewardPurchases")
 					.select("*, rewards(title, cost, type)")
+					.eq("master_username", window.activeMasterContext)
 					.order("purchaseDate", { ascending: false })
 			: window.supabase
 					.from("userRewardPurchases")
 					.select("*, rewards(title, cost, type)")
 					.eq("userId", window.currentUser)
+					.eq("master_username", window.activeMasterContext)
 					.order("purchaseDate", { ascending: false });
 	const { data, error } = await query;
 
@@ -436,9 +443,9 @@ window.fetchUserRewardPurchasesInitial = async function () {
 		window.showError("Failed to load purchase history.");
 	} else {
 		window.userRewardPurchases = data;
-		if (window.activeTab === "shop" || window.currentUser === "skeen") {
+		if (window.activeTab === "shop" || window.isMaster()) {
 			window.renderUserRewardPurchases();
-			if (window.currentUser === "skeen") {
+			if (window.isMaster()) {
 				window.renderPendingAuthorizations();
 			}
 		}
@@ -452,12 +459,12 @@ window.fetchRewardSystemSettingsInitial = async function () {
 	const { data, error } = await window.supabase
 		.from("rewardSystemSettings")
 		.select("*")
-		.eq("id", "system_settings")
+		.eq("master_username", window.activeMasterContext)
 		.limit(1);
 	if (error) {
 		console.error("Error fetching reward system settings:", error);
 		window.rewardSystemSettings = {
-			id: "system_settings",
+			master_username: window.activeMasterContext,
 			instantPurchaseLimit: 500,
 			currentInstantSpend: 0,
 			resetDurationDays: 30,
@@ -466,13 +473,13 @@ window.fetchRewardSystemSettingsInitial = async function () {
 		};
 		await window.supabase
 			.from("rewardSystemSettings")
-			.upsert([window.rewardSystemSettings], { onConflict: "id" });
+			.upsert([window.rewardSystemSettings], { onConflict: "master_username" });
 	} else if (data && data.length > 0) {
 		window.rewardSystemSettings = data[0];
 		window.checkForRewardLimitReset();
 	} else {
 		window.rewardSystemSettings = {
-			id: "system_settings",
+			master_username: window.activeMasterContext,
 			instantPurchaseLimit: 500,
 			currentInstantSpend: 0,
 			resetDurationDays: 30,
@@ -481,10 +488,10 @@ window.fetchRewardSystemSettingsInitial = async function () {
 		};
 		await window.supabase
 			.from("rewardSystemSettings")
-			.upsert([window.rewardSystemSettings], { onConflict: "id" });
+			.upsert([window.rewardSystemSettings], { onConflict: "master_username" });
 	}
 	if (
-		window.currentUser === "skeen" &&
+		window.isMaster() &&
 		(window.activeTab === "dashboard" ||
 			window.activeTab === "adminSettings")
 	) {

@@ -8,13 +8,22 @@
  */
 window.attemptAutoLogin = async function () {
 	const rememberedUser = localStorage.getItem("rememberedUser");
-	// Ensure users object is available (it's defined globally in main.js)
-	if (rememberedUser && window.users && window.users[rememberedUser]) {
+	if (rememberedUser) {
 		window.currentUser = rememberedUser;
-		console.log(`Auto-logging in as ${window.currentUser}`);
-		await window.showMainApp(); // Show the main application UI
+		await window.loadUsersFromDB();
+		if (
+			window.users[rememberedUser] &&
+			window.users[rememberedUser].status === "active"
+		) {
+			console.log(`Auto-logging in as ${window.currentUser}`);
+			await window.showMainApp();
+		} else {
+			window.currentUser = null;
+			localStorage.removeItem("rememberedUser");
+			window.showLogin();
+		}
 	} else {
-		window.showLogin(); // Show the login screen
+		window.showLogin();
 	}
 };
 
@@ -36,7 +45,7 @@ window.handleLogin = async function (e) {
 	// Only check Supabase - remove local password verification
 	const { data, error } = await window.supabase
 		.from("users")
-		.select("username, password, role")
+		.select("username, password, role, display_name, status")
 		.eq("username", username)
 		.eq("password", password)
 		.limit(1);
@@ -48,10 +57,16 @@ window.handleLogin = async function (e) {
 	}
 
 	const userData = data[0];
+	if (userData.status && userData.status !== "active") {
+		window.showError("This account has been deactivated.");
+		return;
+	}
+	window.currentUser = userData.username;
 
-	// Only check if user exists in local users object (for permissions/role)
+	// Load all users dynamically from DB
+	await window.loadUsersFromDB();
+
 	if (window.users[userData.username]) {
-		window.currentUser = userData.username;
 		if (rememberMe) {
 			localStorage.setItem("rememberedUser", window.currentUser);
 		} else {
@@ -60,6 +75,7 @@ window.handleLogin = async function (e) {
 		await window.showMainApp();
 		window.hideError();
 	} else {
+		window.currentUser = null;
 		window.showError("User configuration not found");
 	}
 };

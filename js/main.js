@@ -3,29 +3,8 @@
 
 // Global application state variables
 // These are declared here, and other files access them via the window object.
-const users = {
-	skeen: {
-		role: "skeen",
-		displayName: "Sir",
-		permissions: [
-			"create_task",
-			"approve_task",
-			"delete_task",
-			"view_all_tasks",
-			"manage_users", // For admin points control
-			"view_dashboard",
-			"approve_suggestions",
-			"manage_rewards", // Admin can manage rewards
-		],
-		points: 0, // Admin points should always remain 0 and not be tracked
-	},
-	schinken: {
-		role: "schinken",
-		displayName: "Pig",
-		permissions: ["check_task", "view_assigned_tasks", "suggest_task"],
-		points: 0,
-	},
-};
+// Users object is populated dynamically from Supabase by database-pigs.js loadUsersFromDB()
+const users = {};
 let currentUser = null;
 let tasks = [];
 let suggestions = [];
@@ -348,7 +327,7 @@ window.bulletproofStopTracker = async function (trackerId) {
 		}
 
 		// Update user view
-		if (window.currentUser === "schinken" && window.updateLiveCostTracker) {
+		if (window.isSlave && window.isSlave() && window.updateLiveCostTracker) {
 			// Set flag to prevent showing other trackers
 			window.userManuallyStoppedTracker = true;
 			setTimeout(() => {
@@ -410,7 +389,8 @@ window.emergencyStopAll = async function () {
 			await window.supabase
 				.from("active_cost_trackers")
 				.select("id, description")
-				.eq("status", "running");
+				.eq("status", "running")
+				.eq("master_username", window.activeMasterContext);
 
 		if (fetchError) {
 			console.error("Failed to fetch running trackers:", fetchError);
@@ -433,7 +413,8 @@ window.emergencyStopAll = async function () {
 				updated_at: new Date().toISOString(),
 				notes: "Emergency stop - admin intervention",
 			})
-			.eq("status", "running");
+			.eq("status", "running")
+			.eq("master_username", window.activeMasterContext);
 
 		if (stopError) {
 			console.error("Failed to stop trackers:", stopError);
@@ -663,7 +644,8 @@ window.fetchActiveCostTrackersWithRetry = async function (retryCount = 0) {
 		const { data, error } = await window.supabase
 			.from("active_cost_trackers")
 			.select("*")
-			.eq("status", "running");
+			.eq("status", "running")
+			.eq("master_username", window.activeMasterContext);
 
 		if (error) {
 			throw error;
@@ -674,10 +656,10 @@ window.fetchActiveCostTrackersWithRetry = async function (retryCount = 0) {
 		);
 
 		// Update UI based on current user
-		if (window.currentUser === "skeen") {
+		if (window.isMaster && window.isMaster()) {
 			window.renderActiveCostTrackersAdmin();
 			window.updateActiveCostTrackersCount();
-		} else if (window.currentUser === "schinken") {
+		} else if (window.isSlave && window.isSlave()) {
 			window.updateLiveCostTracker();
 		}
 

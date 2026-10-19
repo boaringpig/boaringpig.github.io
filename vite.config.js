@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 import { ViteMinifyPlugin } from "vite-plugin-minify";
 import { minifyHtmlStringsPlugin } from "./vite-plugin-minify-html-strings.js";
 
@@ -26,6 +27,7 @@ export default defineConfig({
 			...minifyHtmlStringsPlugin(),
 			enforce: "pre",
 		},
+		react(),
 		ViteMinifyPlugin({
 			collapseWhitespace: true,
 			removeComments: true,

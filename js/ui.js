@@ -129,7 +129,7 @@ window.switchTab = function (tabName) {
 	window.activeTab = tabName;
 
 	// Clear live cost tracker intervals when switching tabs (except for schinken user)
-	if (window.currentUser !== "schinken") {
+	if (!window.isSlave()) {
 		window.clearLiveCostTrackerIntervals();
 	}
 
@@ -147,12 +147,13 @@ window.switchTab = function (tabName) {
 		window.renderUserRewardPurchases();
 	} else if (tabName === "adminSettings") {
 		if (
-			window.currentUser === "skeen" &&
+			window.isMaster() &&
 			window.hasPermission("manage_rewards")
 		) {
 			window.renderAdminRewardManagement();
 			window.renderPendingAuthorizations();
 			window.renderAdminRewardSettings();
+			if (window.renderPigList) window.renderPigList();
 		} else {
 			const adminRewardManagement = document.getElementById(
 				"adminRewardManagement"
@@ -162,8 +163,12 @@ window.switchTab = function (tabName) {
 		}
 	} else if (tabName === "tasks") {
 		// For the 'tasks' tab, fetch and render all data for the admin
-		if (window.currentUser === "skeen") {
+		if (window.isMaster()) {
 			window.renderTasks();
+		}
+	} else if (tabName === "masters") {
+		if (window.isAdmin()) {
+			window.renderMastersList();
 		}
 	}
 };
@@ -187,7 +192,7 @@ window.showMainApp = async function () {
 	var userPointsBadge = document.getElementById("userPoints");
 	if (userPointsBadge) {
 		userPointsBadge.style.display =
-			user.role === "skeen" ? "none" : "inline-block";
+			user.role === "master" ? "none" : "inline-block";
 	}
 	window.logUserActivity("login");
 
@@ -195,13 +200,29 @@ window.showMainApp = async function () {
 	var suggestTab = document.getElementById("suggestTab");
 	var shopTab = document.getElementById("shopTab");
 	var adminSettingsTab = document.getElementById("adminSettingsTab");
+	var mastersTab = document.getElementById("mastersTab");
 	var adminView = document.getElementById("adminView");
 	var userView = document.getElementById("userView");
+
+	if (mastersTab) mastersTab.style.display = window.isAdmin() ? "block" : "none";
+
+	if (window.loadGroupTerms) {
+		await window.loadGroupTerms();
+	}
+	if (window.renderGroupContextSwitcher) {
+		window.renderGroupContextSwitcher();
+	}
+	if (window.maybeAutoEnterBetaMode) {
+		await window.maybeAutoEnterBetaMode();
+	}
 	var adminRewardManagement = document.getElementById(
 		"adminRewardManagement"
 	);
 
-	if (window.currentUser === "skeen") {
+	var managePigsSection = document.getElementById("managePigsSection");
+	var pigAssignmentRow = document.getElementById("pigAssignmentRow");
+
+	if (window.isMaster()) {
 		if (dashboardTab) dashboardTab.style.display = "block";
 		if (suggestTab) suggestTab.style.display = "none";
 		if (shopTab) shopTab.style.display = "none";
@@ -219,6 +240,9 @@ window.showMainApp = async function () {
 			)
 				? "block"
 				: "none";
+		if (managePigsSection) managePigsSection.style.display = "block";
+		if (pigAssignmentRow) pigAssignmentRow.style.display = "flex";
+		window.renderPigCheckboxes();
 	} else {
 		if (dashboardTab) dashboardTab.style.display = "none";
 		if (suggestTab) suggestTab.style.display = "block";
@@ -227,6 +251,8 @@ window.showMainApp = async function () {
 		if (adminView) adminView.style.display = "none";
 		if (userView) userView.style.display = "block";
 		if (adminRewardManagement) adminRewardManagement.style.display = "none";
+		if (managePigsSection) managePigsSection.style.display = "none";
+		if (pigAssignmentRow) pigAssignmentRow.style.display = "none";
 	}
 
 	// Initialize the tool buttons here
@@ -297,18 +323,18 @@ window.showMainApp = async function () {
 					);
 				}
 				if (
-					window.currentUser === "skeen" &&
+					window.isMaster() &&
 					window.hasPermission("manage_rewards")
 				) {
 					window.renderAdminRewardManagement();
 					window.renderPendingAuthorizations();
 					window.renderAdminRewardSettings();
-				} else if (window.currentUser !== "skeen") {
+				} else if (!window.isMaster()) {
 					window.renderRewards();
 					window.renderUserRewardPurchases();
 				}
 				// FIX: For the admin, explicitly render tasks after data is loaded on initial page load
-				if (window.currentUser === "skeen") {
+				if (window.isMaster()) {
 					window.renderTasks();
 				}
 			})

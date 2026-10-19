@@ -88,7 +88,12 @@ window.loadData = async function () {
 		.channel("tasks_channel")
 		.on(
 			"postgres_changes",
-			{ event: "*", schema: "public", table: "tasks" },
+			{
+				event: "*",
+				schema: "public",
+				table: "tasks",
+				filter: "master_username=eq." + window.activeMasterContext,
+			},
 			(payload) => {
 				try {
 					console.log("Task change received!", payload);
@@ -129,7 +134,12 @@ window.loadData = async function () {
 		.channel("suggestions_channel")
 		.on(
 			"postgres_changes",
-			{ event: "*", schema: "public", table: "suggestions" },
+			{
+				event: "*",
+				schema: "public",
+				table: "suggestions",
+				filter: "master_username=eq." + window.activeMasterContext,
+			},
 			(payload) => {
 				try {
 					console.log("Suggestion change received!", payload);
@@ -152,10 +162,10 @@ window.loadData = async function () {
 					);
 
 					// Re-render the correct UI based on the current user and tab
-					if (window.currentUser === "skeen") {
-						window.renderTasks(); // This will call renderAdminView and then renderAdminSuggestions
+					if (window.isMaster()) {
+						window.renderTasks();
 					} else {
-						window.renderSuggestions(); // This is for 'schinken's' view
+						window.renderSuggestions();
 					}
 				} catch (error) {
 					console.error(
@@ -175,7 +185,12 @@ window.loadData = async function () {
 		.channel("activity_channel")
 		.on(
 			"postgres_changes",
-			{ event: "*", schema: "public", table: "userActivity" },
+			{
+				event: "*",
+				schema: "public",
+				table: "userActivity",
+				filter: "master_username=eq." + window.activeMasterContext,
+			},
 			(payload) => {
 				try {
 					console.log("Activity change received!", payload);
@@ -216,7 +231,12 @@ window.loadData = async function () {
 		.channel("user_profiles_channel")
 		.on(
 			"postgres_changes",
-			{ event: "*", schema: "public", table: "userProfiles" },
+			{
+				event: "*",
+				schema: "public",
+				table: "userProfiles",
+				filter: "master_username=eq." + window.activeMasterContext,
+			},
 			(payload) => {
 				try {
 					console.log("User profile change received!", payload);
@@ -251,7 +271,12 @@ window.loadData = async function () {
 		.channel("rewards_channel")
 		.on(
 			"postgres_changes",
-			{ event: "*", schema: "public", table: "rewards" },
+			{
+				event: "*",
+				schema: "public",
+				table: "rewards",
+				filter: "master_username=eq." + window.activeMasterContext,
+			},
 			(payload) => {
 				console.log("Reward change received!", payload);
 				if (payload.eventType === "INSERT") {
@@ -269,10 +294,10 @@ window.loadData = async function () {
 				window.rewards.sort((a, b) => a.title.localeCompare(b.title));
 				if (
 					window.activeTab === "shop" ||
-					window.currentUser === "skeen"
+					window.isMaster()
 				) {
 					window.renderRewards();
-					if (window.currentUser === "skeen") {
+					if (window.isMaster()) {
 						window.renderAdminRewardManagement();
 					}
 				}
@@ -284,12 +309,17 @@ window.loadData = async function () {
 		.channel("user_reward_purchases_channel")
 		.on(
 			"postgres_changes",
-			{ event: "*", schema: "public", table: "userRewardPurchases" },
+			{
+				event: "*",
+				schema: "public",
+				table: "userRewardPurchases",
+				filter: "master_username=eq." + window.activeMasterContext,
+			},
 			async (payload) => {
 				console.log("User reward purchase change received!", payload);
 				await window.fetchUserRewardPurchasesInitial();
 				if (
-					window.currentUser === "skeen" ||
+					window.isMaster() ||
 					window.activeTab === "shop"
 				) {
 					window.renderUserRewardPurchases();
@@ -303,7 +333,12 @@ window.loadData = async function () {
 		.channel("reward_system_settings_channel")
 		.on(
 			"postgres_changes",
-			{ event: "*", schema: "public", table: "rewardSystemSettings" },
+			{
+				event: "*",
+				schema: "public",
+				table: "rewardSystemSettings",
+				filter: "master_username=eq." + window.activeMasterContext,
+			},
 			async (payload) => {
 				console.log("Reward system settings change received!", payload);
 				if (
@@ -313,7 +348,7 @@ window.loadData = async function () {
 					window.rewardSystemSettings = payload.new;
 					window.checkForRewardLimitReset();
 					if (
-						window.currentUser === "skeen" &&
+						window.isMaster() &&
 						(window.activeTab === "dashboard" ||
 							window.activeTab === "adminSettings")
 					) {
@@ -332,7 +367,12 @@ window.loadData = async function () {
 		.channel("active_cost_trackers_channel")
 		.on(
 			"postgres_changes",
-			{ event: "*", schema: "public", table: "active_cost_trackers" },
+			{
+				event: "*",
+				schema: "public",
+				table: "active_cost_trackers",
+				filter: "master_username=eq." + window.activeMasterContext,
+			},
 			async (payload) => {
 				console.log("Active cost tracker change received!", payload);
 				console.log("Event type:", payload.eventType);
@@ -352,7 +392,7 @@ window.loadData = async function () {
 					const stoppedTrackerId = payload.new.id;
 
 					// Clear the display ONLY if the stopped tracker was the one being displayed
-					if (window.currentUser === "schinken") {
+					if (window.isSlave()) {
 						const liveCostTracker =
 							document.getElementById("liveCostTracker");
 
@@ -411,10 +451,10 @@ window.loadData = async function () {
 				}
 
 				// Update UI for both admin and user views
-				if (window.currentUser === "skeen") {
+				if (window.isMaster()) {
 					window.renderActiveCostTrackersAdmin();
 					window.updateActiveCostTrackersCount();
-				} else if (window.currentUser === "schinken") {
+				} else if (window.isSlave()) {
 					// IMPROVED: Don't auto-show trackers if user just manually stopped one
 					if (!window.userManuallyStoppedTracker) {
 						// Use setTimeout to ensure UI update happens after data refresh
@@ -507,7 +547,7 @@ window.checkForOverdueTasks = function () {
 			task.dueDate &&
 			task.status !== "completed" &&
 			task.type !== "demerit" &&
-			task.assignedTo === "schinken"
+			window.users[task.assignedTo] && window.users[task.assignedTo].role === "slave"
 		) {
 			const wasOverdue = task.isOverdue;
 			const isNowOverdue = new Date(task.dueDate) < now;

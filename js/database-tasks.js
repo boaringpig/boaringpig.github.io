@@ -5,7 +5,10 @@
  * Fetches all tasks from Supabase.
  */
 window.fetchTasksInitial = async function () {
-	const { data, error } = await window.supabase.from("tasks").select("*");
+	const { data, error } = await window.supabase
+		.from("tasks")
+		.select("*")
+		.eq("master_username", window.activeMasterContext);
 	if (error) {
 		console.error("Error fetching tasks:", error);
 		window.showError("Failed to load tasks.");
@@ -13,6 +16,24 @@ window.fetchTasksInitial = async function () {
 		window.tasks = data.sort(
 			(a, b) => new Date(b.createdAt) - new Date(a.createdAt)
 		);
+
+		// Fetch shared task assignments for the current user
+		if (window.isSlave && window.isSlave()) {
+			try {
+				var { data: assignments, error: assignError } = await window.supabase
+					.from("task_assignments")
+					.select("task_id")
+					.eq("assigned_to", window.currentUser)
+					.eq("master_username", window.activeMasterContext);
+				if (!assignError && assignments) {
+					window.mySharedTaskIds = assignments.map(function (a) { return a.task_id; });
+				}
+			} catch (e) {
+				console.error("Error fetching task assignments:", e);
+				window.mySharedTaskIds = [];
+			}
+		}
+
 		window.renderTasks();
 		window.updateStats();
 		if (window.activeTab === "calendar" && window.fullCalendarInstance) {
@@ -25,8 +46,16 @@ window.fetchTasksInitial = async function () {
 
 /**
  * Creates a new task (regular or demerit) and saves it to Supabase.
+ *
+ * `overrides` is optional and lets a non-DOM caller (e.g. the React beta UI)
+ * pass values directly instead of this function reading them out of the
+ * classic HTML form's inputs. Any field left out of `overrides` falls back
+ * to the classic DOM read, so calling this with no arguments at all behaves
+ * exactly as before.
  */
-window.createTask = async function () {
+window.createTask = async function (overrides) {
+	overrides = overrides || {};
+
 	if (!window.hasPermission("create_task")) {
 		window.showNotification(
 			"You do not have permission to create tasks",
@@ -36,10 +65,16 @@ window.createTask = async function () {
 	}
 
 	const taskInput = document.getElementById("taskInput");
-	const taskText = taskInput.value.trim();
-	const isDemerit = document.getElementById("isDemerit")
-		? document.getElementById("isDemerit").checked
-		: false;
+	const taskText =
+		overrides.text !== undefined
+			? overrides.text.trim()
+			: taskInput.value.trim();
+	const isDemerit =
+		overrides.isDemerit !== undefined
+			? overrides.isDemerit
+			: document.getElementById("isDemerit")
+			? document.getElementById("isDemerit").checked
+			: false;
 
 	if (taskText === "") {
 		window.showNotification("Please enter a task description", "error");
@@ -47,59 +82,110 @@ window.createTask = async function () {
 	}
 
 	let task;
+	let finalPenaltyPoints = 5;
+
+	// Get selected pigs and assignment mode
+	var selectedPigs =
+		overrides.selectedPigs !== undefined
+			? overrides.selectedPigs
+			: window.getSelectedPigs
+			? window.getSelectedPigs()
+			: [];
+	var assignmentMode =
+		overrides.assignmentMode !== undefined
+			? overrides.assignmentMode
+			: window.getAssignmentMode
+			? window.getAssignmentMode()
+			: "individual";
+
+	if (selectedPigs.length === 0) {
+		var defaultPig = window.getSlaves()[0];
+		if (defaultPig) {
+			selectedPigs = [defaultPig];
+		} else {
+			window.showNotification(
+				"No " + window.term("slavePlural") + " available to assign tasks to.",
+				"error"
+			);
+			return;
+		}
+	}
 
 	try {
 		if (isDemerit) {
 			const penaltyPoints =
-				parseInt(document.getElementById("penaltyPoints").value) || 5;
+				overrides.penaltyPoints !== undefined
+					? parseInt(overrides.penaltyPoints) || 5
+					: parseInt(document.getElementById("penaltyPoints").value) || 5;
+			finalPenaltyPoints = penaltyPoints;
 
-			task = {
-				text: taskText,
-				status: "demerit_issued",
-				type: "demerit",
-				createdAt: new Date().toISOString(),
-				createdBy: window.currentUser,
-				assignedTo: "schinken",
-				points: 0,
-				penaltyPoints: penaltyPoints,
-				dueDate: null,
-				isRepeating: false,
-				repeatInterval: null,
-				completedAt: null,
-				completedBy: null,
-				approvedAt: null,
-				approvedBy: null,
-				isOverdue: false,
-				appealStatus: null,
-				appealedAt: null,
-				appealReviewedAt: null,
-				appealReviewedBy: null,
-				acceptedAt: null,
-				appealText: null,
-				// Add the new fields here, setting them to null for tasks not from a suggestion
-				originalSuggestionId: null,
-				originalSuggestedBy: null,
-			};
-			await window.updateUserPoints(
-				"schinken",
-				penaltyPoints,
-				"subtract"
-			);
+			// Demerits are always individual copies
+			for (var pi = 0; pi < selectedPigs.length; pi++) {
+				var demeritPig = selectedPigs[pi];
+				task = {
+					text: taskText,
+					status: "demerit_issued",
+					type: "demerit",
+					createdAt: new Date().toISOString(),
+					createdBy: window.currentUser,
+					master_username: window.activeMasterContext,
+					assignedTo: demeritPig,
+					points: 0,
+					penaltyPoints: penaltyPoints,
+					dueDate: null,
+					isRepeating: false,
+					repeatInterval: null,
+					completedAt: null,
+					completedBy: null,
+					approvedAt: null,
+					approvedBy: null,
+					isOverdue: false,
+					appealStatus: null,
+					appealedAt: null,
+					appealReviewedAt: null,
+					appealReviewedBy: null,
+					acceptedAt: null,
+					appealText: null,
+					originalsuggestionid: null,
+					originalsuggestedby: null,
+				};
+
+				var { error: demeritError } = await window.supabase
+					.from("tasks")
+					.insert([task]);
+				if (demeritError) {
+					console.error("Error creating demerit for " + demeritPig + ":", demeritError);
+				}
+				await window.updateUserPoints(demeritPig, penaltyPoints, "subtract");
+			}
 		} else {
 			const points =
-				parseInt(document.getElementById("taskPoints").value) || 10;
+				overrides.points !== undefined
+					? parseInt(overrides.points) || 10
+					: parseInt(document.getElementById("taskPoints").value) || 10;
 			const penaltyPoints =
-				parseInt(document.getElementById("penaltyPoints").value) || 5;
+				overrides.penaltyPoints !== undefined
+					? parseInt(overrides.penaltyPoints) || 5
+					: parseInt(document.getElementById("penaltyPoints").value) || 5;
 
 			// Use the new Flatpickr-compatible input
-			const dueDate = document.getElementById("taskDueDate").value;
+			const dueDate =
+				overrides.dueDate !== undefined
+					? overrides.dueDate
+					: document.getElementById("taskDueDate").value;
 
-			const isRepeating = document.getElementById("isRepeating")
-				? document.getElementById("isRepeating").checked
-				: false;
-			const repeatInterval = document.getElementById("repeatInterval")
-				? document.getElementById("repeatInterval").value
-				: null;
+			const isRepeating =
+				overrides.isRepeating !== undefined
+					? overrides.isRepeating
+					: document.getElementById("isRepeating")
+					? document.getElementById("isRepeating").checked
+					: false;
+			const repeatInterval =
+				overrides.repeatInterval !== undefined
+					? overrides.repeatInterval
+					: document.getElementById("repeatInterval")
+					? document.getElementById("repeatInterval").value
+					: null;
 
 			// More robust date validation for the new date picker
 			if (dueDate) {
@@ -122,39 +208,95 @@ window.createTask = async function () {
 				}
 			}
 
-			task = {
-				text: taskText,
-				status: "todo",
-				type: "regular",
-				createdAt: new Date().toISOString(),
-				createdBy: window.currentUser,
-				assignedTo: "schinken",
-				points: points,
-				penaltyPoints: penaltyPoints,
-				dueDate: dueDate || null,
-				isRepeating: isRepeating,
-				repeatInterval: isRepeating ? repeatInterval : null,
-				completedAt: null,
-				completedBy: null,
-				approvedAt: null,
-				approvedBy: null,
-				isOverdue: false,
-				// Add the new fields here, setting them to null for tasks not from a suggestion
-				originalSuggestionId: null,
-				originalSuggestedBy: null,
-			};
+			if (assignmentMode === "shared" && selectedPigs.length > 1) {
+				// Shared task: one task record, multiple assignees via task_assignments
+				task = {
+					text: taskText,
+					status: "todo",
+					type: "regular",
+					createdAt: new Date().toISOString(),
+					createdBy: window.currentUser,
+					master_username: window.activeMasterContext,
+					assignedTo: null,
+					assignment_mode: "shared",
+					points: points,
+					penaltyPoints: penaltyPoints,
+					dueDate: dueDate || null,
+					isRepeating: isRepeating,
+					repeatInterval: isRepeating ? repeatInterval : null,
+					completedAt: null,
+					completedBy: null,
+					approvedAt: null,
+					approvedBy: null,
+					isOverdue: false,
+					originalsuggestionid: null,
+					originalsuggestedby: null,
+				};
+
+				var { data: insertedTask, error: sharedError } = await window.supabase
+					.from("tasks")
+					.insert([task])
+					.select();
+
+				if (sharedError) {
+					console.error("Error creating shared task:", sharedError);
+					window.showNotification("Failed to create shared task.", "error");
+					return;
+				}
+
+				if (insertedTask && insertedTask[0]) {
+					var assignments = selectedPigs.map(function(pig) {
+						return {
+							task_id: insertedTask[0].id,
+							assigned_to: pig,
+							status: "todo",
+							master_username: window.activeMasterContext,
+						};
+					});
+					var { error: assignError } = await window.supabase
+						.from("task_assignments")
+						.insert(assignments);
+					if (assignError) {
+						console.error("Error creating task assignments:", assignError);
+					}
+				}
+			} else {
+				// Individual copies: one task per pig
+				for (var ti = 0; ti < selectedPigs.length; ti++) {
+					task = {
+						text: taskText,
+						status: "todo",
+						type: "regular",
+						createdAt: new Date().toISOString(),
+						createdBy: window.currentUser,
+						master_username: window.activeMasterContext,
+						assignedTo: selectedPigs[ti],
+						points: points,
+						penaltyPoints: penaltyPoints,
+						dueDate: dueDate || null,
+						isRepeating: isRepeating,
+						repeatInterval: isRepeating ? repeatInterval : null,
+						completedAt: null,
+						completedBy: null,
+						approvedAt: null,
+						approvedBy: null,
+						isOverdue: false,
+						originalsuggestionid: null,
+						originalsuggestedby: null,
+					};
+
+					var { error: indivError } = await window.supabase
+						.from("tasks")
+						.insert([task]);
+					if (indivError) {
+						console.error("Error creating task for " + selectedPigs[ti] + ":", indivError);
+					}
+				}
+			}
 		}
 
-		const { error: taskError } = await window.supabase
-			.from("tasks")
-			.insert([task]);
-		if (taskError) {
-			console.error("Error creating task:", taskError);
-			window.showNotification(
-				"Failed to create task. Please try again.",
-				"error"
-			);
-		} else {
+		// If we get here without early return, it succeeded
+		{
 			taskInput.value = "";
 			const taskPointsEl = document.getElementById("taskPoints");
 			const penaltyPointsEl = document.getElementById("penaltyPoints");
@@ -180,11 +322,14 @@ window.createTask = async function () {
 
 			if (isDemerit) {
 				window.showNotification(
-					`Demerit task issued to user. ${task.penaltyPoints} points deducted.`,
+					"Demerit issued to " + selectedPigs.length + " " + window.term("slave") + "(s). " + finalPenaltyPoints + " points deducted each.",
 					"warning"
 				);
 			} else {
-				window.showNotification("Task created successfully!");
+				window.showNotification(
+					"Task created for " + selectedPigs.length + " " + window.term("slave") + "(s)!" +
+					(assignmentMode === "shared" && selectedPigs.length > 1 ? " (Shared)" : "")
+				);
 			}
 			await window.fetchTasksInitial();
 		}
@@ -572,7 +717,8 @@ window.createRepeatingTask = async function (originalTask) {
 		type: "regular",
 		createdAt: new Date().toISOString(),
 		createdBy: originalTask.createdBy,
-		assignedTo: "schinken",
+		master_username: originalTask.master_username,
+		assignedTo: originalTask.assignedTo,
 		points: originalTask.points,
 		penaltyPoints: originalTask.penaltyPoints,
 		dueDate: nextDueDate.toISOString(),

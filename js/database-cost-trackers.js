@@ -8,7 +8,8 @@ window.fetchActiveCostTrackersInitial = async function () {
 	const { data, error } = await window.supabase
 		.from("active_cost_trackers")
 		.select("*")
-		.eq("status", "running");
+		.eq("status", "running")
+		.eq("master_username", window.activeMasterContext);
 
 	if (error) {
 		console.error("Error fetching active cost trackers:", error);
@@ -19,10 +20,10 @@ window.fetchActiveCostTrackersInitial = async function () {
 		);
 
 		// Update UI for both admin and user views
-		if (window.currentUser === "skeen") {
+		if (window.isMaster()) {
 			window.renderActiveCostTrackersAdmin();
 			window.updateActiveCostTrackersCount();
-		} else if (window.currentUser === "schinken") {
+		} else if (window.isSlave()) {
 			window.updateLiveCostTracker();
 		}
 	}
@@ -39,7 +40,8 @@ window.stopAllActiveCostTrackers = async function () {
 	const { data: activeTrackers, error: fetchError } = await window.supabase
 		.from("active_cost_trackers")
 		.select("*")
-		.eq("status", "running");
+		.eq("status", "running")
+		.eq("master_username", window.activeMasterContext);
 
 	if (fetchError) {
 		console.error("Error fetching active trackers:", fetchError);
@@ -56,7 +58,8 @@ window.stopAllActiveCostTrackers = async function () {
 				status: "stopped",
 				updated_at: new Date().toISOString(),
 			})
-			.eq("status", "running");
+			.eq("status", "running")
+			.eq("master_username", window.activeMasterContext);
 
 		if (updateError) {
 			console.error("Error stopping active trackers:", updateError);
@@ -89,6 +92,7 @@ window.startLiveCostTracker = async function (
 
 	const tracker = {
 		created_by: window.currentUser,
+		master_username: window.activeMasterContext,
 		started_at: new Date().toISOString(),
 		description: description || "Cost Tracker Running",
 		rate: rate || 50.0,
@@ -279,7 +283,8 @@ Time-based Cost: ${timeText} @ ${tracker.currency}${tracker.rate.toFixed(
 				type: "cost-tracker",
 				createdAt: new Date().toISOString(),
 				createdBy: window.currentUser,
-				assignedTo: "schinken",
+				master_username: window.activeMasterContext,
+				assignedTo: window.getSlaves()[0] || window.currentUser,
 				points: 0,
 				penaltyPoints: 100,
 				dueDate: new Date(

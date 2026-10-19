@@ -1,0 +1,69 @@
+/*
+ * Base/reset rules for the beta dashboard. Mobile-first: unprefixed rules
+ * target small screens, and the @media rule below widens the layout for
+ * desktop. See src/beta/README.md's "Responsive approach" section.
+ */
+
+.betaApp {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+		Helvetica, Arial, sans-serif;
+	min-height: 100vh;
+	box-sizing: border-box;
+	font-size: 15px;
+	line-height: 1.5;
+}
+
+.betaApp *,
+.betaApp *::before,
+.betaApp *::after {
+	box-sizing: border-box;
+}
+
+.betaApp button,
+.betaApp input,
+.betaApp select,
+.betaApp textarea {
+	font-family: inherit;
+	font-size: inherit;
+	color: inherit;
+}
+
+.betaApp a {
+	color: var(--color-accent);
+}
+
+/* A visible focus ring for keyboard users on every interactive element,
+   satisfying the "explicitly define... focus" requirement app-wide instead
+   of per-component. Mouse users don't see it (:focus-visible), keyboard
+   users always do. */
+.betaApp button:focus-visible,
+.betaApp input:focus-visible,
+.betaApp select:focus-visible,
+.betaApp textarea:focus-visible,
+.betaApp a:focus-visible,
+.betaApp [tabindex]:focus-visible {
+	outline: 2px solid var(--focus-ring);
+	outline-offset: 2px;
+}
+
+.betaApp .visuallyHidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+.betaContainer {
+	width: 100%;
+	max-width: 1100px;
+	margin: 0 auto;
+	padding: var(--space-4);
+}
+
+@media (min-width: 768px) {
+	.betaContainer {
+		padding: var(--space-6);
+	}
+}

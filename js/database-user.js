@@ -9,7 +9,7 @@ const LOGIN_DEBOUNCE_TIME = 5000;
  * @param {string} action - The action performed (e.g., 'login', 'logout').
  */
 window.logUserActivity = async function (action) {
-	if (window.currentUser !== "schinken" && window.currentUser !== "skeen") {
+	if (!window.users[window.currentUser]) {
 		return;
 	}
 
@@ -27,6 +27,7 @@ window.logUserActivity = async function (action) {
 	const activity = {
 		user: window.currentUser,
 		action: action,
+		master_username: window.activeMasterContext,
 		timestamp: new Date().toISOString(),
 	};
 	window.userActivityLog.unshift(activity);
@@ -52,6 +53,7 @@ window.fetchUserActivityInitial = async function () {
 	const { data, error } = await window.supabase
 		.from("userActivity")
 		.select("*")
+		.eq("master_username", window.activeMasterContext)
 		.order("timestamp", { ascending: false })
 		.limit(50);
 	if (error) {
@@ -68,7 +70,8 @@ window.fetchUserActivityInitial = async function () {
 window.fetchUserProfilesInitial = async function () {
 	const { data, error } = await window.supabase
 		.from("userProfiles")
-		.select("*");
+		.select("*")
+		.eq("master_username", window.activeMasterContext);
 	if (error) {
 		console.error("Error fetching user profiles:", error);
 	} else {
@@ -96,7 +99,7 @@ window.updateUserPoints = async function (
 	operation = null
 ) {
 	// Admin points are always kept at 0 and not tracked
-	if (username === "skeen") {
+	if (window.users[username] && window.users[username].role === "master") {
 		if (operation === "set") {
 			window.users[username].points = 0; // Always keep admin at 0
 		} else if (operation === "add") {
@@ -145,10 +148,11 @@ window.updateUserPoints = async function (
 		const { error } = await window.supabase.from("userProfiles").upsert(
 			{
 				username: username,
+				master_username: window.activeMasterContext,
 				points: window.users[username].points,
 				updatedAt: new Date().toISOString(),
 			},
-			{ onConflict: "username" }
+			{ onConflict: "master_username,username" }
 		);
 		if (error) {
 			console.error(
@@ -190,7 +194,7 @@ window.updateUserPoints = async function (
 	}
 
 	// Update admin points control if it exists (for any user update)
-	if (username === "schinken" && window.updateAdminPointsDisplay) {
+	if (window.users[username] && window.users[username].role === "slave" && window.updateAdminPointsDisplay) {
 		window.updateAdminPointsDisplay();
 	}
 
@@ -215,6 +219,17 @@ window.setUserPoints = async function () {
 		return;
 	}
 
+	var targetPig = document.getElementById("adminPointsPigSelect");
+	var pigUsername = targetPig ? targetPig.value : window.getSlaves()[0];
+
+	if (!pigUsername || !window.users[pigUsername]) {
+		window.showNotification(
+			"Please select a valid " + window.term("slave") + ".",
+			"error"
+		);
+		return;
+	}
+
 	const input = document.getElementById("adminPointsInput");
 	const newPoints = parseInt(input.value);
 
@@ -223,20 +238,20 @@ window.setUserPoints = async function () {
 		return;
 	}
 
-	const oldPoints = window.users["schinken"].points || 0;
-	await window.updateUserPoints("schinken", newPoints, "set");
+	const oldPoints = window.users[pigUsername].points || 0;
+	await window.updateUserPoints(pigUsername, newPoints, "set");
 
+	var displayName = window.users[pigUsername].displayName || pigUsername;
 	window.showNotification(
-		`User points changed from ${oldPoints} to ${newPoints}`,
+		displayName + " points changed from " + oldPoints + " to " + newPoints,
 		"success"
 	);
 
-	// Log the change
 	try {
 		const activity = {
 			user: window.currentUser,
 			action: "points_changed",
-			details: `Changed schinken points from ${oldPoints} to ${newPoints}`,
+			details: "Changed " + pigUsername + " points from " + oldPoints + " to " + newPoints,
 			timestamp: new Date().toISOString(),
 		};
 		await window.supabase.from("userActivity").insert([activity]);
