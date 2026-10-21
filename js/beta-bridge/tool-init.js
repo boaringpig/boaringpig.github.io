@@ -1,4 +1,4 @@
-// js/tool-init.js
+// js/beta-bridge/tool-init.js
 // This file initializes the tool buttons and their functionality.
 
 /**

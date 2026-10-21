@@ -15,7 +15,7 @@ window.groupTerms = {
 // default UI for everyone; classicUiForced is an admin kill-switch that
 // locks a group to the classic UI only. The
 // bg/card/elevated/textPrimary/textSecondary colors are admin-set per group
-// (see js/ui-admin.js's edit-master modal) and consumed by src/beta's
+// (see js/admin/ui-admin.js's edit-master modal) and consumed by src/beta's
 // AppContext.
 window.groupTheme = {
 	classicUiForced: false,

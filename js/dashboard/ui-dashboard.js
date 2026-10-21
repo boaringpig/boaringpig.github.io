@@ -340,7 +340,7 @@ window.updateStats = function () {
 	}
 };
 
-// Add this to js/ui-dashboard.js - Enhanced renderDashboard function with invoice tracking
+// Add this to js/dashboard/ui-dashboard.js - Enhanced renderDashboard function with invoice tracking
 
 /**
  * Renders the dashboard view with user stats, activity log, admin controls, and invoice totals.
@@ -704,7 +704,7 @@ window.debugInvoiceStats = function () {
 	return stats;
 };
 
-// Add these enhanced functions to js/ui-dashboard.js for detailed invoice management
+// Add these enhanced functions to js/dashboard/ui-dashboard.js for detailed invoice management
 
 /**
  * NEW: Enhanced updateInvoiceStatCards with clickable details

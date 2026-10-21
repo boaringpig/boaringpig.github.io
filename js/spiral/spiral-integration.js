@@ -1,4 +1,4 @@
-// js/spiral-integration.js - Corrected and Enhanced Version
+// js/spiral/spiral-integration.js - Corrected and Enhanced Version
 // This file manages the spiral canvas and its integration with the task system.
 
 // We wrap the entire module in an Immediately Invoked Function Expression (IIFE)
