@@ -1,5 +1,6 @@
 // DashboardPage.jsx - master-only tab: stats, per-slave progress, points
-// control, activity feed, and cost tracker administration.
+// control, and activity feed. Cost tracker administration lives on the
+// Tools tab now (src/beta/components/tools/ToolsPage.jsx).
 import { useApp } from "../../context/AppContext";
 import { useTasks } from "../../hooks/useTasks";
 import { useSlaves } from "../../hooks/useSlaves";
@@ -9,7 +10,6 @@ import { UserProgressList } from "./UserProgressList";
 import { AdminPointsControl } from "./AdminPointsControl";
 import { ActivityFeed } from "./ActivityFeed";
 import { Card } from "../common/Card";
-import { CostTrackerPanel } from "../costTrackers/CostTrackerPanel";
 import styles from "./DashboardPage.module.css";
 
 export function DashboardPage() {
@@ -57,10 +57,6 @@ export function DashboardPage() {
 					error={activityState.error}
 					onRetry={activityState.reload}
 				/>
-			</Card>
-
-			<Card className={styles.section}>
-				<CostTrackerPanel />
 			</Card>
 		</div>
 	);

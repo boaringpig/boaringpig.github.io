@@ -18,6 +18,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createSpiral, DEFAULT_SPIRAL_PROPS } from "../../utils/spiralMath";
 import { saveSpiralConfig, loadSpiralConfigFile } from "../../utils/spiralConfigIO";
+import { useSavedSpirals } from "../../hooks/useSavedSpirals";
 import { SpiralCanvas } from "./SpiralCanvas";
 import { SpiralSidebar } from "./SpiralSidebar";
 import { useTextSequence } from "./useTextSequence";
@@ -31,7 +32,14 @@ function snapshotOf(spiral) {
 	return Object.assign({}, spiral);
 }
 
-export function SpiralGeneratorModal({ onClose }) {
+/**
+ * initialConfig/initialName/initialSavedId: set when opened from
+ * SavedSpiralsList's "Load" action (src/beta/components/tools/) -- applies
+ * a previously-saved config on mount and remembers which saved row it came
+ * from, so "Save to Library" updates that same row instead of always
+ * inserting a new one.
+ */
+export function SpiralGeneratorModal({ onClose, initialConfig, initialName, initialSavedId }) {
 	var canvasRef = useRef(null);
 	var spiralsRef = useRef([]);
 	var nextIdRef = useRef(1);
@@ -43,7 +51,10 @@ export function SpiralGeneratorModal({ onClose }) {
 	var [activeSnapshot, setActiveSnapshot] = useState(null);
 	var [backgroundColor, setBackgroundColor] = useState("#000000");
 	var [showTaskModal, setShowTaskModal] = useState(false);
+	var [savedSpiralId, setSavedSpiralId] = useState(initialSavedId || null);
+	var [savedSpiralName, setSavedSpiralName] = useState(initialName || "");
 	var textSequence = useTextSequence();
+	var savedSpirals = useSavedSpirals();
 
 	function currentCanvasSize() {
 		var canvas = canvasRef.current;
@@ -100,27 +111,33 @@ export function SpiralGeneratorModal({ onClose }) {
 		window.showNotification("Spiral configuration saved successfully.", "success");
 	}
 
+	function applyConfig(config) {
+		var size = currentCanvasSize();
+		var loaded = (config.spirals || []).map(function (props) {
+			nextIdRef.current = Math.max(nextIdRef.current, (props.id || 0) + 1);
+			return Object.assign(
+				{ x: size.width / 2, y: size.height / 2 },
+				DEFAULT_SPIRAL_PROPS,
+				props
+			);
+		});
+		spiralsRef.current = loaded;
+		var newActive = (config.globalSettings && config.globalSettings.selectedSpiralIndex) || 0;
+		setActiveIndex(newActive);
+		setActiveSnapshot(snapshotOf(loaded[newActive] || loaded[0]));
+		if (config.globalSettings && config.globalSettings.backgroundColor) {
+			setBackgroundColor(config.globalSettings.backgroundColor);
+		}
+		setSpiralsVersion(function (v) { return v + 1; });
+	}
+
 	function handleLoadFile(file) {
 		loadSpiralConfigFile(
 			file,
 			function (config) {
-				var size = currentCanvasSize();
-				var loaded = (config.spirals || []).map(function (props) {
-					nextIdRef.current = Math.max(nextIdRef.current, (props.id || 0) + 1);
-					return Object.assign(
-						{ x: size.width / 2, y: size.height / 2 },
-						DEFAULT_SPIRAL_PROPS,
-						props
-					);
-				});
-				spiralsRef.current = loaded;
-				var newActive = (config.globalSettings && config.globalSettings.selectedSpiralIndex) || 0;
-				setActiveIndex(newActive);
-				setActiveSnapshot(snapshotOf(loaded[newActive] || loaded[0]));
-				if (config.globalSettings && config.globalSettings.backgroundColor) {
-					setBackgroundColor(config.globalSettings.backgroundColor);
-				}
-				setSpiralsVersion(function (v) { return v + 1; });
+				applyConfig(config);
+				setSavedSpiralId(null);
+				setSavedSpiralName("");
 				window.showNotification("Spiral configuration loaded successfully.", "success");
 			},
 			function (message) {
@@ -129,8 +146,32 @@ export function SpiralGeneratorModal({ onClose }) {
 		);
 	}
 
+	function handleSaveToLibrary(name) {
+		savedSpirals
+			.saveSpiral({
+				id: savedSpiralId,
+				name: name,
+				config: {
+					spirals: spiralsRef.current.map(function (s) {
+						return Object.assign({}, s);
+					}),
+					textSettings: {},
+					globalSettings: {
+						backgroundColor: backgroundColor,
+						selectedSpiralIndex: activeIndex,
+					},
+				},
+			})
+			.then(function (id) {
+				if (id) setSavedSpiralId(id);
+				setSavedSpiralName(name);
+			});
+	}
+
 	useEffect(function () {
-		if (spiralsRef.current.length === 0) {
+		if (initialConfig) {
+			applyConfig(initialConfig);
+		} else if (spiralsRef.current.length === 0) {
 			addSpiral();
 		}
 
@@ -178,6 +219,8 @@ export function SpiralGeneratorModal({ onClose }) {
 					onSave={handleSave}
 					onLoadFile={handleLoadFile}
 					onOpenTaskModal={function () { setShowTaskModal(true); }}
+					savedSpiralName={savedSpiralName}
+					onSaveToLibrary={handleSaveToLibrary}
 				/>
 			</div>
 

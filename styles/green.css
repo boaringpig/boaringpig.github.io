@@ -1,90 +1,94 @@
-/* styles/terminal-theme.css */
-/* Terminal-style theme with green/black colors and a normal UI font */
+/* styles/green.css */
+/* Classic app styling. Shares the app-wide design tokens (styles/theme.css)
+   with the beta dashboard -- the old black/green monospace terminal theme
+   has been retired. */
 
 :root {
-	/* Terminal Color Palette */
-	--terminal-bg: #000000; /* Pure black background */
-	--terminal-bg-alt: #000801; /* Slightly lighter black */
-	--terminal-green: #00ff00; /* Bright terminal green */
-	--terminal-green-dark: #00cc00; /* Darker green */
-	--terminal-green-light: #66ff66; /* Light green */
-	--terminal-white: #ffffff; /* Pure white text */
-	--terminal-gray: #808080; /* Gray for secondary text */
-	--terminal-gray-dark: #404040; /* Dark gray */
-	--terminal-gray-light: #b0b0b0; /* Light gray */
+	/* This block used to define its own black/green terminal palette
+	   directly; it now aliases the same variable names onto the shared
+	   tokens in styles/theme.css (loaded before this file), so every one of
+	   this file's ~2500 lines of `var(--terminal-*)`/`var(--status-*)`
+	   usages below repaints with the new look without being rewritten. Per-
+	   group colors (bg/card/elevated/text) are applied as overrides of
+	   --color-* on top of this by js/apply-theme.js once a group is known;
+	   the login/invite screens just see theme.css's fixed defaults. */
+	--terminal-bg: var(--color-bg);
+	--terminal-bg-alt: var(--color-card);
+	--terminal-green: var(--color-accent);
+	--terminal-green-dark: var(--color-accent);
+	--terminal-green-light: var(--color-accent);
+	--terminal-white: var(--color-text-primary);
+	--terminal-gray: var(--color-text-secondary);
+	--terminal-gray-dark: var(--color-border-strong);
+	--terminal-gray-light: var(--color-text-secondary);
 
-	/* Status Colors - keeping some variety for task highlighting */
-	--status-success: #00ff00; /* Green for success */
-	--status-warning: #ffff00; /* Yellow for warnings */
-	--status-error: #ff0000; /* Red for errors */
-	--status-info: #00ffff; /* Cyan for info */
-	--status-pending: #ff8800; /* Orange for pending */
+	--status-success: var(--color-success);
+	--status-warning: var(--color-warning);
+	--status-error: var(--color-danger);
+	--status-info: var(--color-accent);
+	--status-pending: var(--color-warning);
 
-	/* Primary & Accent Colors */
-	--primary-color-start: var(--terminal-green);
-	--primary-color-end: var(--terminal-green-dark);
-	--accent-color-start: var(--status-warning);
-	--accent-color-end: #cccc00;
+	--primary-color-start: var(--color-accent);
+	--primary-color-end: var(--color-accent);
+	--accent-color-start: var(--color-warning);
+	--accent-color-end: var(--color-warning);
 
-	/* Backgrounds */
-	--body-bg-start: var(--terminal-bg);
-	--body-bg-end: var(--terminal-bg-alt);
-	--container-bg: rgba(10, 10, 10, 0.95);
-	--card-bg: var(--terminal-bg-alt);
-	--input-bg: var(--terminal-bg);
-	--border-color-light: var(--terminal-green);
-	--border-color-medium: var(--terminal-green-dark);
-	--hover-border-color: var(--terminal-green-light);
-	--focus-shadow-color: rgba(0, 255, 0, 0.3);
+	--body-bg-start: var(--color-bg);
+	--body-bg-end: var(--color-bg);
+	--container-bg: color-mix(in srgb, var(--color-bg) 95%, transparent);
+	--card-bg: var(--color-card);
+	--input-bg: var(--color-bg);
+	--border-color-light: var(--color-border-strong);
+	--border-color-medium: var(--color-border);
+	--hover-border-color: var(--focus-ring);
+	--focus-shadow-color: color-mix(in srgb, var(--focus-ring) 30%, transparent);
 
-	/* Text Colors */
-	--text-color-light: var(--terminal-white);
-	--text-color-medium: var(--terminal-gray-light);
-	--text-color-dark: var(--terminal-green-light);
-	--link-color: var(--terminal-green);
+	--text-color-light: var(--color-text-primary);
+	--text-color-medium: var(--color-text-secondary);
+	--text-color-dark: var(--color-accent);
+	--link-color: var(--color-accent);
 
-	/* Status & Notification Colors */
-	--status-pending-bg: rgba(255, 136, 0, 0.2);
-	--status-pending-text: var(--status-pending);
-	--status-completed-bg: rgba(0, 255, 0, 0.2);
-	--status-completed-text: var(--status-success);
-	--status-overdue-bg: rgba(255, 0, 0, 0.2);
-	--status-overdue-text: var(--status-error);
-	--status-demerit-bg: rgba(255, 0, 0, 0.2);
-	--status-demerit-text: var(--status-error);
-	--status-demerit-accepted-bg: rgba(0, 255, 255, 0.2);
-	--status-demerit-accepted-text: var(--status-info);
-	--status-pending-appeal-bg: rgba(255, 136, 0, 0.2);
-	--status-pending-appeal-text: var(--status-pending);
+	--status-pending-bg: color-mix(in srgb, var(--color-warning) 20%, transparent);
+	--status-pending-text: var(--color-warning);
+	--status-completed-bg: color-mix(in srgb, var(--color-success) 20%, transparent);
+	--status-completed-text: var(--color-success);
+	--status-overdue-bg: color-mix(in srgb, var(--color-danger) 20%, transparent);
+	--status-overdue-text: var(--color-danger);
+	--status-demerit-bg: color-mix(in srgb, var(--color-danger) 20%, transparent);
+	--status-demerit-text: var(--color-danger);
+	--status-demerit-accepted-bg: color-mix(in srgb, var(--color-accent) 20%, transparent);
+	--status-demerit-accepted-text: var(--color-accent);
+	--status-pending-appeal-bg: color-mix(in srgb, var(--color-warning) 20%, transparent);
+	--status-pending-appeal-text: var(--color-warning);
 
-	--notification-success-border: var(--status-success);
-	--notification-error-border: var(--status-error);
-	--notification-warning-border: var(--status-warning);
+	--notification-success-border: var(--color-success);
+	--notification-error-border: var(--color-danger);
+	--notification-warning-border: var(--color-warning);
 
 	/* Demo Credentials */
-	--demo-bg: var(--terminal-bg);
-	--demo-border: var(--terminal-green);
-	--demo-header-text: var(--terminal-green);
-	--demo-text: var(--terminal-white);
-	--demo-strong-text: var(--terminal-green-light);
+	--demo-bg: var(--color-bg);
+	--demo-border: var(--color-border-strong);
+	--demo-header-text: var(--color-accent);
+	--demo-text: var(--color-text-primary);
+	--demo-strong-text: var(--color-accent);
 
 	/* FullCalendar specific styles */
-	--fc-button-bg: var(--terminal-green);
-	--fc-button-hover-bg: var(--terminal-green-dark);
-	--fc-button-text: var(--terminal-bg);
-	--fc-border-color: var(--terminal-green);
-	--fc-event-bg-normal: var(--status-success);
-	--fc-event-border-normal: var(--terminal-green-dark);
-	--fc-event-bg-repeating: var(--status-info);
-	--fc-event-border-repeating: #00cccc;
-	--fc-event-text: var(--terminal-bg);
-	--fc-today-bg: rgb(0, 31, 0);
-	--fc-daygrid-event-dot: var(--terminal-green);
+	--fc-button-bg: var(--color-accent);
+	--fc-button-hover-bg: var(--focus-ring);
+	--fc-button-text: var(--color-accent-text);
+	--fc-border-color: var(--color-border-strong);
+	--fc-event-bg-normal: var(--color-success);
+	--fc-event-border-normal: var(--color-success);
+	--fc-event-bg-repeating: var(--color-accent);
+	--fc-event-border-repeating: var(--color-accent);
+	--fc-event-text: var(--color-accent-text);
+	--fc-today-bg: color-mix(in srgb, var(--color-accent) 12%, transparent);
+	--fc-daygrid-event-dot: var(--color-accent);
 
 	/* Modal */
-	--modal-overlay-bg: rgba(0, 0, 0, 0.9);
-	--modal-content-bg: var(--terminal-bg-alt);
-	--modal-text-color: var(--terminal-white);
+	--modal-overlay-bg: rgba(0, 0, 0, 0.6);
+	--modal-content-bg: var(--color-card);
+	--modal-text-color: var(--color-text-primary);
 
 	/* Font Sizes */
 	--font-size-base: 13px;
@@ -197,7 +201,7 @@ button {
 	width: 100%;
 	padding: 15px;
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	font-size: var(--font-size-base);
 	transition: all 0.3s ease;
 	background: var(--input-bg);
@@ -208,7 +212,7 @@ button {
 .form-select:focus {
 	outline: none;
 	border-color: var(--terminal-green-light);
-	box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+	box-shadow: 0 0 10px color-mix(in srgb, var(--focus-ring) 30%, transparent);
 }
 
 /* Buttons - Terminal style with green outlines */
@@ -219,7 +223,7 @@ button {
 	background: var(--terminal-bg);
 	color: var(--terminal-green);
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	cursor: pointer;
 	font-size: var(--font-size-base);
 	font-weight: var(--font-weight-bold);
@@ -231,7 +235,7 @@ button {
 .action-btn:hover {
 	background: var(--terminal-green);
 	color: var(--terminal-bg);
-	box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 50%, transparent);
 }
 
 /* Specific button colors */
@@ -315,7 +319,7 @@ button {
 	background: var(--terminal-bg);
 	color: var(--status-error);
 	border: 1px solid var(--status-error);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	cursor: pointer;
 	font-size: var(--font-size-sm);
 	font-weight: var(--font-weight-bold);
@@ -352,12 +356,33 @@ button {
 	color: var(--terminal-bg);
 }
 
+.theme-toggle-btn {
+	padding: 8px 14px;
+	background: var(--color-card);
+	border: 1px solid var(--color-border-strong);
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	color: var(--color-text-primary);
+	font-size: var(--font-size-sm);
+	transition: all 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+	border-color: var(--focus-ring);
+}
+
+#loginScreen .theme-toggle-btn {
+	position: absolute;
+	top: 20px;
+	right: 20px;
+}
+
 /* Task Items */
 .task-item {
 	background: var(--card-bg);
 	padding: 10px 10px 10px 20px;
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	margin-bottom: 20px;
 	transition: all 0.3s ease;
 	position: relative;
@@ -367,7 +392,7 @@ button {
 }
 
 .task-item:hover {
-	box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 30%, transparent);
 	border-color: var(--terminal-green-light);
 }
 
@@ -487,7 +512,7 @@ button {
 	background: var(--card-bg);
 	padding: 30px;
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	margin-bottom: 30px;
 	display: flex;
 	flex-direction: column;
@@ -540,7 +565,7 @@ button {
 .calendar-container {
 	background: var(--card-bg);
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	padding: 30px;
 }
 
@@ -587,13 +612,13 @@ button {
 	background: var(--card-bg);
 	padding: 25px;
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	text-align: center;
 	transition: all 0.3s ease;
 }
 
 .stat-card:hover {
-	box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 30%, transparent);
 }
 
 .stat-card h3 {
@@ -613,14 +638,14 @@ button {
 .reward-card {
 	background: var(--card-bg);
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	padding: 20px;
 	text-align: center;
 	transition: all 0.3s ease;
 }
 
 .reward-card:hover {
-	box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 30%, transparent);
 	border-color: var(--terminal-green-light);
 }
 
@@ -657,7 +682,7 @@ button {
 .notification {
 	background: var(--card-bg);
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	color: var(--terminal-white);
 	font-weight: var(--font-weight-bold);
 }
@@ -687,10 +712,10 @@ button {
 .modal-content {
 	background: var(--modal-content-bg);
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	color: var(--terminal-white);
 	padding: 30px;
-	box-shadow: 0 0 25px rgba(0, 255, 0, 0.5);
+	box-shadow: 0 0 25px color-mix(in srgb, var(--focus-ring) 50%, transparent);
 	max-width: 500px;
 	width: 90%;
 	text-align: left;
@@ -731,9 +756,9 @@ button {
 #eventModal > div {
 	background: var(--modal-content-bg);
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	color: var(--terminal-white);
-	box-shadow: 0 0 25px rgba(0, 255, 0, 0.5);
+	box-shadow: 0 0 25px color-mix(in srgb, var(--focus-ring) 50%, transparent);
 	animation: fadeInScale 0.3s ease-out forwards;
 }
 
@@ -767,9 +792,9 @@ button {
 
 /* Appeal modal specific styling */
 .appeal-warning {
-	background: rgba(255, 136, 0, 0.1);
+	background: color-mix(in srgb, var(--color-warning) 10%, transparent);
 	border: 1px solid var(--status-warning);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	padding: 15px;
 	margin: 15px 0;
 	color: var(--status-warning);
@@ -793,7 +818,7 @@ button {
 .demo-credentials {
 	background: var(--demo-bg);
 	border: 1px solid var(--demo-border);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	padding: 20px;
 	margin-top: 30px;
 	text-align: left;
@@ -873,7 +898,7 @@ button {
 .notification {
 	background: var(--card-bg);
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	color: var(--terminal-white);
 	font-weight: var(--font-weight-bold);
 	font-size: var(--font-size-base);
@@ -921,7 +946,7 @@ button {
 	padding: 0 20px;
 	background: var(--terminal-bg);
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 }
 
 .stat-item {
@@ -1062,7 +1087,7 @@ button {
 	background: var(--terminal-bg);
 	color: var(--terminal-green);
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	cursor: pointer;
 	font-size: var(--font-size-base);
 	font-weight: var(--font-weight-bold);
@@ -1218,128 +1243,128 @@ button {
 
 /* Points badge styling for different point values */
 .points-badge.negative {
-	background: linear-gradient(45deg, #ff6b6b, #cc0000) !important;
+	background: linear-gradient(45deg, var(--color-danger), color-mix(in srgb, var(--color-danger) 80%, black)) !important;
 	color: white !important;
-	box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+	box-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
 	animation: pulse-red 2s infinite;
 }
 
 .points-badge.zero {
-	background: linear-gradient(45deg, #ffff00, #cccc00) !important;
+	background: linear-gradient(45deg, var(--color-warning), color-mix(in srgb, var(--color-warning) 80%, black)) !important;
 	color: #000 !important;
 }
 
 .points-badge.positive {
-	background: linear-gradient(45deg, #00ff00, #00cc00) !important;
+	background: linear-gradient(45deg, var(--color-success), color-mix(in srgb, var(--color-success) 80%, black)) !important;
 	color: #000 !important;
 }
 
 /* Stat numbers with negative values */
 .stat-number.negative {
-	color: #ff6b6b !important;
-	text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+	color: var(--color-danger) !important;
+	text-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
 }
 
 .stat-number.zero {
-	color: #ffff00 !important;
+	color: var(--color-warning) !important;
 }
 
 .stat-number.positive {
-	color: #00ff00 !important;
+	color: var(--color-success) !important;
 }
 
 /* Animation for negative points to draw attention */
 @keyframes pulse-red {
 	0% {
-		box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+		box-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
 	}
 	50% {
-		box-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+		box-shadow: 0 0 20px color-mix(in srgb, var(--color-danger) 8%, transparent);
 	}
 	100% {
-		box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+		box-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
 	}
 }
 
 /* User progress display for negative points */
 .user-stats .negative-points {
-	color: #ff6b6b;
+	color: var(--color-danger);
 	font-weight: bold;
-	text-shadow: 0 0 5px rgba(255, 107, 107, 0.5);
+	text-shadow: 0 0 5px color-mix(in srgb, var(--color-danger) 5%, transparent);
 }
 
 /* Dashboard stats card for negative points */
 .stat-card .negative-stat {
-	color: #ff6b6b;
-	border-color: #ff6b6b;
+	color: var(--color-danger);
+	border-color: var(--color-danger);
 }
 
 .stat-card .negative-stat:hover {
-	box-shadow: 0 0 15px rgba(255, 107, 107, 0.3);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--color-danger) 3%, transparent);
 }
 
 /* Add these styles to styles/green.css for better negative points display */
 
 /* Points badge styling for different point values */
 .points-badge.negative {
-	background: linear-gradient(45deg, #ff6b6b, #cc0000) !important;
+	background: linear-gradient(45deg, var(--color-danger), color-mix(in srgb, var(--color-danger) 80%, black)) !important;
 	color: white !important;
-	box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+	box-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
 	animation: pulse-red 2s infinite;
 }
 
 .points-badge.zero {
-	background: linear-gradient(45deg, #ffff00, #cccc00) !important;
+	background: linear-gradient(45deg, var(--color-warning), color-mix(in srgb, var(--color-warning) 80%, black)) !important;
 	color: #000 !important;
 }
 
 .points-badge.positive {
-	background: linear-gradient(45deg, #00ff00, #00cc00) !important;
+	background: linear-gradient(45deg, var(--color-success), color-mix(in srgb, var(--color-success) 80%, black)) !important;
 	color: #000 !important;
 }
 
 /* Stat numbers with negative values */
 .stat-number.negative {
-	color: #ff6b6b !important;
-	text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+	color: var(--color-danger) !important;
+	text-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
 }
 
 .stat-number.zero {
-	color: #ffff00 !important;
+	color: var(--color-warning) !important;
 }
 
 .stat-number.positive {
-	color: #00ff00 !important;
+	color: var(--color-success) !important;
 }
 
 /* Animation for negative points to draw attention */
 @keyframes pulse-red {
 	0% {
-		box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+		box-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
 	}
 	50% {
-		box-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+		box-shadow: 0 0 20px color-mix(in srgb, var(--color-danger) 8%, transparent);
 	}
 	100% {
-		box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+		box-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
 	}
 }
 
 /* User progress display for negative points */
 .user-stats .negative-points {
-	color: #ff6b6b;
+	color: var(--color-danger);
 	font-weight: bold;
-	text-shadow: 0 0 5px rgba(255, 107, 107, 0.5);
+	text-shadow: 0 0 5px color-mix(in srgb, var(--color-danger) 5%, transparent);
 }
 
 /* Dashboard stats card for negative points */
 .stat-card .negative-stat {
-	color: #ff6b6b;
-	border-color: #ff6b6b;
+	color: var(--color-danger);
+	border-color: var(--color-danger);
 }
 
 .stat-card .negative-stat:hover {
-	box-shadow: 0 0 15px rgba(255, 107, 107, 0.3);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--color-danger) 3%, transparent);
 }
 
 /* Live Cost Tracker Styles */
@@ -1349,9 +1374,9 @@ button {
 	right: 20px;
 	background: var(--card-bg);
 	border: 2px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	padding: 15px;
-	box-shadow: 0 0 25px rgba(0, 255, 0, 0.5);
+	box-shadow: 0 0 25px color-mix(in srgb, var(--focus-ring) 50%, transparent);
 	z-index: 1000;
 	min-width: 280px;
 	max-width: 350px;
@@ -1416,7 +1441,7 @@ button {
 	text-align: center;
 	border: 1px solid var(--terminal-green);
 	padding: 8px;
-	background: rgba(0, 255, 0, 0.1);
+	background: color-mix(in srgb, var(--focus-ring) 10%, transparent);
 }
 
 .live-tracker-rate {
@@ -1476,7 +1501,7 @@ button {
 	margin-bottom: 8px;
 	background: var(--card-bg);
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 }
 
 .penalty-info {
@@ -1535,7 +1560,7 @@ button {
 	background: var(--terminal-bg);
 	border: 1px solid var(--terminal-green);
 	color: var(--terminal-white);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	font-size: var(--font-size-base);
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
 		Helvetica, Arial, sans-serif !important;
@@ -1544,7 +1569,7 @@ button {
 .modal-overlay .modal-content .form-input:focus {
 	outline: none;
 	border-color: var(--terminal-green-light);
-	box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+	box-shadow: 0 0 10px color-mix(in srgb, var(--focus-ring) 30%, transparent);
 }
 
 .modal-overlay .modal-content .form-input[type="checkbox"] {
@@ -1567,7 +1592,7 @@ button {
 	background: var(--terminal-bg);
 	color: var(--terminal-green);
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	cursor: pointer;
 	font-size: var(--font-size-base);
 	font-weight: var(--font-weight-bold);
@@ -1579,7 +1604,7 @@ button {
 .modal-overlay .modal-content .action-btn:hover {
 	background: var(--terminal-green);
 	color: var(--terminal-bg);
-	box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 50%, transparent);
 }
 
 .modal-overlay .modal-content .action-btn.approve-btn {
@@ -1673,7 +1698,7 @@ button {
 	background: var(--card-bg);
 	padding: 25px;
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	text-align: center;
 	transition: all 0.3s ease;
 	position: relative;
@@ -1685,7 +1710,7 @@ button {
 }
 
 #invoicePaidStat:hover {
-	box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 30%, transparent);
 	border-color: var(--terminal-green-light);
 }
 
@@ -1698,7 +1723,7 @@ button {
 }
 
 #invoicePendingStat:hover {
-	box-shadow: 0 0 15px rgba(255, 255, 0, 0.3);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--color-warning) 30%, transparent);
 	border-color: var(--status-warning);
 }
 
@@ -1711,7 +1736,7 @@ button {
 }
 
 #invoiceDeniedStat:hover {
-	box-shadow: 0 0 15px rgba(255, 107, 107, 0.3);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--color-danger) 3%, transparent);
 	border-color: var(--status-error);
 }
 
@@ -1761,24 +1786,24 @@ button {
 
 @keyframes pulse-yellow {
 	0% {
-		text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+		text-shadow: 0 0 10px color-mix(in srgb, var(--color-warning) 5%, transparent);
 	}
 	50% {
-		text-shadow: 0 0 20px rgba(255, 255, 0, 0.8);
+		text-shadow: 0 0 20px color-mix(in srgb, var(--color-warning) 8%, transparent);
 	}
 	100% {
-		text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+		text-shadow: 0 0 10px color-mix(in srgb, var(--color-warning) 5%, transparent);
 	}
 }
 
 /* Success glow for paid invoices */
 #invoicePaidStat .stat-number {
-	text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+	text-shadow: 0 0 10px color-mix(in srgb, var(--color-success) 5%, transparent);
 }
 
 /* Error glow for denied invoices */
 #invoiceDeniedStat .stat-number {
-	text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+	text-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
 }
 
 /* Mobile responsive adjustments */
@@ -1826,7 +1851,7 @@ button {
 	white-space: pre-wrap;
 	max-height: 300px;
 	overflow-y: auto;
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 }
 
 /* Add these styles to styles/green.css for the invoice dashboard cards */
@@ -1838,7 +1863,7 @@ button {
 	background: var(--card-bg);
 	padding: 25px;
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	text-align: center;
 	transition: all 0.3s ease;
 	position: relative;
@@ -1850,7 +1875,7 @@ button {
 }
 
 #invoicePaidStat:hover {
-	box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 30%, transparent);
 	border-color: var(--terminal-green-light);
 }
 
@@ -1863,7 +1888,7 @@ button {
 }
 
 #invoicePendingStat:hover {
-	box-shadow: 0 0 15px rgba(255, 255, 0, 0.3);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--color-warning) 30%, transparent);
 	border-color: var(--status-warning);
 }
 
@@ -1876,7 +1901,7 @@ button {
 }
 
 #invoiceDeniedStat:hover {
-	box-shadow: 0 0 15px rgba(255, 107, 107, 0.3);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--color-danger) 3%, transparent);
 	border-color: var(--status-error);
 }
 
@@ -1926,24 +1951,24 @@ button {
 
 @keyframes pulse-yellow {
 	0% {
-		text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+		text-shadow: 0 0 10px color-mix(in srgb, var(--color-warning) 5%, transparent);
 	}
 	50% {
-		text-shadow: 0 0 20px rgba(255, 255, 0, 0.8);
+		text-shadow: 0 0 20px color-mix(in srgb, var(--color-warning) 8%, transparent);
 	}
 	100% {
-		text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+		text-shadow: 0 0 10px color-mix(in srgb, var(--color-warning) 5%, transparent);
 	}
 }
 
 /* Success glow for paid invoices */
 #invoicePaidStat .stat-number {
-	text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+	text-shadow: 0 0 10px color-mix(in srgb, var(--color-success) 5%, transparent);
 }
 
 /* Error glow for denied invoices */
 #invoiceDeniedStat .stat-number {
-	text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+	text-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
 }
 
 /* Mobile responsive adjustments */
@@ -1991,7 +2016,7 @@ button {
 	white-space: pre-wrap;
 	max-height: 300px;
 	overflow-y: auto;
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 }
 
 /* Invoice Details Modal Styling */
@@ -2187,14 +2212,14 @@ button {
 
 .suggestion-item:hover {
 	border-color: var(--status-info) !important;
-	box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+	box-shadow: 0 0 15px color-mix(in srgb, var(--color-accent) 30%, transparent);
 }
 
 /* Changes preview styling */
 .suggestion-changes-preview {
 	background: var(--terminal-bg-alt);
 	border: 1px solid var(--terminal-green);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	padding: 15px;
 	margin: 20px 0;
 }
@@ -2266,7 +2291,7 @@ button {
 	background: var(--terminal-bg);
 	border: 1px solid var(--terminal-green);
 	color: var(--terminal-white);
-	border-radius: 0;
+	border-radius: var(--radius-sm);
 	font-size: var(--font-size-base);
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
 		Helvetica, Arial, sans-serif !important;
@@ -2275,7 +2300,7 @@ button {
 .modal-content .form-input:focus {
 	outline: none;
 	border-color: var(--terminal-green-light);
-	box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+	box-shadow: 0 0 10px color-mix(in srgb, var(--focus-ring) 30%, transparent);
 }
 
 .modal-content .form-input[type="checkbox"] {
@@ -2316,7 +2341,7 @@ button {
 .action-btn.check-btn:hover {
 	background: var(--status-info);
 	color: var(--terminal-bg);
-	box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+	box-shadow: 0 0 10px color-mix(in srgb, var(--color-accent) 30%, transparent);
 }
 
 /* Time ago badge for suggestions */
@@ -2394,12 +2419,12 @@ button {
 
 .form-input.error {
 	border-color: var(--status-error);
-	box-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
+	box-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 3%, transparent);
 }
 
 /* Success message for approved suggestions */
 .suggestion-approved {
-	background: rgba(0, 255, 0, 0.1);
+	background: color-mix(in srgb, var(--color-success) 10%, transparent);
 	border-color: var(--status-success) !important;
 	opacity: 0.8;
 }

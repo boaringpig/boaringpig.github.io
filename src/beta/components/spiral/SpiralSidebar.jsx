@@ -1,7 +1,8 @@
 // SpiralSidebar.jsx - spiral list management, the active spiral's property
 // controls, background color, save/load config, and "Send as Task".
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Button } from "../common/Button";
+import { TextInput } from "../common/TextInput";
 import styles from "./SpiralSidebar.module.css";
 
 var PROPERTY_FIELDS = [
@@ -29,8 +30,11 @@ export function SpiralSidebar({
 	onSave,
 	onLoadFile,
 	onOpenTaskModal,
+	savedSpiralName,
+	onSaveToLibrary,
 }) {
 	var fileInputRef = useRef(null);
+	var [libraryName, setLibraryName] = useState(savedSpiralName || "");
 
 	return (
 		<div className={styles.sidebar}>
@@ -121,6 +125,23 @@ export function SpiralSidebar({
 						e.target.value = "";
 					}}
 				/>
+			</div>
+
+			<div className={styles.controlGroup}>
+				<h3>Save to Library</h3>
+				<TextInput
+					label="Name"
+					value={libraryName}
+					onChange={function (e) { setLibraryName(e.target.value); }}
+					placeholder="e.g. Calming blue swirl"
+				/>
+				<Button
+					variant="secondary"
+					disabled={!libraryName.trim()}
+					onClick={function () { onSaveToLibrary(libraryName.trim()); }}
+				>
+					{savedSpiralName ? "Update Saved Spiral" : "Save to Library"}
+				</Button>
 			</div>
 
 			<div className={styles.controlGroup}>

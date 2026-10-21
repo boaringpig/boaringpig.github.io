@@ -397,6 +397,120 @@ window.addPenaltyToLiveTracker = async function (
 };
 
 /**
+ * Deletes a cost tracker row outright (running or stopped) -- a true
+ * cancel/abort, distinct from stopping: no status change, no invoice task,
+ * the row is just gone. Safe for a stopped row too since its financial
+ * record, if any, already lives independently as an invoice task in
+ * `tasks` (created by stopLiveCostTracker above), not on this row.
+ */
+window.deleteCostTracker = async function (trackerId) {
+	if (!window.hasPermission("create_task")) {
+		window.showNotification(
+			"You do not have permission to delete cost trackers",
+			"error"
+		);
+		return;
+	}
+
+	const { error } = await window.supabase
+		.from("active_cost_trackers")
+		.delete()
+		.eq("id", trackerId);
+
+	if (error) {
+		console.error("Error deleting cost tracker:", error);
+		window.showNotification("Failed to delete cost tracker.", "error");
+		return;
+	}
+
+	if (window.activeLiveTrackerId === trackerId) {
+		window.activeLiveTrackerId = null;
+	}
+	if (window.currentLiveTracker && window.currentLiveTracker.id === trackerId) {
+		window.currentLiveTracker = null;
+	}
+
+	window.showNotification("Cost tracker deleted.");
+	await window.fetchActiveCostTrackersInitial();
+};
+
+/**
+ * Saved cost-tracker presets: a reusable {name, description, rate,
+ * currency, incrementInterval} a master can start a new tracker from
+ * without retyping it every time. Upserts by id when provided, otherwise
+ * inserts a new one.
+ */
+window.saveCostTrackerPreset = async function (preset) {
+	var payload = {
+		name: preset.name,
+		description: preset.description || null,
+		rate: preset.rate,
+		currency: preset.currency,
+		increment_interval: preset.incrementInterval,
+		updated_at: new Date().toISOString(),
+	};
+
+	if (preset.id) {
+		var { error: updateError } = await window.supabase
+			.from("saved_cost_tracker_presets")
+			.update(payload)
+			.eq("id", preset.id);
+		if (updateError) {
+			console.error("Error updating cost tracker preset:", updateError);
+			window.showNotification("Failed to save preset.", "error");
+			return null;
+		}
+		return preset.id;
+	}
+
+	payload.master_username = window.activeMasterContext;
+	payload.created_by = window.currentUser;
+
+	var { data, error } = await window.supabase
+		.from("saved_cost_tracker_presets")
+		.insert([payload])
+		.select()
+		.single();
+
+	if (error) {
+		console.error("Error saving cost tracker preset:", error);
+		window.showNotification("Failed to save preset.", "error");
+		return null;
+	}
+
+	window.showNotification("Preset saved!", "success");
+	return data.id;
+};
+
+window.fetchCostTrackerPresets = async function () {
+	var { data, error } = await window.supabase
+		.from("saved_cost_tracker_presets")
+		.select("*")
+		.eq("master_username", window.activeMasterContext)
+		.order("name", { ascending: true });
+
+	if (error) {
+		console.error("Error fetching cost tracker presets:", error);
+		return [];
+	}
+	return data || [];
+};
+
+window.deleteCostTrackerPreset = async function (id) {
+	var { error } = await window.supabase
+		.from("saved_cost_tracker_presets")
+		.delete()
+		.eq("id", id);
+
+	if (error) {
+		console.error("Error deleting cost tracker preset:", error);
+		window.showNotification("Failed to delete preset.", "error");
+		return;
+	}
+	window.showNotification("Preset deleted.");
+};
+
+/**
  * Removes a penalty from an active cost tracker
  */
 window.removePenaltyFromLiveTracker = async function (trackerId, penaltyId) {

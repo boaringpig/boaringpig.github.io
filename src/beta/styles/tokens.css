@@ -50,3 +50,9 @@
 	background: var(--color-bg);
 	color: var(--color-text-primary);
 }
+
+.betaApp[data-theme="light"] {
+	--color-border: rgba(0, 0, 0, 0.08);
+	--color-border-strong: rgba(0, 0, 0, 0.16);
+	color-scheme: light;
+}

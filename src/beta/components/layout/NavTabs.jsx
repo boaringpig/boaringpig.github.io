@@ -14,6 +14,7 @@ export function NavTabs({ activeTab, onChange }) {
 
 	if (app.isMaster) {
 		tabs.push({ key: "dashboard", label: "Dashboard" });
+		tabs.push({ key: "tools", label: "Tools" });
 	}
 	if (app.isSlave) {
 		tabs.push({ key: "suggest", label: "Suggest Task" });

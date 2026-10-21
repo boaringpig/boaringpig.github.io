@@ -178,6 +178,7 @@ window.showEditMasterModal = async function (masterUsername) {
 		(master.classicUiForced ? "checked" : "") +
 		' /> Force classic styling for this group (disable beta)</label>' +
 		"</div>" +
+		'<p class="form-label" style="margin-bottom: 4px;"><strong>Dark mode colors</strong></p>' +
 		'<div class="form-row">' +
 		'<div class="form-group"><label class="form-label">Background</label>' +
 		'<input type="color" id="editThemeBg" value="' +
@@ -202,6 +203,31 @@ window.showEditMasterModal = async function (masterUsername) {
 		master.theme.textSecondary +
 		'" /></div>' +
 		"</div>" +
+		'<p class="form-label" style="margin-bottom: 4px;"><strong>Light mode colors</strong></p>' +
+		'<div class="form-row">' +
+		'<div class="form-group"><label class="form-label">Background</label>' +
+		'<input type="color" id="editThemeBgLight" value="' +
+		master.themeLight.bg +
+		'" /></div>' +
+		'<div class="form-group"><label class="form-label">Card</label>' +
+		'<input type="color" id="editThemeCardLight" value="' +
+		master.themeLight.card +
+		'" /></div>' +
+		'<div class="form-group"><label class="form-label">Elevated</label>' +
+		'<input type="color" id="editThemeElevatedLight" value="' +
+		master.themeLight.elevated +
+		'" /></div>' +
+		"</div>" +
+		'<div class="form-row">' +
+		'<div class="form-group"><label class="form-label">Primary text</label>' +
+		'<input type="color" id="editThemeTextPrimaryLight" value="' +
+		master.themeLight.textPrimary +
+		'" /></div>' +
+		'<div class="form-group"><label class="form-label">Secondary text</label>' +
+		'<input type="color" id="editThemeTextSecondaryLight" value="' +
+		master.themeLight.textSecondary +
+		'" /></div>' +
+		"</div>" +
 		'<div id="contrastChecklist" style="font-size: 12px; margin-bottom: 12px;"></div>' +
 		'<div class="modal-actions">' +
 		'<button id="modalSaveMaster" class="action-btn approve-btn">Save</button>' +
@@ -217,6 +243,16 @@ window.showEditMasterModal = async function (masterUsername) {
 			elevated: document.getElementById("editThemeElevated").value,
 			textPrimary: document.getElementById("editThemeTextPrimary").value,
 			textSecondary: document.getElementById("editThemeTextSecondary").value,
+		};
+	}
+
+	function readThemeLight() {
+		return {
+			bg: document.getElementById("editThemeBgLight").value,
+			card: document.getElementById("editThemeCardLight").value,
+			elevated: document.getElementById("editThemeElevatedLight").value,
+			textPrimary: document.getElementById("editThemeTextPrimaryLight").value,
+			textSecondary: document.getElementById("editThemeTextSecondaryLight").value,
 		};
 	}
 
@@ -279,6 +315,7 @@ window.showEditMasterModal = async function (masterUsername) {
 				.value.trim(),
 			classicUiForced: document.getElementById("editClassicUiForced").checked,
 			theme: readTheme(),
+			themeLight: readThemeLight(),
 		});
 
 		document.body.removeChild(modal);

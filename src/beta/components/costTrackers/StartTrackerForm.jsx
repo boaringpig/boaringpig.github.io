@@ -1,11 +1,15 @@
 // StartTrackerForm.jsx - starts a new live cost tracker (master only).
-import { useState } from "react";
+// Optionally saves the entered config as a reusable preset alongside
+// starting it, and can be prefilled from a saved preset via presetToApply
+// (selecting "Use" on a SavedPresetsList row) -- same save/reuse pattern as
+// the spiral generator's saved-library feature.
+import { useEffect, useState } from "react";
 import { Card } from "../common/Card";
 import { Button } from "../common/Button";
 import { TextInput } from "../common/TextInput";
 import styles from "./StartTrackerForm.module.css";
 
-export function StartTrackerForm({ onStart }) {
+export function StartTrackerForm({ onStart, onSavePreset, presetToApply }) {
 	var [description, setDescription] = useState("Cost Tracker Running");
 	var [rate, setRate] = useState(50);
 	var [currency, setCurrency] = useState("€");
@@ -14,6 +18,18 @@ export function StartTrackerForm({ onStart }) {
 	var [stagedPenalties, setStagedPenalties] = useState([]);
 	var [penaltyDescription, setPenaltyDescription] = useState("");
 	var [penaltyAmount, setPenaltyAmount] = useState("");
+	var [presetName, setPresetName] = useState("");
+
+	useEffect(
+		function () {
+			if (!presetToApply) return;
+			setDescription(presetToApply.description || "Cost Tracker Running");
+			setRate(presetToApply.rate);
+			setCurrency(presetToApply.currency);
+			setInterval_(presetToApply.increment_interval);
+		},
+		[presetToApply]
+	);
 
 	if (!window.hasPermission("create_task")) return null;
 
@@ -40,8 +56,19 @@ export function StartTrackerForm({ onStart }) {
 		e.preventDefault();
 		setSubmitting(true);
 		try {
+			if (presetName.trim() && onSavePreset) {
+				await onSavePreset({
+					id: presetToApply ? presetToApply.id : undefined,
+					name: presetName.trim(),
+					description: description,
+					rate: Number(rate) || 0,
+					currency: currency,
+					incrementInterval: Number(interval),
+				});
+			}
 			await onStart(description, Number(rate) || 0, currency, Number(interval), stagedPenalties);
 			setStagedPenalties([]);
+			setPresetName("");
 		} finally {
 			setSubmitting(false);
 		}
@@ -148,6 +175,15 @@ export function StartTrackerForm({ onStart }) {
 						})}
 					</ul>
 				) : null}
+
+				<TextInput
+					label="Save as preset (optional)"
+					placeholder="Name this config to reuse it later"
+					value={presetName}
+					onChange={function (e) {
+						setPresetName(e.target.value);
+					}}
+				/>
 
 				<Button type="submit" loading={submitting}>
 					Start tracker

@@ -19,6 +19,10 @@ export function Header() {
 		app.exitBeta();
 	}
 
+	function toggleThemeMode() {
+		app.setThemeMode(app.themeMode === "light" ? "dark" : "light");
+	}
+
 	function handleLogout() {
 		// Hide the beta root first, then run the classic logout (which
 		// unsubscribes realtime channels and shows the login screen).
@@ -72,6 +76,9 @@ export function Header() {
 				<span className={styles.userBadge}>{app.displayName}</span>
 				<Button variant="secondary" onClick={openStatusEditor}>
 					✏️ Status
+				</Button>
+				<Button variant="secondary" onClick={toggleThemeMode}>
+					{app.themeMode === "light" ? "🌙 Dark mode" : "☀️ Light mode"}
 				</Button>
 				{!app.isMaster ? (
 					<span className={styles.points}>{user.points || 0} points</span>

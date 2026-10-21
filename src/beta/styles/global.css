@@ -62,6 +62,31 @@
 	padding: var(--space-4);
 }
 
+/* Slim scrollbar matching the shared design tokens (classic has the same
+   rule in styles/green.css) -- browser default otherwise. */
+.betaApp ::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+.betaApp ::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.betaApp ::-webkit-scrollbar-thumb {
+	background: var(--color-accent);
+	border-radius: 4px;
+}
+
+.betaApp ::-webkit-scrollbar-thumb:hover {
+	background: var(--focus-ring);
+}
+
+.betaApp {
+	scrollbar-width: thin;
+	scrollbar-color: var(--color-accent) transparent;
+}
+
 @media (min-width: 768px) {
 	.betaContainer {
 		padding: var(--space-6);

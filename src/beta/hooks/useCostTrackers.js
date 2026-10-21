@@ -17,9 +17,21 @@ export function useCostTrackers() {
 	var running = list.items.filter(function (t) {
 		return t.status === "running";
 	});
+	// useRealtimeList fetches every row for the group regardless of status --
+	// only the `running` filter above is new-vs-old; derive a stopped history
+	// from the same list/subscription rather than opening a second one.
+	var stopped = list.items
+		.filter(function (t) {
+			return t.status === "stopped";
+		})
+		.sort(function (a, b) {
+			return new Date(b.updated_at) - new Date(a.updated_at);
+		})
+		.slice(0, 20);
 
 	return {
 		trackers: running,
+		stoppedTrackers: stopped,
 		status: list.status,
 		error: list.error,
 		reload: list.reload,
@@ -35,6 +47,9 @@ export function useCostTrackers() {
 		},
 		stopTracker: function (trackerId, createInvoice) {
 			return window.stopLiveCostTracker(trackerId, createInvoice !== false);
+		},
+		deleteTracker: function (trackerId) {
+			return window.deleteCostTracker(trackerId);
 		},
 		addPenalty: function (trackerId, description, amount) {
 			return window.addPenaltyToLiveTracker(trackerId, description, amount);

@@ -55,6 +55,13 @@ window.fetchAllMasters = async function () {
 				textPrimary: s.theme_text_primary || "#fafafa",
 				textSecondary: s.theme_text_secondary || "#a1a1aa",
 			},
+			themeLight: {
+				bg: s.theme_bg_light || "#ffffff",
+				card: s.theme_card_light || "#f4f4f5",
+				elevated: s.theme_elevated_light || "#e4e4e7",
+				textPrimary: s.theme_text_primary_light || "#18181b",
+				textSecondary: s.theme_text_secondary_light || "#52525b",
+			},
 		};
 	});
 
@@ -134,6 +141,14 @@ window.createMaster = async function (details) {
 					(details.theme && details.theme.textPrimary) || "#fafafa",
 				theme_text_secondary:
 					(details.theme && details.theme.textSecondary) || "#a1a1aa",
+				theme_bg_light: (details.themeLight && details.themeLight.bg) || "#ffffff",
+				theme_card_light: (details.themeLight && details.themeLight.card) || "#f4f4f5",
+				theme_elevated_light:
+					(details.themeLight && details.themeLight.elevated) || "#e4e4e7",
+				theme_text_primary_light:
+					(details.themeLight && details.themeLight.textPrimary) || "#18181b",
+				theme_text_secondary_light:
+					(details.themeLight && details.themeLight.textSecondary) || "#52525b",
 			},
 		]);
 
@@ -169,6 +184,14 @@ window.updateMasterTerminology = async function (masterUsername, terms) {
 			theme_text_primary: (terms.theme && terms.theme.textPrimary) || "#fafafa",
 			theme_text_secondary:
 				(terms.theme && terms.theme.textSecondary) || "#a1a1aa",
+			theme_bg_light: (terms.themeLight && terms.themeLight.bg) || "#ffffff",
+			theme_card_light: (terms.themeLight && terms.themeLight.card) || "#f4f4f5",
+			theme_elevated_light:
+				(terms.themeLight && terms.themeLight.elevated) || "#e4e4e7",
+			theme_text_primary_light:
+				(terms.themeLight && terms.themeLight.textPrimary) || "#18181b",
+			theme_text_secondary_light:
+				(terms.themeLight && terms.themeLight.textSecondary) || "#52525b",
 			updated_at: new Date().toISOString(),
 		},
 		{ onConflict: "master_username" }

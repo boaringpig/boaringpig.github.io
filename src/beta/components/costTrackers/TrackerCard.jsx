@@ -47,7 +47,7 @@ function computeTotals(tracker, now) {
 	};
 }
 
-export function TrackerCard({ tracker, isAdmin, onStop, onAddPenalty, onRemovePenalty }) {
+export function TrackerCard({ tracker, isAdmin, onStop, onDelete, onAddPenalty, onRemovePenalty }) {
 	var [now, setNow] = useState(Date.now());
 	var [penaltyDescription, setPenaltyDescription] = useState("");
 	var [penaltyAmount, setPenaltyAmount] = useState("");
@@ -142,6 +142,9 @@ export function TrackerCard({ tracker, isAdmin, onStop, onAddPenalty, onRemovePe
 						</Button>
 						<Button variant="secondary" onClick={function () { onStop(tracker.id, false); }}>
 							Stop (no invoice)
+						</Button>
+						<Button variant="secondary" onClick={function () { onDelete(tracker.id); }}>
+							Delete
 						</Button>
 					</div>
 				</>
