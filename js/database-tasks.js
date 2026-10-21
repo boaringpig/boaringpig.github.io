@@ -2,6 +2,59 @@
 // This file contains all the database-related functions for tasks.
 
 /**
+ * Creates a task assigned to one or more pigs, taking care of the
+ * single-assignee-vs-shared-task-assignments split the same way
+ * window.createTask's own "Shared Task" mode does: a single assignee gets a
+ * normal `assignedTo` task, multiple assignees get one shared task row plus
+ * a task_assignments entry per pig (so any of them can act on it, same as a
+ * shared regular task). Used by any special task type that builds its own
+ * task object instead of going through createTask (cost-tracker invoices,
+ * spiral "send as task") but still needs proper multi-pig assignment.
+ */
+window.createTaskForPigs = async function (taskBase, assignedTo) {
+	var pigs = (
+		Array.isArray(assignedTo) && assignedTo.length > 0
+			? assignedTo
+			: [window.getSlaves()[0] || window.currentUser]
+	).filter(Boolean);
+
+	if (pigs.length <= 1) {
+		var task = Object.assign({}, taskBase, {
+			assignedTo: pigs[0] || window.currentUser,
+		});
+		var { error } = await window.supabase.from("tasks").insert([task]);
+		return { error: error };
+	}
+
+	var sharedTask = Object.assign({}, taskBase, {
+		assignedTo: null,
+		assignment_mode: "shared",
+	});
+	var { data: insertedTask, error: sharedError } = await window.supabase
+		.from("tasks")
+		.insert([sharedTask])
+		.select();
+
+	if (sharedError || !insertedTask || !insertedTask[0]) {
+		return { error: sharedError };
+	}
+
+	var assignments = pigs.map(function (pig) {
+		return {
+			task_id: insertedTask[0].id,
+			assigned_to: pig,
+			status: "todo",
+			master_username: window.activeMasterContext,
+		};
+	});
+	var { error: assignError } = await window.supabase
+		.from("task_assignments")
+		.insert(assignments);
+
+	return { error: assignError };
+};
+
+/**
  * Fetches all tasks from Supabase.
  */
 window.fetchTasksInitial = async function () {

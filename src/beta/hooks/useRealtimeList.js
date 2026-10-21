@@ -47,7 +47,7 @@ export function useRealtimeList(opts) {
 	// creating a second one, so two hook instances subscribed to the same
 	// table+masterUsername (e.g. a banner mounted globally plus a page using
 	// the same hook, as with MotdBanner/MotdManageList or
-	// LiveTrackerBanner/CostTrackerPanel) would otherwise collide: the
+	// LiveTrackerPill/CostTrackerPanel) would otherwise collide: the
 	// second `.channel(name).on(...)` call throws "cannot add
 	// postgres_changes callbacks ... after subscribe()" because it's really
 	// the same already-subscribed channel. A random per-instance suffix

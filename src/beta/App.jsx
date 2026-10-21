@@ -18,7 +18,6 @@ import { MastersPage } from "./components/admin/MastersPage";
 import { ChatPage } from "./components/chat/ChatPage";
 import { ToolsPage } from "./components/tools/ToolsPage";
 import { MasterOverviewPage } from "./components/overview/MasterOverviewPage";
-import { LiveTrackerBanner } from "./components/costTrackers/LiveTrackerBanner";
 import { MotdBanner } from "./components/motd/MotdBanner";
 import "./styles/tokens.css";
 import "./styles/global.css";
@@ -71,7 +70,6 @@ function AppShell() {
 				<MotdBanner />
 				<PageSwitch activeTab={activeTab} />
 			</main>
-			<LiveTrackerBanner />
 		</div>
 	);
 }

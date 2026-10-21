@@ -753,7 +753,7 @@ Time-based Cost: ${costDetails.timeBasedCost.description} = ${costDetails.timeBa
 			};
 
 			try {
-				const { error: taskError } = await window.createCostTrackerInvoiceTask(
+				const { error: taskError } = await window.createTaskForPigs(
 					taskBase,
 					assignedTo
 				);

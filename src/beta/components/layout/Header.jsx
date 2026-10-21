@@ -6,6 +6,7 @@ import { useApp } from "../../context/AppContext";
 import { Button } from "../common/Button";
 import { Modal } from "../common/Modal";
 import { TextInput } from "../common/TextInput";
+import { LiveTrackerPill } from "../costTrackers/LiveTrackerPill";
 import styles from "./Header.module.css";
 
 export function Header() {
@@ -74,6 +75,7 @@ export function Header() {
 					</select>
 				) : null}
 				<span className={styles.userBadge}>{app.displayName}</span>
+				<LiveTrackerPill />
 				<Button variant="secondary" onClick={openStatusEditor}>
 					✏️ Status
 				</Button>
