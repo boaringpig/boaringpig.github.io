@@ -1,0 +1,53 @@
+.controlGroup {
+	/* Always rendered first in the sidebar, so no top border/spacing needed
+	   (see SpiralSidebar.module.css's :first-child reset for the pattern
+	   this mirrors). */
+}
+
+.controlGroup h3 {
+	margin: 0 0 var(--space-2);
+	font-size: 14px;
+}
+
+.script {
+	width: 100%;
+	min-height: 80px;
+	background: var(--color-bg);
+	color: var(--color-text-primary);
+	border: 1px solid var(--color-border-strong);
+	border-radius: var(--radius-sm);
+	padding: var(--space-2);
+	font-family: inherit;
+	margin-bottom: var(--space-2);
+}
+
+.controlRow {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	margin-bottom: var(--space-1);
+	font-size: 13px;
+}
+
+.controlRow label {
+	flex: 0 0 95px;
+	color: var(--color-text-secondary);
+}
+
+.controlRow input[type="range"] {
+	flex: 1;
+	min-width: 0;
+}
+
+.valueDisplay {
+	flex: 0 0 56px;
+	text-align: right;
+	color: var(--color-text-secondary);
+	white-space: nowrap;
+}
+
+.buttonRow {
+	display: flex;
+	gap: var(--space-2);
+	margin-top: var(--space-2);
+}

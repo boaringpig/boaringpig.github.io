@@ -8,6 +8,7 @@ import { useSlaves } from "../../hooks/useSlaves";
 import { Card } from "../common/Card";
 import { Button } from "../common/Button";
 import { TextInput } from "../common/TextInput";
+import { SpiralGeneratorModal } from "../spiral/SpiralGeneratorModal";
 import styles from "./TaskForm.module.css";
 
 var emptyForm = {
@@ -27,6 +28,7 @@ export function TaskForm({ onCreated }) {
 	var [form, setForm] = useState(emptyForm);
 	var [selected, setSelected] = useState([]);
 	var [submitting, setSubmitting] = useState(false);
+	var [showSpiral, setShowSpiral] = useState(false);
 
 	function updateField(key, value) {
 		setForm(function (prev) {
@@ -70,7 +72,15 @@ export function TaskForm({ onCreated }) {
 
 	return (
 		<Card>
-			<h2 className={styles.heading}>Create New Task</h2>
+			<div className={styles.headingRow}>
+				<h2 className={styles.heading}>Create New Task</h2>
+				<Button type="button" variant="secondary" onClick={function () { setShowSpiral(true); }}>
+					🌀 Create Spiral Task
+				</Button>
+			</div>
+			{showSpiral ? (
+				<SpiralGeneratorModal onClose={function () { setShowSpiral(false); }} />
+			) : null}
 			<form onSubmit={handleSubmit}>
 				<TextInput
 					label="Task description"

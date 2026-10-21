@@ -81,8 +81,8 @@ window.renderMastersList = async function () {
 				(m.isAdmin
 					? ' <span class="status-badge status-todo">Admin</span>'
 					: "") +
-				(m.betaUiEnabled
-					? ' <span class="status-badge status-completed">Beta UI</span>'
+				(m.classicUiForced
+					? ' <span class="status-badge status-todo">Classic Only</span>'
 					: "") +
 				'<span class="task-text">' +
 				window.escapeHtml(m.displayName) +
@@ -174,9 +174,9 @@ window.showEditMasterModal = async function (masterUsername) {
 		'" /></div>' +
 		'<hr style="margin: 12px 0; border-color: var(--border-color, #333);" />' +
 		'<div class="form-group">' +
-		'<label class="form-label"><input type="checkbox" id="editBetaUiEnabled" ' +
-		(master.betaUiEnabled ? "checked" : "") +
-		' /> Enable React beta dashboard for this group</label>' +
+		'<label class="form-label"><input type="checkbox" id="editClassicUiForced" ' +
+		(master.classicUiForced ? "checked" : "") +
+		' /> Force classic styling for this group (disable beta)</label>' +
 		"</div>" +
 		'<div class="form-row">' +
 		'<div class="form-group"><label class="form-label">Background</label>' +
@@ -277,7 +277,7 @@ window.showEditMasterModal = async function (masterUsername) {
 			slaveLabelPlural: document
 				.getElementById("editSlaveLabelPlural")
 				.value.trim(),
-			betaUiEnabled: document.getElementById("editBetaUiEnabled").checked,
+			classicUiForced: document.getElementById("editClassicUiForced").checked,
 			theme: readTheme(),
 		});
 

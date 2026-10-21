@@ -2,24 +2,32 @@
 // Glue between the classic vanilla-JS app and the React beta dashboard
 // (src/beta/). Classic code never imports React directly - it only knows
 // about two DOM containers (#mainApp, #betaRoot) and two functions
-// (enterBetaMode/exitBetaMode). The React bundle itself is only downloaded
-// the first time someone actually clicks into the beta, via a dynamic
-// import() - so nobody pays for React unless their group has it enabled.
+// (enterBetaMode/exitBetaMode). The React bundle is downloaded via a
+// dynamic import() the first time enterBetaMode runs -- which, since beta
+// is the default UI, is normally right after login -- so a group locked to
+// classic (classicUiForced) or a user who's switched back to classic
+// styling never pays for it.
 
 var betaMountFn = null;
 var betaUnmountFn = null;
 var betaMounted = false;
 
 /**
- * Shows/hides the "Try Beta Dashboard" button based on whether the active
- * group has opted in (window.groupTheme.betaUiEnabled, loaded by
- * js/terminology.js's loadGroupTerms). Called after every login and group
- * context switch.
+ * Shows/hides the classic-side "Try Beta Dashboard" button. Beta is the
+ * default UI for everyone now, so this only matters while classic is
+ * actually the UI currently on screen (checked directly off #betaRoot's
+ * display state, not a tracked flag, since this can be re-invoked -- e.g.
+ * from loadGroupTerms after an admin edits group settings from *within*
+ * the beta Masters page -- while beta is already mounted, and the button
+ * must stay hidden then) and the group hasn't been locked to classic.
  */
 window.renderBetaToggleButton = function () {
 	var button = document.getElementById("betaToggleButton");
 	if (!button) return;
-	button.style.display = window.groupTheme.betaUiEnabled ? "inline-block" : "none";
+	var betaRoot = document.getElementById("betaRoot");
+	var classicVisible = !betaRoot || betaRoot.style.display !== "block";
+	var allowed = !window.groupTheme.classicUiForced;
+	button.style.display = allowed && classicVisible ? "inline-block" : "none";
 };
 
 /**
@@ -27,9 +35,9 @@ window.renderBetaToggleButton = function () {
  * React bundle on first use.
  */
 window.enterBetaMode = async function () {
-	if (!window.groupTheme.betaUiEnabled) {
+	if (window.groupTheme.classicUiForced) {
 		window.showNotification(
-			"The beta dashboard isn't enabled for this group yet.",
+			"This group is set to classic styling only.",
 			"error"
 		);
 		return;
@@ -93,17 +101,21 @@ window.exitBetaMode = function () {
 
 /**
  * Called once after login/showMainApp has finished setting up the classic
- * UI. If this group has the beta enabled AND the user previously chose it,
- * jump straight into beta mode instead of showing classic first.
+ * UI. Beta is the default now: jumps straight into it unless this group is
+ * locked to classic, or this browser previously chose classic explicitly
+ * (exitBetaMode sets preferBetaUi="0", which is the only opt-out signal --
+ * anything else, including no preference at all, means "use beta").
  */
 window.maybeAutoEnterBetaMode = async function () {
+	if (window.groupTheme.classicUiForced) return;
+
 	var preferred = null;
 	try {
 		preferred = localStorage.getItem("preferBetaUi");
 	} catch (e) {
 		preferred = null;
 	}
-	if (preferred === "1" && window.groupTheme.betaUiEnabled) {
-		await window.enterBetaMode();
-	}
+	if (preferred === "0") return;
+
+	await window.enterBetaMode();
 };
