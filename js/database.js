@@ -109,7 +109,9 @@ window.loadData = async function () {
 				try {
 					console.log("Task change received!", payload);
 					if (payload.eventType === "INSERT") {
-						window.tasks.unshift(payload.new);
+						if (!window.tasks.some((t) => t.id === payload.new.id)) {
+							window.tasks.unshift(payload.new);
+						}
 					} else if (payload.eventType === "UPDATE") {
 						const index = window.tasks.findIndex(
 							(t) => t.id === payload.old.id
@@ -155,7 +157,9 @@ window.loadData = async function () {
 				try {
 					console.log("Suggestion change received!", payload);
 					if (payload.eventType === "INSERT") {
-						window.suggestions.unshift(payload.new);
+						if (!window.suggestions.some((s) => s.id === payload.new.id)) {
+							window.suggestions.unshift(payload.new);
+						}
 					} else if (payload.eventType === "UPDATE") {
 						const index = window.suggestions.findIndex(
 							(s) => s.id === payload.old.id
@@ -494,12 +498,14 @@ window.loadData = async function () {
 			},
 			(payload) => {
 				if (payload.eventType === "INSERT") {
-					window.chatMessages.push(payload.new);
-					window.chatMessages.sort(
-						(a, b) => new Date(a.created_at) - new Date(b.created_at)
-					);
-					if (window.activeTab === "chat" && window.renderChatMessages) {
-						window.renderChatMessages();
+					if (!window.chatMessages.some((m) => m.id === payload.new.id)) {
+						window.chatMessages.push(payload.new);
+						window.chatMessages.sort(
+							(a, b) => new Date(a.created_at) - new Date(b.created_at)
+						);
+						if (window.activeTab === "chat" && window.renderChatMessages) {
+							window.renderChatMessages();
+						}
 					}
 				}
 			}

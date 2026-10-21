@@ -4,7 +4,7 @@
 // contract for this one caller risks regressing every other table that
 // relies on it. Writes delegate to the classic window.sendChatMessage, same
 // as every other mutation in this app (see src/beta/README.md).
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "../context/AppContext";
 
 var PAGE_SIZE = 100;
@@ -17,6 +17,11 @@ export function useChat() {
 	var [status, setStatus] = useState("loading");
 	var [error, setError] = useState(null);
 	var [hasMoreOlder, setHasMoreOlder] = useState(false);
+
+	// Random per-instance suffix so a repeated topic name across hook
+	// instances never collides -- see useRealtimeList.js for the full
+	// explanation of why this is needed.
+	var instanceId = useRef(Math.random().toString(36).slice(2)).current;
 
 	var load = useCallback(
 		async function () {
@@ -77,7 +82,18 @@ export function useChat() {
 
 	var sendMessage = useCallback(
 		async function (body) {
-			await window.sendChatMessage({ body: body });
+			// Push the sent message locally immediately rather than waiting on
+			// the realtime round-trip -- see js/database-chat.js's
+			// sendChatMessage for why this can't be relied on alone.
+			var sent = await window.sendChatMessage({ body: body });
+			if (sent) {
+				setMessages(function (prev) {
+					if (prev.some(function (m) { return m.id === sent.id; })) {
+						return prev;
+					}
+					return prev.concat([sent]);
+				});
+			}
 		},
 		[]
 	);
@@ -89,7 +105,7 @@ export function useChat() {
 			if (!masterUsername) return undefined;
 
 			var channel = window.supabase
-				.channel("beta_chat_messages_" + masterUsername)
+				.channel("beta_chat_messages_" + masterUsername + "_" + instanceId)
 				.on(
 					"postgres_changes",
 					{
@@ -100,6 +116,9 @@ export function useChat() {
 					},
 					function (payload) {
 						setMessages(function (prev) {
+							if (prev.some(function (m) { return m.id === payload.new.id; })) {
+								return prev;
+							}
 							return prev.concat([payload.new]);
 						});
 					}

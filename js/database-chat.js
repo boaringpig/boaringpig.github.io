@@ -79,13 +79,17 @@ window.sendChatMessage = async function (overrides) {
 
 	if (!body) return;
 
-	var { error } = await window.supabase.from("chat_messages").insert([
-		{
-			master_username: window.activeMasterContext,
-			sender_username: window.currentUser,
-			body: body,
-		},
-	]);
+	var { data, error } = await window.supabase
+		.from("chat_messages")
+		.insert([
+			{
+				master_username: window.activeMasterContext,
+				sender_username: window.currentUser,
+				body: body,
+			},
+		])
+		.select()
+		.single();
 
 	if (error) {
 		console.error("Error sending chat message:", error);
@@ -94,4 +98,21 @@ window.sendChatMessage = async function (overrides) {
 	}
 
 	if (inputEl) inputEl.value = "";
+
+	// Push the sent message locally immediately rather than waiting on the
+	// chat_channel realtime round-trip (js/database.js) to echo it back --
+	// that round-trip is what used to make a sender's own message not show
+	// up until a reload. Dedupe against the channel's own INSERT handler,
+	// which also guards against double-adding this same row.
+	if (!window.chatMessages.some(function (m) { return m.id === data.id; })) {
+		window.chatMessages.push(data);
+		window.chatMessages.sort(
+			(a, b) => new Date(a.created_at) - new Date(b.created_at)
+		);
+		if (window.activeTab === "chat" && window.renderChatMessages) {
+			window.renderChatMessages();
+		}
+	}
+
+	return data;
 };

@@ -13,12 +13,14 @@ window.renderCalendar = function () {
 
 	var calendarEvents = [];
 	if (window.tasks && Array.isArray(window.tasks)) {
+		var mySharedTaskIds = window.mySharedTaskIds || [];
 		calendarEvents = window.tasks
 			.filter(function (task) {
 				return (
 					task &&
-					task.assignedTo === window.currentUser &&
-					task.dueDate
+					task.dueDate &&
+					(task.assignedTo === window.currentUser ||
+						mySharedTaskIds.includes(task.id))
 				);
 			})
 			.map(function (task) {

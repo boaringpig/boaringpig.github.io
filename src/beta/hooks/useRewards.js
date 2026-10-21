@@ -1,6 +1,6 @@
 // useRewards.js - rewards, purchase history, and the (single-row-per-group)
 // reward system settings, plus all the mutation wrappers.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "../context/AppContext";
 import { useRealtimeList } from "./useRealtimeList";
 
@@ -39,6 +39,11 @@ export function useRewards() {
 	var [settings, setSettings] = useState(DEFAULT_SETTINGS);
 	var [settingsStatus, setSettingsStatus] = useState("loading");
 
+	// Random per-instance suffix so a repeated topic name across hook
+	// instances never collides -- see useRealtimeList.js for the full
+	// explanation of why this is needed.
+	var instanceId = useRef(Math.random().toString(36).slice(2)).current;
+
 	var loadSettings = useCallback(
 		async function () {
 			if (!masterUsername) return;
@@ -65,7 +70,7 @@ export function useRewards() {
 			loadSettings();
 			if (!masterUsername) return undefined;
 			var channel = window.supabase
-				.channel("beta_reward_settings_" + masterUsername)
+				.channel("beta_reward_settings_" + masterUsername + "_" + instanceId)
 				.on(
 					"postgres_changes",
 					{
