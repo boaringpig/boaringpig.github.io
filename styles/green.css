@@ -178,6 +178,22 @@ button {
 	font-size: var(--font-size-4xl); /* Consistent large numbers */
 }
 
+/* Login / invite-signup card -- matches src/beta/components/common/Card's
+   flat convention (neutral border, no glow) rather than the old terminal
+   look's accent-bordered box with a neon box-shadow. */
+.login-container {
+	max-width: 400px;
+	margin: 80px auto;
+	text-align: center;
+}
+
+.login-form {
+	background: var(--color-card);
+	padding: var(--space-6);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+}
+
 .login-title {
 	font-size: var(--font-size-2xl);
 	color: var(--terminal-green);
@@ -200,85 +216,85 @@ button {
 .form-select {
 	width: 100%;
 	padding: 15px;
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border-strong);
 	border-radius: var(--radius-sm);
 	font-size: var(--font-size-base);
-	transition: all 0.3s ease;
+	transition: border-color 0.15s ease;
 	background: var(--input-bg);
 	color: var(--terminal-white);
 }
 
-.form-input:focus,
-.form-select:focus {
-	outline: none;
-	border-color: var(--terminal-green-light);
-	box-shadow: 0 0 10px color-mix(in srgb, var(--focus-ring) 30%, transparent);
+/* Mirrors the app-wide :focus-visible outline rule in
+   src/beta/styles/global.css instead of a glow box-shadow. */
+.form-input:focus-visible,
+.form-select:focus-visible {
+	outline: 2px solid var(--focus-ring);
+	outline-offset: 2px;
 }
 
-/* Buttons - Terminal style with green outlines */
+/* Buttons -- mirror src/beta/components/common/Button.module.css's flat,
+   solid-filled convention (no ghost-outline, no glow) instead of the old
+   terminal look's accent-bordered-and-glowing-on-hover style. */
 .login-btn,
 .add-btn,
 .action-btn {
 	padding: 12px 24px;
-	background: var(--terminal-bg);
-	color: var(--terminal-green);
-	border: 1px solid var(--terminal-green);
+	background: var(--color-accent);
+	color: var(--color-accent-text);
+	border: 1px solid transparent;
 	border-radius: var(--radius-sm);
 	cursor: pointer;
 	font-size: var(--font-size-base);
 	font-weight: var(--font-weight-bold);
-	transition: all 0.3s ease;
+	transition: background-color 0.15s ease, border-color 0.15s ease,
+		opacity 0.15s ease;
 }
 
 .login-btn:hover,
 .add-btn:hover,
 .action-btn:hover {
-	background: var(--terminal-green);
-	color: var(--terminal-bg);
-	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 50%, transparent);
+	background: color-mix(in srgb, var(--color-accent) 85%, white 15%);
 }
 
-/* Specific button colors */
+/* Specific button colors -- same flat-fill treatment, one solid color per
+   semantic action instead of an outline that recolors on hover. */
 .check-btn {
-	border-color: var(--status-info);
-	color: var(--status-info);
+	background: var(--color-elevated);
+	color: var(--color-text-primary);
+	border-color: var(--color-border-strong);
 }
 
 .check-btn:hover {
-	background: var(--status-info);
-	color: var(--terminal-bg);
+	background: color-mix(in srgb, var(--color-elevated) 85%, white 15%);
 }
 
 .approve-btn {
-	border-color: var(--status-success);
-	color: var(--status-success);
+	background: var(--color-success);
+	color: var(--color-success-text);
 }
 
 .approve-btn:hover {
-	background: var(--status-success);
-	color: var(--terminal-bg);
+	background: color-mix(in srgb, var(--color-success) 85%, black 15%);
 }
 
 .delete-btn,
 .reject-btn {
-	border-color: var(--status-error);
-	color: var(--status-error);
+	background: var(--color-danger);
+	color: var(--color-danger-text);
 }
 
 .delete-btn:hover,
 .reject-btn:hover {
-	background: var(--status-error);
-	color: var(--terminal-bg);
+	background: color-mix(in srgb, var(--color-danger) 85%, black 15%);
 }
 
 .appeal-btn {
-	border-color: var(--status-warning);
-	color: var(--status-warning);
+	background: var(--color-warning);
+	color: var(--color-warning-text);
 }
 
 .appeal-btn:hover {
-	background: var(--status-warning);
-	color: var(--terminal-bg);
+	background: color-mix(in srgb, var(--color-warning) 85%, black 15%);
 }
 
 /* Header Styles */
@@ -306,7 +322,7 @@ button {
 .points-badge {
 	display: inline-block;
 	padding: 8px 16px;
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	background: var(--terminal-bg);
 	color: var(--terminal-green);
 	font-weight: var(--font-weight-bold);
@@ -342,7 +358,7 @@ button {
 .nav-tab {
 	padding: 12px 24px;
 	background: var(--terminal-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-bottom: none;
 	cursor: pointer;
 	font-weight: var(--font-weight-bold);
@@ -381,7 +397,7 @@ button {
 .task-item {
 	background: var(--card-bg);
 	padding: 10px 10px 10px 20px;
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 	margin-bottom: 20px;
 	transition: all 0.3s ease;
@@ -392,8 +408,8 @@ button {
 }
 
 .task-item:hover {
-	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 30%, transparent);
 	border-color: var(--terminal-green-light);
+	background: var(--color-elevated);
 }
 
 .task-item::before {
@@ -497,7 +513,7 @@ button {
 /* Points badges */
 .points-badge-small {
 	background: var(--terminal-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	color: var(--terminal-green);
 	font-size: 11px;
 	padding: 2px 8px;
@@ -511,7 +527,7 @@ button {
 .reward-creation-form {
 	background: var(--card-bg);
 	padding: 30px;
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 	margin-bottom: 30px;
 	display: flex;
@@ -564,7 +580,7 @@ button {
 /* Calendar container */
 .calendar-container {
 	background: var(--card-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 	padding: 30px;
 }
@@ -576,15 +592,15 @@ button {
 }
 
 .fc .fc-button-primary {
-	background-color: var(--terminal-bg) !important;
-	border-color: var(--terminal-green) !important;
-	color: var(--terminal-green) !important;
+	background-color: var(--color-accent) !important;
+	border-color: transparent !important;
+	color: var(--color-accent-text) !important;
 	font-weight: var(--font-weight-bold) !important;
 }
 
 .fc .fc-button-primary:hover {
-	background-color: var(--terminal-green) !important;
-	color: var(--terminal-bg) !important;
+	background-color: color-mix(in srgb, var(--color-accent) 85%, white 15%) !important;
+	color: var(--color-accent-text) !important;
 }
 
 .fc .fc-toolbar-title {
@@ -594,7 +610,7 @@ button {
 
 .fc-theme-standard td,
 .fc-theme-standard th {
-	border-color: var(--terminal-green) !important;
+	border-color: var(--color-border) !important;
 }
 
 .fc-col-header-cell {
@@ -611,14 +627,14 @@ button {
 .stat-card {
 	background: var(--card-bg);
 	padding: 25px;
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 	text-align: center;
 	transition: all 0.3s ease;
 }
 
 .stat-card:hover {
-	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 30%, transparent);
+	background: var(--color-elevated);
 }
 
 .stat-card h3 {
@@ -637,7 +653,7 @@ button {
 /* Rewards styling */
 .reward-card {
 	background: var(--card-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 	padding: 20px;
 	text-align: center;
@@ -645,8 +661,8 @@ button {
 }
 
 .reward-card:hover {
-	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 30%, transparent);
 	border-color: var(--terminal-green-light);
+	background: var(--color-elevated);
 }
 
 .reward-card h3 {
@@ -665,7 +681,7 @@ button {
 .purchase-btn {
 	background: var(--terminal-bg);
 	color: var(--terminal-green);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	padding: 10px 20px;
 	cursor: pointer;
 	font-weight: var(--font-weight-bold);
@@ -681,7 +697,7 @@ button {
 /* Notifications */
 .notification {
 	background: var(--card-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 	color: var(--terminal-white);
 	font-weight: var(--font-weight-bold);
@@ -711,11 +727,11 @@ button {
 
 .modal-content {
 	background: var(--modal-content-bg);
-	border: 1px solid var(--terminal-green);
-	border-radius: var(--radius-sm);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
 	color: var(--terminal-white);
 	padding: 30px;
-	box-shadow: 0 0 25px color-mix(in srgb, var(--focus-ring) 50%, transparent);
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
 	max-width: 500px;
 	width: 90%;
 	text-align: left;
@@ -755,10 +771,10 @@ button {
 
 #eventModal > div {
 	background: var(--modal-content-bg);
-	border: 1px solid var(--terminal-green);
-	border-radius: var(--radius-sm);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
 	color: var(--terminal-white);
-	box-shadow: 0 0 25px color-mix(in srgb, var(--focus-ring) 50%, transparent);
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
 	animation: fadeInScale 0.3s ease-out forwards;
 }
 
@@ -897,7 +913,7 @@ button {
 /* Notification consistent sizing */
 .notification {
 	background: var(--card-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 	color: var(--terminal-white);
 	font-weight: var(--font-weight-bold);
@@ -926,7 +942,7 @@ button {
 	width: 100%;
 	height: 8px;
 	background: var(--terminal-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	overflow: hidden;
 	margin-top: 8px;
 }
@@ -945,7 +961,7 @@ button {
 	margin-top: 30px;
 	padding: 0 20px;
 	background: var(--terminal-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 }
 
@@ -1086,7 +1102,7 @@ button {
 	padding: 12px 24px;
 	background: var(--terminal-bg);
 	color: var(--terminal-green);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 	cursor: pointer;
 	font-size: var(--font-size-base);
@@ -1111,12 +1127,12 @@ button {
 	position: relative !important;
 	background: #000;
 	margin-bottom: 20px;
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 }
 
 #controls {
 	background: var(--card-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	color: var(--terminal-white);
 	padding: 10px;
 }
@@ -1159,14 +1175,14 @@ button {
 
 #text-script {
 	background: var(--terminal-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	color: var(--terminal-white);
 	font-size: var(--font-size-base);
 	resize: vertical;
 }
 
 .spiral-list {
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	background: var(--terminal-bg);
 	max-height: 150px;
 	overflow-y: auto;
@@ -1199,7 +1215,7 @@ button {
 #cost-tracker-app input,
 #cost-tracker-app select {
 	background: var(--terminal-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	color: var(--terminal-white);
 	font-size: var(--font-size-base);
 }
@@ -1219,14 +1235,14 @@ button {
 }
 #cost-tracker-app .penalty-item {
 	background: var(--terminal-bg-alt);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 }
 #cost-tracker-app .penalty-amount {
 	color: var(--status-error);
 }
 #cost-tracker-app .final-total {
 	background: var(--terminal-bg-alt);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 }
 #cost-tracker-app .bill-item {
 	border-bottom: 1px dashed var(--terminal-green);
@@ -1262,7 +1278,6 @@ button {
 /* Stat numbers with negative values */
 .stat-number.negative {
 	color: var(--color-danger) !important;
-	text-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
 }
 
 .stat-number.zero {
@@ -1290,7 +1305,6 @@ button {
 .user-stats .negative-points {
 	color: var(--color-danger);
 	font-weight: bold;
-	text-shadow: 0 0 5px color-mix(in srgb, var(--color-danger) 5%, transparent);
 }
 
 /* Dashboard stats card for negative points */
@@ -1300,7 +1314,7 @@ button {
 }
 
 .stat-card .negative-stat:hover {
-	box-shadow: 0 0 15px color-mix(in srgb, var(--color-danger) 3%, transparent);
+	background: var(--color-elevated);
 }
 
 /* Add these styles to styles/green.css for better negative points display */
@@ -1326,7 +1340,6 @@ button {
 /* Stat numbers with negative values */
 .stat-number.negative {
 	color: var(--color-danger) !important;
-	text-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
 }
 
 .stat-number.zero {
@@ -1354,7 +1367,6 @@ button {
 .user-stats .negative-points {
 	color: var(--color-danger);
 	font-weight: bold;
-	text-shadow: 0 0 5px color-mix(in srgb, var(--color-danger) 5%, transparent);
 }
 
 /* Dashboard stats card for negative points */
@@ -1364,7 +1376,7 @@ button {
 }
 
 .stat-card .negative-stat:hover {
-	box-shadow: 0 0 15px color-mix(in srgb, var(--color-danger) 3%, transparent);
+	background: var(--color-elevated);
 }
 
 /* Live Cost Tracker Styles */
@@ -1373,10 +1385,10 @@ button {
 	top: 20px;
 	right: 20px;
 	background: var(--card-bg);
-	border: 2px solid var(--terminal-green);
-	border-radius: var(--radius-sm);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
 	padding: 15px;
-	box-shadow: 0 0 25px color-mix(in srgb, var(--focus-ring) 50%, transparent);
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
 	z-index: 1000;
 	min-width: 280px;
 	max-width: 350px;
@@ -1439,7 +1451,7 @@ button {
 	font-weight: var(--font-weight-bold);
 	color: var(--terminal-green);
 	text-align: center;
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	padding: 8px;
 	background: color-mix(in srgb, var(--focus-ring) 10%, transparent);
 }
@@ -1500,7 +1512,7 @@ button {
 	padding: 10px;
 	margin-bottom: 8px;
 	background: var(--card-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 }
 
@@ -1558,7 +1570,7 @@ button {
 	width: 100%;
 	padding: 12px;
 	background: var(--terminal-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	color: var(--terminal-white);
 	border-radius: var(--radius-sm);
 	font-size: var(--font-size-base);
@@ -1566,10 +1578,9 @@ button {
 		Helvetica, Arial, sans-serif !important;
 }
 
-.modal-overlay .modal-content .form-input:focus {
-	outline: none;
-	border-color: var(--terminal-green-light);
-	box-shadow: 0 0 10px color-mix(in srgb, var(--focus-ring) 30%, transparent);
+.modal-overlay .modal-content .form-input:focus-visible {
+	outline: 2px solid var(--focus-ring);
+	outline-offset: 2px;
 }
 
 .modal-overlay .modal-content .form-input[type="checkbox"] {
@@ -1589,42 +1600,38 @@ button {
 
 .modal-overlay .modal-content .action-btn {
 	padding: 12px 24px;
-	background: var(--terminal-bg);
-	color: var(--terminal-green);
-	border: 1px solid var(--terminal-green);
+	background: var(--color-accent);
+	color: var(--color-accent-text);
+	border: 1px solid transparent;
 	border-radius: var(--radius-sm);
 	cursor: pointer;
 	font-size: var(--font-size-base);
 	font-weight: var(--font-weight-bold);
-	transition: all 0.3s ease;
+	transition: background-color 0.15s ease, opacity 0.15s ease;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
 		Helvetica, Arial, sans-serif !important;
 }
 
 .modal-overlay .modal-content .action-btn:hover {
-	background: var(--terminal-green);
-	color: var(--terminal-bg);
-	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 50%, transparent);
+	background: color-mix(in srgb, var(--color-accent) 85%, white 15%);
 }
 
 .modal-overlay .modal-content .action-btn.approve-btn {
-	border-color: var(--status-success);
-	color: var(--status-success);
+	background: var(--color-success);
+	color: var(--color-success-text);
 }
 
 .modal-overlay .modal-content .action-btn.approve-btn:hover {
-	background: var(--status-success);
-	color: var(--terminal-bg);
+	background: color-mix(in srgb, var(--color-success) 85%, black 15%);
 }
 
 .modal-overlay .modal-content .action-btn.delete-btn {
-	border-color: var(--status-error);
-	color: var(--status-error);
+	background: var(--color-danger);
+	color: var(--color-danger-text);
 }
 
 .modal-overlay .modal-content .action-btn.delete-btn:hover {
-	background: var(--status-error);
-	color: var(--terminal-bg);
+	background: color-mix(in srgb, var(--color-danger) 85%, black 15%);
 }
 
 /* Spiral task specific styling in task list */
@@ -1697,7 +1704,7 @@ button {
 #invoiceDeniedStat {
 	background: var(--card-bg);
 	padding: 25px;
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 	text-align: center;
 	transition: all 0.3s ease;
@@ -1710,8 +1717,7 @@ button {
 }
 
 #invoicePaidStat:hover {
-	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 30%, transparent);
-	border-color: var(--terminal-green-light);
+	background: var(--color-elevated);
 }
 
 #invoicePaidStat h3 {
@@ -1723,8 +1729,7 @@ button {
 }
 
 #invoicePendingStat:hover {
-	box-shadow: 0 0 15px color-mix(in srgb, var(--color-warning) 30%, transparent);
-	border-color: var(--status-warning);
+	background: var(--color-elevated);
 }
 
 #invoicePendingStat h3 {
@@ -1736,8 +1741,7 @@ button {
 }
 
 #invoiceDeniedStat:hover {
-	box-shadow: 0 0 15px color-mix(in srgb, var(--color-danger) 3%, transparent);
-	border-color: var(--status-error);
+	background: var(--color-elevated);
 }
 
 #invoiceDeniedStat h3 {
@@ -1796,15 +1800,6 @@ button {
 	}
 }
 
-/* Success glow for paid invoices */
-#invoicePaidStat .stat-number {
-	text-shadow: 0 0 10px color-mix(in srgb, var(--color-success) 5%, transparent);
-}
-
-/* Error glow for denied invoices */
-#invoiceDeniedStat .stat-number {
-	text-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
-}
 
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
@@ -1842,7 +1837,7 @@ button {
 /* Console debug styling for invoice statistics */
 .invoice-debug-output {
 	background: var(--terminal-bg-alt);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	color: var(--terminal-white);
 	padding: 15px;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -1862,7 +1857,7 @@ button {
 #invoiceDeniedStat {
 	background: var(--card-bg);
 	padding: 25px;
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 	text-align: center;
 	transition: all 0.3s ease;
@@ -1875,8 +1870,7 @@ button {
 }
 
 #invoicePaidStat:hover {
-	box-shadow: 0 0 15px color-mix(in srgb, var(--focus-ring) 30%, transparent);
-	border-color: var(--terminal-green-light);
+	background: var(--color-elevated);
 }
 
 #invoicePaidStat h3 {
@@ -1888,8 +1882,7 @@ button {
 }
 
 #invoicePendingStat:hover {
-	box-shadow: 0 0 15px color-mix(in srgb, var(--color-warning) 30%, transparent);
-	border-color: var(--status-warning);
+	background: var(--color-elevated);
 }
 
 #invoicePendingStat h3 {
@@ -1901,8 +1894,7 @@ button {
 }
 
 #invoiceDeniedStat:hover {
-	box-shadow: 0 0 15px color-mix(in srgb, var(--color-danger) 3%, transparent);
-	border-color: var(--status-error);
+	background: var(--color-elevated);
 }
 
 #invoiceDeniedStat h3 {
@@ -1961,15 +1953,6 @@ button {
 	}
 }
 
-/* Success glow for paid invoices */
-#invoicePaidStat .stat-number {
-	text-shadow: 0 0 10px color-mix(in srgb, var(--color-success) 5%, transparent);
-}
-
-/* Error glow for denied invoices */
-#invoiceDeniedStat .stat-number {
-	text-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 5%, transparent);
-}
 
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
@@ -2007,7 +1990,7 @@ button {
 /* Console debug styling for invoice statistics */
 .invoice-debug-output {
 	background: var(--terminal-bg-alt);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	color: var(--terminal-white);
 	padding: 15px;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -2032,7 +2015,7 @@ button {
 	margin: 20px 0;
 	padding: 15px;
 	background: var(--terminal-bg-alt);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 }
 
 .summary-stat {
@@ -2054,7 +2037,7 @@ button {
 }
 
 .invoice-details-list {
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	background: var(--terminal-bg);
 }
 
@@ -2212,13 +2195,13 @@ button {
 
 .suggestion-item:hover {
 	border-color: var(--status-info) !important;
-	box-shadow: 0 0 15px color-mix(in srgb, var(--color-accent) 30%, transparent);
+	background: var(--color-elevated);
 }
 
 /* Changes preview styling */
 .suggestion-changes-preview {
 	background: var(--terminal-bg-alt);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 	padding: 15px;
 	margin: 20px 0;
@@ -2289,7 +2272,7 @@ button {
 	width: 100%;
 	padding: 12px;
 	background: var(--terminal-bg);
-	border: 1px solid var(--terminal-green);
+	border: 1px solid var(--color-border);
 	color: var(--terminal-white);
 	border-radius: var(--radius-sm);
 	font-size: var(--font-size-base);
@@ -2297,10 +2280,9 @@ button {
 		Helvetica, Arial, sans-serif !important;
 }
 
-.modal-content .form-input:focus {
-	outline: none;
-	border-color: var(--terminal-green-light);
-	box-shadow: 0 0 10px color-mix(in srgb, var(--focus-ring) 30%, transparent);
+.modal-content .form-input:focus-visible {
+	outline: 2px solid var(--focus-ring);
+	outline-offset: 2px;
 }
 
 .modal-content .form-input[type="checkbox"] {
@@ -2333,15 +2315,13 @@ button {
 
 /* Specific button styling for suggestion actions */
 .action-btn.check-btn {
-	background: var(--terminal-bg);
-	color: var(--status-info);
-	border: 1px solid var(--status-info);
+	background: var(--color-elevated);
+	color: var(--color-text-primary);
+	border: 1px solid var(--color-border-strong);
 }
 
 .action-btn.check-btn:hover {
-	background: var(--status-info);
-	color: var(--terminal-bg);
-	box-shadow: 0 0 10px color-mix(in srgb, var(--color-accent) 30%, transparent);
+	background: color-mix(in srgb, var(--color-elevated) 85%, white 15%);
 }
 
 /* Time ago badge for suggestions */
@@ -2419,7 +2399,6 @@ button {
 
 .form-input.error {
 	border-color: var(--status-error);
-	box-shadow: 0 0 10px color-mix(in srgb, var(--color-danger) 3%, transparent);
 }
 
 /* Success message for approved suggestions */
