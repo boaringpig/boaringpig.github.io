@@ -1,7 +1,7 @@
 // useSlaves.js - the current group's roster: each slave's username, display
 // name, and points. Used by the task-assignment picker, the dashboard, and
 // the admin "Manage Pigs" page.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "../context/AppContext";
 
 export function useSlaves() {
@@ -11,6 +11,13 @@ export function useSlaves() {
 	var [slaves, setSlaves] = useState([]);
 	var [status, setStatus] = useState("loading");
 	var [error, setError] = useState(null);
+
+	// Random per-instance suffix so a repeated topic name across hook
+	// instances never collides -- see useRealtimeList.js for the full
+	// explanation of why this is needed. This hook has four concurrent
+	// consumers (StartTrackerForm, TaskForm, DashboardPage, ManagePigs), so
+	// it's the most exposed of the hand-rolled hooks to this bug class.
+	var instanceId = useRef(Math.random().toString(36).slice(2)).current;
 
 	var load = useCallback(
 		async function () {
@@ -85,7 +92,7 @@ export function useSlaves() {
 			if (!masterUsername) return undefined;
 
 			var channel = window.supabase
-				.channel("beta_slave_roster_" + masterUsername)
+				.channel("beta_slave_roster_" + masterUsername + "_" + instanceId)
 				.on(
 					"postgres_changes",
 					{
