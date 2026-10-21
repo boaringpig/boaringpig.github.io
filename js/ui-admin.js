@@ -172,7 +172,7 @@ window.showEditMasterModal = async function (masterUsername) {
 		'<input type="text" id="editSlaveLabelPlural" class="form-input" value="' +
 		window.escapeHtml(master.slaveLabelPlural) +
 		'" /></div>' +
-		'<hr style="margin: 12px 0; border-color: var(--border-color, #333);" />' +
+		'<hr style="margin: 12px 0; border-color: var(--color-border-strong);" />' +
 		'<div class="form-group">' +
 		'<label class="form-label"><input type="checkbox" id="editClassicUiForced" ' +
 		(master.classicUiForced ? "checked" : "") +

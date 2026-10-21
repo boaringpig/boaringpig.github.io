@@ -185,7 +185,7 @@ window.renderCalendar = function () {
 	} catch (error) {
 		console.error("Error initializing FullCalendar:", error);
 		var fallbackHtml =
-			'<div style="padding: 20px; text-align: center; color: #666;">' +
+			'<div style="padding: 20px; text-align: center; color: var(--color-text-secondary);">' +
 			"<h3>Calendar Loading...</h3>" +
 			"<p>There was an issue loading the calendar. Please refresh the page.</p>" +
 			'<div style="margin-top: 20px;">' +

@@ -150,6 +150,7 @@ window.showCostTracker = function () {
 	const modal = document.getElementById("costTrackerModal");
 	if (modal) {
 		modal.classList.remove("hidden");
+		window.renderPigCheckboxes("costTrackerPigCheckboxes");
 		// Initialize the cost tracker logic when the modal is shown
 		if (window.costTracker) {
 			window.costTracker.init();

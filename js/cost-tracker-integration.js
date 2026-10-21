@@ -385,6 +385,15 @@ window.costTracker = (function () {
 				return;
 			}
 
+			const assignedTo = window.getSelectedPigs("costTrackerPigCheckboxes");
+			if (assignedTo.length === 0) {
+				window.showNotification(
+					`Select at least one ${window.termCap("slave")} to assign this tracker to`,
+					"error"
+				);
+				return;
+			}
+
 			// Stop any existing live tracker first
 			await window.stopAllActiveCostTrackers();
 
@@ -406,7 +415,8 @@ window.costTracker = (function () {
 					rate,
 					currency,
 					interval,
-					existingPenalties
+					existingPenalties,
+					assignedTo
 				);
 
 				if (trackerId) {
@@ -696,6 +706,15 @@ window.costTracker = (function () {
 				return;
 			}
 
+			const assignedTo = window.getSelectedPigs("costTrackerPigCheckboxes");
+			if (assignedTo.length === 0) {
+				window.showNotification(
+					`Select at least one ${window.termCap("slave")} to assign this invoice to`,
+					"error"
+				);
+				return;
+			}
+
 			const costDetails = instance.getCostDetails();
 
 			// Create task description with cost breakdown
@@ -717,14 +736,13 @@ Time-based Cost: ${costDetails.timeBasedCost.description} = ${costDetails.timeBa
 				penaltiesText +
 				`\n\n💸 TOTAL AMOUNT DUE: ${costDetails.grandTotal}\n\n⚠️ This is an invoice that must be approved for payment. Failure to approve will result in penalty points.`;
 
-			const task = {
+			const taskBase = {
 				text: finalDescription,
 				status: "todo",
 				type: "cost-tracker",
 				createdAt: new Date().toISOString(),
 				createdBy: window.currentUser,
 				master_username: window.activeMasterContext,
-				assignedTo: window.getSlaves()[0] || window.currentUser,
 				points: 0,
 				penaltyPoints: 100,
 				dueDate: new Date(
@@ -735,9 +753,10 @@ Time-based Cost: ${costDetails.timeBasedCost.description} = ${costDetails.timeBa
 			};
 
 			try {
-				const { error: taskError } = await window.supabase
-					.from("tasks")
-					.insert([task]);
+				const { error: taskError } = await window.createCostTrackerInvoiceTask(
+					taskBase,
+					assignedTo
+				);
 
 				if (taskError) {
 					console.error(

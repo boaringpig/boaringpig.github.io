@@ -260,7 +260,7 @@ window.renderAdminView = function () {
 							  "</span>"
 							: "") +
 						(task.type === "demerit" && task.acceptedAt
-							? '<span class="points-badge-small" style="background: #e0e7ff; color: #3730a3;">Accepted</span>'
+							? '<span class="points-badge-small" style="background: color-mix(in srgb, var(--color-accent) 20%, var(--color-card)); color: var(--color-accent);">Accepted</span>'
 							: "") +
 						'<div class="task-meta">' +
 						"Assigned to: " +
@@ -377,12 +377,12 @@ window.renderUserView = function () {
 											<button class="action-btn approve-btn" onclick="window.markInvoiceAsPaid(${task.id})">Mark as Paid</button>`;
 						} else if (task.status === "pending_approval") {
 							actionButtons = `<button class="action-btn check-btn" onclick="window.viewCostTrackerTask(${task.id})">View Invoice</button>
-											<span style="color: #fcd34d; font-weight: bold;">⏳ Payment Pending Admin Approval</span>`;
+											<span style="color: var(--color-warning); font-weight: bold;">⏳ Payment Pending Admin Approval</span>`;
 						} else if (task.status === "completed") {
 							actionButtons = `<button class="action-btn check-btn" onclick="window.viewCostTrackerTask(${task.id})">View Paid Invoice</button>`;
 						} else if (task.status === "failed") {
 							actionButtons = `<button class="action-btn check-btn" onclick="window.viewCostTrackerTask(${task.id})">View Denied Invoice</button>
-											<span style="color: #f87171; font-weight: bold;">❌ Payment Denied</span>`;
+											<span style="color: var(--color-danger); font-weight: bold;">❌ Payment Denied</span>`;
 						} else {
 							actionButtons = `<button class="action-btn check-btn" onclick="window.viewCostTrackerTask(${task.id})">View Invoice</button>`;
 						}
@@ -470,7 +470,7 @@ window.renderUserView = function () {
 							  "</span>"
 							: "") +
 						(task.type === "demerit" && task.acceptedAt
-							? '<span class="points-badge-small" style="background: #e0e7ff; color: #3730a3;">Accepted</span>'
+							? '<span class="points-badge-small" style="background: color-mix(in srgb, var(--color-accent) 20%, var(--color-card)); color: var(--color-accent);">Accepted</span>'
 							: "") +
 						'<div class="task-meta">' +
 						(task.type === "demerit"
@@ -705,7 +705,7 @@ window.viewCostTrackerTask = function (taskId) {
 			${window.escapeHtml(taskText)}
 		</div>
 		<hr>
-		<h3 style="color: #ff6b6b;">Total Amount Due: <strong>${totalAmount}</strong></h3>
+		<h3 style="color: var(--color-danger);">Total Amount Due: <strong>${totalAmount}</strong></h3>
 	`;
 
 	window.showModal(modalContent);

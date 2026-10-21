@@ -36,13 +36,14 @@ export function useCostTrackers() {
 		error: list.error,
 		reload: list.reload,
 
-		startTracker: function (description, rate, currency, incrementInterval, initialPenalties) {
+		startTracker: function (description, rate, currency, incrementInterval, initialPenalties, assignedTo) {
 			return window.startLiveCostTracker(
 				description,
 				rate,
 				currency,
 				incrementInterval,
-				initialPenalties
+				initialPenalties,
+				assignedTo
 			);
 		},
 		stopTracker: function (trackerId, createInvoice) {
