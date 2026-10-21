@@ -1,0 +1,62 @@
+/*
+ * Shared design tokens for the whole app (classic + beta). This is the
+ * single definition of "what the new look is" -- both styles/green.css
+ * (classic, which aliases its old --terminal-* and --status-* variable
+ * names onto these so its ~2500 lines of existing rules repaint without being
+ * rewritten line-by-line) and src/beta/styles/tokens.css (which mirrors
+ * these same values as its own fallbacks) read from it.
+ *
+ * Per-group colors (bg/card/elevated/text-primary/text-secondary) are NOT
+ * defined here -- those come from group_settings (dark and light variants)
+ * and are applied as inline custom properties by js/apply-theme.js (classic)
+ * / src/beta/App.jsx (beta) once a group is known. The values below are
+ * what's shown before that: the login/invite-signup screens, and the
+ * fallback for anything rendered before a group's colors load.
+ */
+
+:root {
+	--color-bg: #09090b;
+	--color-card: #131316;
+	--color-elevated: #1a1a20;
+	--color-text-primary: #fafafa;
+	--color-text-secondary: #a1a1aa;
+
+	/* Fixed accent/status colors -- same in light and dark mode, same as
+	   src/beta/styles/tokens.css (not admin-configurable, unlike the 5 above). */
+	--color-accent: #6366f1;
+	--color-accent-text: #ffffff;
+	--color-success: #22c55e;
+	--color-warning: #eab308;
+	--color-danger: #ef4444;
+	--color-danger-text: #ffffff;
+
+	--color-border: rgba(250, 250, 250, 0.08);
+	--color-border-strong: rgba(250, 250, 250, 0.16);
+	--focus-ring: #8183f4;
+
+	--radius-sm: 6px;
+	--radius-md: 10px;
+	--radius-lg: 16px;
+
+	--space-1: 4px;
+	--space-2: 8px;
+	--space-3: 12px;
+	--space-4: 16px;
+	--space-5: 24px;
+	--space-6: 32px;
+
+	color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+	--color-bg: #ffffff;
+	--color-card: #f4f4f5;
+	--color-elevated: #e4e4e7;
+	--color-text-primary: #18181b;
+	--color-text-secondary: #52525b;
+
+	--color-border: rgba(0, 0, 0, 0.08);
+	--color-border-strong: rgba(0, 0, 0, 0.16);
+
+	color-scheme: light;
+}

@@ -24,6 +24,11 @@ window.groupTheme = {
 	elevated: "#1a1a20",
 	textPrimary: "#fafafa",
 	textSecondary: "#a1a1aa",
+	bgLight: "#ffffff",
+	cardLight: "#f4f4f5",
+	elevatedLight: "#e4e4e7",
+	textPrimaryLight: "#18181b",
+	textSecondaryLight: "#52525b",
 };
 
 function capitalizeFirst(str) {
@@ -85,10 +90,18 @@ window.loadGroupTerms = async function () {
 			elevated: data[0].theme_elevated || "#1a1a20",
 			textPrimary: data[0].theme_text_primary || "#fafafa",
 			textSecondary: data[0].theme_text_secondary || "#a1a1aa",
+			bgLight: data[0].theme_bg_light || "#ffffff",
+			cardLight: data[0].theme_card_light || "#f4f4f5",
+			elevatedLight: data[0].theme_elevated_light || "#e4e4e7",
+			textPrimaryLight: data[0].theme_text_primary_light || "#18181b",
+			textSecondaryLight: data[0].theme_text_secondary_light || "#52525b",
 		};
 	}
 
 	window.applyTerminology();
+	if (window.applyThemeColors) {
+		window.applyThemeColors();
+	}
 	if (window.renderBetaToggleButton) {
 		window.renderBetaToggleButton();
 	}

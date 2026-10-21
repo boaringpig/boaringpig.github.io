@@ -16,6 +16,14 @@ var DEFAULT_THEME = {
 	textSecondary: "#a1a1aa",
 };
 
+var DEFAULT_THEME_LIGHT = {
+	bg: "#ffffff",
+	card: "#f4f4f5",
+	elevated: "#e4e4e7",
+	textPrimary: "#18181b",
+	textSecondary: "#52525b",
+};
+
 function initialState(master) {
 	return {
 		username: master ? master.username : "",
@@ -29,6 +37,7 @@ function initialState(master) {
 		slaveLabelPlural: master ? master.slaveLabelPlural : "pigs",
 		classicUiForced: master ? master.classicUiForced : false,
 		theme: master ? master.theme : DEFAULT_THEME,
+		themeLight: master ? master.themeLight : DEFAULT_THEME_LIGHT,
 	};
 }
 
@@ -46,6 +55,12 @@ export function MasterEditForm({ master, onCreate, onSaveExisting, onCancel }) {
 	function updateTheme(key, value) {
 		setForm(function (prev) {
 			return Object.assign({}, prev, { theme: Object.assign({}, prev.theme, { [key]: value }) });
+		});
+	}
+
+	function updateThemeLight(key, value) {
+		setForm(function (prev) {
+			return Object.assign({}, prev, { themeLight: Object.assign({}, prev.themeLight, { [key]: value }) });
 		});
 	}
 
@@ -161,6 +176,7 @@ export function MasterEditForm({ master, onCreate, onSaveExisting, onCancel }) {
 					Force classic styling for this group (disable beta)
 				</label>
 
+				<p className={styles.colorGroupLabel}>Dark mode colors</p>
 				<div className={styles.colorRow}>
 					{[
 						["bg", "Background"],
@@ -179,6 +195,32 @@ export function MasterEditForm({ master, onCreate, onSaveExisting, onCancel }) {
 									value={form.theme[key]}
 									onChange={function (e) {
 										updateTheme(key, e.target.value);
+									}}
+								/>
+							</label>
+						);
+					})}
+				</div>
+
+				<p className={styles.colorGroupLabel}>Light mode colors</p>
+				<div className={styles.colorRow}>
+					{[
+						["bg", "Background"],
+						["card", "Card"],
+						["elevated", "Elevated"],
+						["textPrimary", "Primary text"],
+						["textSecondary", "Secondary text"],
+					].map(function (entry) {
+						var key = entry[0];
+						var label = entry[1];
+						return (
+							<label key={"light-" + key} className={styles.colorField}>
+								{label}
+								<input
+									type="color"
+									value={form.themeLight[key]}
+									onChange={function (e) {
+										updateThemeLight(key, e.target.value);
 									}}
 								/>
 							</label>

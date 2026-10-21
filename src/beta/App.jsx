@@ -61,7 +61,7 @@ function AppShell() {
 	};
 
 	return (
-		<div className="betaApp" style={themeStyle}>
+		<div className="betaApp" data-theme={app.themeMode} style={themeStyle}>
 			<Header />
 			<NavTabs activeTab={activeTab} onChange={setActiveTab} />
 			<main className="betaContainer">

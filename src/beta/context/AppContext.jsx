@@ -15,12 +15,14 @@
 // them whenever something changes them (e.g. switching which group a shared
 // slave is viewing).
 
-import { createContext, useContext, useMemo, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 
 const AppContext = createContext(null);
 
 function snapshotFromWindow() {
 	var user = window.users[window.currentUser] || {};
+	var groupTheme = window.groupTheme;
+	var isLight = window.themeMode === "light";
 	return {
 		currentUser: window.currentUser,
 		displayName: user.displayName || window.currentUser,
@@ -31,12 +33,13 @@ function snapshotFromWindow() {
 		activeMasterContext: window.activeMasterContext,
 		myMasterOptions: (window.myMasterOptions || []).slice(),
 		groupTerms: Object.assign({}, window.groupTerms),
+		themeMode: window.themeMode || "dark",
 		theme: {
-			bg: window.groupTheme.bg,
-			card: window.groupTheme.card,
-			elevated: window.groupTheme.elevated,
-			textPrimary: window.groupTheme.textPrimary,
-			textSecondary: window.groupTheme.textSecondary,
+			bg: isLight ? groupTheme.bgLight : groupTheme.bg,
+			card: isLight ? groupTheme.cardLight : groupTheme.card,
+			elevated: isLight ? groupTheme.elevatedLight : groupTheme.elevated,
+			textPrimary: isLight ? groupTheme.textPrimaryLight : groupTheme.textPrimary,
+			textSecondary: isLight ? groupTheme.textSecondaryLight : groupTheme.textSecondary,
 		},
 	};
 }
@@ -63,15 +66,37 @@ export function AppProvider({ children }) {
 		window.exitBetaMode();
 	}, []);
 
+	const setThemeMode = useCallback(
+		function (mode) {
+			window.setThemeMode(mode);
+			refresh();
+		},
+		[refresh]
+	);
+
+	// classic code (js/apply-theme.js) dispatches this after setThemeMode
+	// runs, so this re-snapshots even when the toggle was clicked from the
+	// classic UI's own button rather than this one.
+	useEffect(
+		function () {
+			window.addEventListener("theme-changed", refresh);
+			return function () {
+				window.removeEventListener("theme-changed", refresh);
+			};
+		},
+		[refresh]
+	);
+
 	const value = useMemo(
 		function () {
 			return Object.assign({}, snapshot, {
 				refresh: refresh,
 				switchGroup: switchGroup,
 				exitBeta: exitBeta,
+				setThemeMode: setThemeMode,
 			});
 		},
-		[snapshot, refresh, switchGroup, exitBeta]
+		[snapshot, refresh, switchGroup, exitBeta, setThemeMode]
 	);
 
 	return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

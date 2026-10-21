@@ -6,6 +6,8 @@
 		<title>TPF - Pig Management Tool</title>
 		<!-- Tailwind CSS CDN for utility classes -->
 		<script src="https://cdn.tailwindcss.com"></script>
+		<!-- Shared design tokens (both classic and beta read these) -->
+		<link rel="stylesheet" href="styles/theme.css" />
 		<!-- Custom Stylesheet -->
 		<link rel="stylesheet" href="styles/green.css" />
 		<!-- Flatpickr CSS -->
@@ -21,6 +23,7 @@
 			rel="stylesheet"
 		/>
 		<script type="module" src="js/config.js"></script>
+		<script type="module" src="js/apply-theme.js"></script>
 
 		<!-- New Integration Scripts moved to head to be loaded first -->
 		<script type="module" src="js/spiral-integration.js"></script>
@@ -55,6 +58,12 @@
 			<!-- Login Screen -->
 			<div id="loginScreen" class="login-container">
 				<div class="login-form">
+					<button
+						type="button"
+						id="loginThemeToggleBtn"
+						class="theme-toggle-btn"
+						onclick="window.toggleThemeMode()"
+					></button>
 					<h1 class="login-title">Pig Management Tool Login</h1>
 
 					<div
@@ -184,6 +193,12 @@
 							✏️ Status
 						</button>
 						<div id="userPoints" class="points-badge">0 Points</div>
+						<button
+							type="button"
+							id="mainThemeToggleBtn"
+							class="theme-toggle-btn"
+							onclick="window.toggleThemeMode()"
+						></button>
 						<button class="logout-btn" onclick="logout()">
 							Logout
 						</button>
