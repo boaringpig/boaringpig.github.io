@@ -136,9 +136,14 @@ export function TrackerCard({ tracker, isAdmin, onStop, onAddPenalty, onRemovePe
 							Add
 						</Button>
 					</div>
-					<Button variant="danger" onClick={function () { onStop(tracker.id); }}>
-						Stop &amp; invoice
-					</Button>
+					<div className={styles.stopActions}>
+						<Button variant="danger" onClick={function () { onStop(tracker.id, true); }}>
+							Stop &amp; invoice
+						</Button>
+						<Button variant="secondary" onClick={function () { onStop(tracker.id, false); }}>
+							Stop (no invoice)
+						</Button>
+					</div>
 				</>
 			) : null}
 		</Card>

@@ -11,12 +11,37 @@ export function StartTrackerForm({ onStart }) {
 	var [currency, setCurrency] = useState("€");
 	var [interval, setInterval_] = useState(60000);
 	var [submitting, setSubmitting] = useState(false);
+	var [stagedPenalties, setStagedPenalties] = useState([]);
+	var [penaltyDescription, setPenaltyDescription] = useState("");
+	var [penaltyAmount, setPenaltyAmount] = useState("");
+
+	if (!window.hasPermission("create_task")) return null;
+
+	function addStagedPenalty() {
+		setStagedPenalties(function (prev) {
+			return prev.concat({
+				description: penaltyDescription.trim(),
+				amount: Number(penaltyAmount),
+			});
+		});
+		setPenaltyDescription("");
+		setPenaltyAmount("");
+	}
+
+	function removeStagedPenalty(index) {
+		setStagedPenalties(function (prev) {
+			return prev.filter(function (_, i) {
+				return i !== index;
+			});
+		});
+	}
 
 	async function handleSubmit(e) {
 		e.preventDefault();
 		setSubmitting(true);
 		try {
-			await onStart(description, Number(rate) || 0, currency, Number(interval), []);
+			await onStart(description, Number(rate) || 0, currency, Number(interval), stagedPenalties);
+			setStagedPenalties([]);
 		} finally {
 			setSubmitting(false);
 		}
@@ -73,6 +98,57 @@ export function StartTrackerForm({ onStart }) {
 						</select>
 					</div>
 				</div>
+
+				<div className={styles.penaltyForm}>
+					<TextInput
+						label="Penalty description"
+						value={penaltyDescription}
+						onChange={function (e) {
+							setPenaltyDescription(e.target.value);
+						}}
+					/>
+					<TextInput
+						label="Amount"
+						type="number"
+						min="0"
+						step="0.01"
+						value={penaltyAmount}
+						onChange={function (e) {
+							setPenaltyAmount(e.target.value);
+						}}
+					/>
+					<Button
+						type="button"
+						variant="secondary"
+						disabled={!penaltyDescription.trim() || !penaltyAmount}
+						onClick={addStagedPenalty}
+					>
+						Add penalty
+					</Button>
+				</div>
+				{stagedPenalties.length > 0 ? (
+					<ul className={styles.penaltyList}>
+						{stagedPenalties.map(function (p, i) {
+							return (
+								<li key={i}>
+									{p.description}: {currency}
+									{p.amount.toFixed(2)}
+									<button
+										type="button"
+										className={styles.removePenalty}
+										onClick={function () {
+											removeStagedPenalty(i);
+										}}
+										aria-label={"Remove staged penalty " + p.description}
+									>
+										&times;
+									</button>
+								</li>
+							);
+						})}
+					</ul>
+				) : null}
+
 				<Button type="submit" loading={submitting}>
 					Start tracker
 				</Button>

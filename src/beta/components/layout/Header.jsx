@@ -77,7 +77,7 @@ export function Header() {
 					<span className={styles.points}>{user.points || 0} points</span>
 				) : null}
 				<Button variant="secondary" onClick={handleExitBeta}>
-					Exit beta
+					Switch to classic styling
 				</Button>
 				<Button variant="secondary" onClick={handleLogout}>
 					Logout

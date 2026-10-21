@@ -1,0 +1,89 @@
+.sidebar {
+	width: 320px;
+	flex: 0 0 320px;
+	overflow-y: auto;
+	padding: var(--space-4);
+	background: var(--color-card);
+	border-left: 1px solid var(--color-border);
+}
+
+.controlGroup {
+	border-top: 1px solid var(--color-border);
+	padding-top: var(--space-3);
+	margin-top: var(--space-3);
+}
+
+.controlGroup:first-child {
+	border-top: none;
+	padding-top: 0;
+	margin-top: 0;
+}
+
+.controlGroup h3 {
+	margin: 0 0 var(--space-2);
+	font-size: 14px;
+}
+
+.spiralList {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	margin-bottom: var(--space-2);
+}
+
+.spiralItem,
+.spiralItemActive {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--space-1) var(--space-2);
+	border-radius: var(--radius-sm);
+	font-size: 13px;
+}
+
+.spiralItemActive {
+	background: var(--color-elevated);
+	border: 1px solid var(--color-border-strong);
+}
+
+.actions {
+	display: flex;
+	gap: var(--space-1);
+}
+
+.controlRow {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	margin-bottom: var(--space-1);
+	font-size: 13px;
+}
+
+.controlRow label {
+	flex: 0 0 90px;
+	color: var(--color-text-secondary);
+}
+
+.controlRow input[type="range"] {
+	flex: 1;
+}
+
+.valueDisplay {
+	flex: 0 0 45px;
+	text-align: right;
+	color: var(--color-text-secondary);
+}
+
+.sendAsTask {
+	width: 100%;
+	margin-top: var(--space-4);
+}
+
+@media (max-width: 760px) {
+	.sidebar {
+		width: auto;
+		flex: 1;
+		border-left: none;
+		border-top: 1px solid var(--color-border);
+	}
+}

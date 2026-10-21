@@ -27,7 +27,7 @@ function initialState(master) {
 		masterLabelPlural: master ? master.masterLabelPlural : "Masters",
 		slaveLabel: master ? master.slaveLabel : "pig",
 		slaveLabelPlural: master ? master.slaveLabelPlural : "pigs",
-		betaUiEnabled: master ? master.betaUiEnabled : false,
+		classicUiForced: master ? master.classicUiForced : false,
 		theme: master ? master.theme : DEFAULT_THEME,
 	};
 }
@@ -153,12 +153,12 @@ export function MasterEditForm({ master, onCreate, onSaveExisting, onCancel }) {
 				<label className={styles.checkboxRow}>
 					<input
 						type="checkbox"
-						checked={form.betaUiEnabled}
+						checked={form.classicUiForced}
 						onChange={function (e) {
-							update("betaUiEnabled", e.target.checked);
+							update("classicUiForced", e.target.checked);
 						}}
 					/>
-					Enable React beta dashboard for this group
+					Force classic styling for this group (disable beta)
 				</label>
 
 				<div className={styles.colorRow}>

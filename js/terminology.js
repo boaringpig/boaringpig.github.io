@@ -11,13 +11,14 @@ window.groupTerms = {
 	slaveLabelPlural: "pigs",
 };
 
-// The React beta dashboard's theme for the active group. betaUiEnabled
-// gates whether the "Try Beta Dashboard" switch is shown at all; the
+// The React beta dashboard's theme for the active group. Beta is the
+// default UI for everyone; classicUiForced is an admin kill-switch that
+// locks a group to the classic UI only. The
 // bg/card/elevated/textPrimary/textSecondary colors are admin-set per group
 // (see js/ui-admin.js's edit-master modal) and consumed by src/beta's
 // AppContext.
 window.groupTheme = {
-	betaUiEnabled: false,
+	classicUiForced: false,
 	bg: "#09090b",
 	card: "#131316",
 	elevated: "#1a1a20",
@@ -78,7 +79,7 @@ window.loadGroupTerms = async function () {
 			slaveLabelPlural: data[0].slave_label_plural || "pigs",
 		};
 		window.groupTheme = {
-			betaUiEnabled: !!data[0].beta_ui_enabled,
+			classicUiForced: !!data[0].classic_ui_forced,
 			bg: data[0].theme_bg || "#09090b",
 			card: data[0].theme_card || "#131316",
 			elevated: data[0].theme_elevated || "#1a1a20",
