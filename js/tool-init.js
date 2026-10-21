@@ -130,6 +130,7 @@ window.ensureModalFunctions = function () {
 			const modal = document.getElementById("costTrackerModal");
 			if (modal) {
 				modal.classList.remove("hidden");
+				window.renderPigCheckboxes("costTrackerPigCheckboxes");
 				if (window.costTracker && window.costTracker.init) {
 					window.costTracker.init();
 				}

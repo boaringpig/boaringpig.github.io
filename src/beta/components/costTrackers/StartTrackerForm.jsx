@@ -4,21 +4,36 @@
 // (selecting "Use" on a SavedPresetsList row) -- same save/reuse pattern as
 // the spiral generator's saved-library feature.
 import { useEffect, useState } from "react";
+import { useApp } from "../../context/AppContext";
+import { useSlaves } from "../../hooks/useSlaves";
 import { Card } from "../common/Card";
 import { Button } from "../common/Button";
 import { TextInput } from "../common/TextInput";
 import styles from "./StartTrackerForm.module.css";
 
 export function StartTrackerForm({ onStart, onSavePreset, presetToApply }) {
+	var app = useApp();
+	var slavesState = useSlaves();
 	var [description, setDescription] = useState("Cost Tracker Running");
 	var [rate, setRate] = useState(50);
 	var [currency, setCurrency] = useState("€");
 	var [interval, setInterval_] = useState(60000);
+	var [assignedTo, setAssignedTo] = useState([]);
 	var [submitting, setSubmitting] = useState(false);
 	var [stagedPenalties, setStagedPenalties] = useState([]);
 	var [penaltyDescription, setPenaltyDescription] = useState("");
 	var [penaltyAmount, setPenaltyAmount] = useState("");
 	var [presetName, setPresetName] = useState("");
+
+	function toggleAssignee(username) {
+		setAssignedTo(function (prev) {
+			return prev.includes(username)
+				? prev.filter(function (u) {
+						return u !== username;
+				  })
+				: prev.concat(username);
+		});
+	}
 
 	useEffect(
 		function () {
@@ -66,9 +81,10 @@ export function StartTrackerForm({ onStart, onSavePreset, presetToApply }) {
 					incrementInterval: Number(interval),
 				});
 			}
-			await onStart(description, Number(rate) || 0, currency, Number(interval), stagedPenalties);
+			await onStart(description, Number(rate) || 0, currency, Number(interval), stagedPenalties, assignedTo);
 			setStagedPenalties([]);
 			setPresetName("");
+			setAssignedTo([]);
 		} finally {
 			setSubmitting(false);
 		}
@@ -176,6 +192,32 @@ export function StartTrackerForm({ onStart, onSavePreset, presetToApply }) {
 					</ul>
 				) : null}
 
+				<fieldset className={styles.fieldset}>
+					<legend>
+						Assign to {app.groupTerms.slaveLabelPlural}
+					</legend>
+					{slavesState.slaves.length === 0 ? (
+						<p className={styles.hint}>
+							No {app.groupTerms.slaveLabelPlural} added yet.
+						</p>
+					) : (
+						slavesState.slaves.map(function (slave) {
+							return (
+								<label key={slave.username} className={styles.checkboxRow}>
+									<input
+										type="checkbox"
+										checked={assignedTo.includes(slave.username)}
+										onChange={function () {
+											toggleAssignee(slave.username);
+										}}
+									/>
+									{slave.displayName}
+								</label>
+							);
+						})
+					)}
+				</fieldset>
+
 				<TextInput
 					label="Save as preset (optional)"
 					placeholder="Name this config to reuse it later"
@@ -185,7 +227,7 @@ export function StartTrackerForm({ onStart, onSavePreset, presetToApply }) {
 					}}
 				/>
 
-				<Button type="submit" loading={submitting}>
+				<Button type="submit" loading={submitting} disabled={assignedTo.length === 0}>
 					Start tracker
 				</Button>
 			</form>

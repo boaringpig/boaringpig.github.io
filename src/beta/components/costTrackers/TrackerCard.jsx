@@ -63,6 +63,10 @@ export function TrackerCard({ tracker, isAdmin, onStop, onDelete, onAddPenalty, 
 
 	var totals = computeTotals(tracker, now);
 	var owner = window.users[tracker.created_by];
+	var assignedNames = (tracker.assigned_to || []).map(function (pig) {
+		var user = window.users[pig];
+		return user ? user.displayName : pig;
+	});
 
 	return (
 		<Card className={styles.card}>
@@ -71,6 +75,11 @@ export function TrackerCard({ tracker, isAdmin, onStop, onDelete, onAddPenalty, 
 				by {owner ? owner.displayName : tracker.created_by} &middot; {tracker.currency}
 				{parseFloat(tracker.rate).toFixed(2)} per {intervalLabel(parseInt(tracker.increment_interval))}
 			</p>
+			{isAdmin ? (
+				<p className={styles.meta}>
+					Assigned to: {assignedNames.length > 0 ? assignedNames.join(", ") : "N/A"}
+				</p>
+			) : null}
 			<div className={styles.readout}>
 				<span>{totals.timeText}</span>
 				<span className={styles.amount}>

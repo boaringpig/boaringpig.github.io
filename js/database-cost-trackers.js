@@ -70,18 +70,81 @@ window.stopAllActiveCostTrackers = async function () {
 };
 
 /**
- * Starts a new live cost tracker (Admin only) - ensures single tracker
+ * Creates an invoice task assigned to one or more pigs. Mirrors the
+ * shared-task pattern in js/database-tasks.js: a single assignee gets a
+ * normal `assignedTo` task, multiple assignees get one shared task row plus
+ * a task_assignments entry per pig (so any of them can pay it, same as a
+ * shared regular task).
+ */
+window.createCostTrackerInvoiceTask = async function (taskBase, assignedTo) {
+	var pigs = (
+		Array.isArray(assignedTo) && assignedTo.length > 0
+			? assignedTo
+			: [window.getSlaves()[0] || window.currentUser]
+	).filter(Boolean);
+
+	if (pigs.length <= 1) {
+		var task = Object.assign({}, taskBase, {
+			assignedTo: pigs[0] || window.currentUser,
+		});
+		var { error } = await window.supabase.from("tasks").insert([task]);
+		return { error: error };
+	}
+
+	var sharedTask = Object.assign({}, taskBase, {
+		assignedTo: null,
+		assignment_mode: "shared",
+	});
+	var { data: insertedTask, error: sharedError } = await window.supabase
+		.from("tasks")
+		.insert([sharedTask])
+		.select();
+
+	if (sharedError || !insertedTask || !insertedTask[0]) {
+		return { error: sharedError };
+	}
+
+	var assignments = pigs.map(function (pig) {
+		return {
+			task_id: insertedTask[0].id,
+			assigned_to: pig,
+			status: "todo",
+			master_username: window.activeMasterContext,
+		};
+	});
+	var { error: assignError } = await window.supabase
+		.from("task_assignments")
+		.insert(assignments);
+
+	return { error: assignError };
+};
+
+/**
+ * Starts a new live cost tracker (Admin only) - ensures single tracker.
+ * `assignedTo` must be a non-empty array of slave usernames: a tracker is
+ * only ever visible to (and later invoiced to) the pig(s) it names here, so
+ * it must always be assigned rather than silently broadcasting to everyone
+ * in the group.
  */
 window.startLiveCostTracker = async function (
 	description,
 	rate,
 	currency,
 	incrementInterval,
-	initialPenalties = []
+	initialPenalties = [],
+	assignedTo = []
 ) {
 	if (!window.hasPermission("create_task")) {
 		window.showNotification(
 			"You do not have permission to start cost trackers",
+			"error"
+		);
+		return;
+	}
+
+	if (!Array.isArray(assignedTo) || assignedTo.length === 0) {
+		window.showNotification(
+			`Select at least one ${window.termCap("slave")} to assign this tracker to`,
 			"error"
 		);
 		return;
@@ -99,6 +162,7 @@ window.startLiveCostTracker = async function (
 		currency: currency || "€",
 		increment_interval: incrementInterval || 60000,
 		penalties: JSON.stringify(initialPenalties), // Include initial penalties
+		assigned_to: assignedTo,
 		status: "running",
 	};
 
@@ -277,14 +341,13 @@ Time-based Cost: ${timeText} @ ${tracker.currency}${tracker.rate.toFixed(
 
 			console.log("Creating task with description:", taskDescription);
 
-			const task = {
+			const taskBase = {
 				text: taskDescription,
 				status: "todo",
 				type: "cost-tracker",
 				createdAt: new Date().toISOString(),
 				createdBy: window.currentUser,
 				master_username: window.activeMasterContext,
-				assignedTo: window.getSlaves()[0] || window.currentUser,
 				points: 0,
 				penaltyPoints: 100,
 				dueDate: new Date(
@@ -294,9 +357,10 @@ Time-based Cost: ${timeText} @ ${tracker.currency}${tracker.rate.toFixed(
 				repeatInterval: null,
 			};
 
-			const { error: taskError } = await window.supabase
-				.from("tasks")
-				.insert([task]);
+			const { error: taskError } = await window.createCostTrackerInvoiceTask(
+				taskBase,
+				tracker.assigned_to
+			);
 
 			if (taskError) {
 				console.error("Error creating invoice task:", taskError);

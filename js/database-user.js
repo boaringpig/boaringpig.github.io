@@ -168,11 +168,11 @@ window.updateUserPoints = async function (
 		if (pointsBadge) {
 			const userPoints = window.users[window.currentUser].points || 0;
 			// Color-code the points badge based on value
-			let pointsColor = "#00ff00"; // Green for positive
+			let pointsColor = "var(--color-success)"; // Green for positive
 			if (userPoints < 0) {
-				pointsColor = "#ff6b6b"; // Red for negative
+				pointsColor = "var(--color-danger)"; // Red for negative
 			} else if (userPoints === 0) {
-				pointsColor = "#ffff00"; // Yellow for zero
+				pointsColor = "var(--color-warning)"; // Yellow for zero
 			}
 
 			pointsBadge.textContent = `${userPoints} Points`;
@@ -184,11 +184,11 @@ window.updateUserPoints = async function (
 			myPointsStat.textContent = userPoints;
 			// Color-code the stat as well
 			if (userPoints < 0) {
-				myPointsStat.style.color = "#ff6b6b"; // Red for negative
+				myPointsStat.style.color = "var(--color-danger)"; // Red for negative
 			} else if (userPoints === 0) {
-				myPointsStat.style.color = "#ffff00"; // Yellow for zero
+				myPointsStat.style.color = "var(--color-warning)"; // Yellow for zero
 			} else {
-				myPointsStat.style.color = "#00ff00"; // Green for positive
+				myPointsStat.style.color = "var(--color-success)"; // Green for positive
 			}
 		}
 	}

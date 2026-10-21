@@ -75,12 +75,16 @@ window.renderActiveCostTrackersAdmin = function () {
 			return `
 			<div class="activity-item cost-tracker-admin-item">
 				<div class="activity-action">
-					💰 ${window.escapeHtml(tracker.description)} 
+					💰 ${window.escapeHtml(tracker.description)}
 					<br><span style="color: var(--terminal-green);">by ${
 						window.users[tracker.created_by]
 							? window.users[tracker.created_by].displayName
 							: tracker.created_by
-					}</span>
+					} &rarr; ${
+					(tracker.assigned_to || [])
+						.map((pig) => window.escapeHtml(window.users[pig]?.displayName || pig))
+						.join(", ") || "N/A"
+				}</span>
 				</div>
 				<div class="cost-tracker-details">
 					<div class="cost-tracker-time">⏱️ Running: ${timeText}</div>
@@ -222,39 +226,25 @@ window.updateLiveCostTracker = function () {
 		return; // No need to proceed, nothing to show
 	}
 
-	// Find a tracker for the current user
+	// Find a tracker assigned to the current user. A tracker is only ever
+	// visible to the pig(s) it names in `assigned_to` -- it does NOT broadcast
+	// to every slave in the group just because a master started it.
 	const userTracker = window.activeCostTrackers.find((tracker) => {
-		const trackerUser =
-			tracker.created_by ||
-			tracker.createdBy ||
-			tracker.user_id ||
-			tracker.userId;
-		const assignedTo = tracker.assigned_to || tracker.assignedTo;
+		const assignedTo = tracker.assigned_to;
 		const isRunning = tracker.status === "running";
-
-		// Check if this tracker should be visible to current user:
-		const isAssignedTracker = assignedTo === window.currentUser;
-		const isAdminTrackerForUser =
-			window.isSlave() && window.users[trackerUser] && window.users[trackerUser].role === "master";
-		const isOwnTracker = trackerUser === window.currentUser;
-
-		const isUserMatch =
-			isAssignedTracker || isAdminTrackerForUser || isOwnTracker;
+		const isAssignedTracker =
+			Array.isArray(assignedTo) && assignedTo.includes(window.currentUser);
 
 		console.log(`Checking tracker ${tracker.id}:`, {
-			trackerUser: trackerUser,
 			assignedTo: assignedTo,
 			currentUser: window.currentUser,
 			isAssignedTracker: isAssignedTracker,
-			isAdminTrackerForUser: isAdminTrackerForUser,
-			isOwnTracker: isOwnTracker,
-			isUserMatch: isUserMatch,
 			status: tracker.status,
 			isRunning: isRunning,
-			overall_match: isUserMatch && isRunning,
+			overall_match: isAssignedTracker && isRunning,
 		});
 
-		return isUserMatch && isRunning;
+		return isAssignedTracker && isRunning;
 	});
 
 	console.log("User tracker found:", userTracker ? "Yes" : "No");
@@ -710,6 +700,11 @@ window.viewLiveCostTracker = function (trackerId) {
 		<p><strong>Started by:</strong> ${
 			window.users[tracker.created_by]?.displayName || tracker.created_by
 		}</p>
+		<p><strong>Assigned to:</strong> ${
+			(tracker.assigned_to || [])
+				.map((pig) => window.users[pig]?.displayName || pig)
+				.join(", ") || "N/A"
+		}</p>
 		<p><strong>Running time:</strong> ${timeText}</p>
 		<p><strong>Rate:</strong> ${tracker.currency}${rate.toFixed(
 		2
@@ -738,7 +733,7 @@ window.viewLiveCostTracker = function (trackerId) {
 
 	modalContent += `
 		<hr>
-		<h3 style="color: #ff6b6b;">Total Amount: <strong>${
+		<h3 style="color: var(--color-danger);">Total Amount: <strong>${
 			tracker.currency
 		}${grandTotal.toFixed(2)}</strong></h3>
 		<p><em>This will be the invoice amount when the tracker is stopped.</em></p>

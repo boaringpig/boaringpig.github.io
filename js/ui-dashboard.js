@@ -69,7 +69,11 @@ window.addAdminPointsControl = function () {
 
 	var userPoints = window.users[targetPig].points || 0;
 	var pointsColor =
-		userPoints < 0 ? "#ff6b6b" : userPoints === 0 ? "#ffff00" : "#00ff00";
+		userPoints < 0
+			? "var(--color-danger)"
+			: userPoints === 0
+			? "var(--color-warning)"
+			: "var(--color-success)";
 
 	var pigOptions = slaves
 		.map(function (pig) {
@@ -116,7 +120,11 @@ window.updateAdminPointsDisplay = function () {
 
 	var userPoints = window.users[targetPig].points || 0;
 	var pointsColor =
-		userPoints < 0 ? "#ff6b6b" : userPoints === 0 ? "#ffff00" : "#00ff00";
+		userPoints < 0
+			? "var(--color-danger)"
+			: userPoints === 0
+			? "var(--color-warning)"
+			: "var(--color-success)";
 
 	var statNumber = pointsControl.querySelector(".stat-number");
 	var input = pointsControl.querySelector("#adminPointsInput");
@@ -242,11 +250,11 @@ window.renderUserProgress = function () {
 
 		var pointsStyle = "";
 		if (user.points < 0) {
-			pointsStyle = "color: #ff6b6b; font-weight: bold;";
+			pointsStyle = "color: var(--color-danger); font-weight: bold;";
 		} else if (user.points === 0) {
-			pointsStyle = "color: #ffff00; font-weight: bold;";
+			pointsStyle = "color: var(--color-warning); font-weight: bold;";
 		} else {
-			pointsStyle = "color: #00ff00; font-weight: bold;";
+			pointsStyle = "color: var(--color-success); font-weight: bold;";
 		}
 
 		return (
@@ -315,16 +323,19 @@ window.updateStats = function () {
 		myPointsEl.className = "stat-number";
 		if (points < 0) {
 			myPointsEl.classList.add("negative");
-			myPointsEl.style.color = "#ff6b6b";
-			myPointsEl.style.textShadow = "0 0 10px rgba(255, 107, 107, 0.5)";
+			myPointsEl.style.color = "var(--color-danger)";
+			myPointsEl.style.textShadow =
+				"0 0 10px color-mix(in srgb, var(--color-danger) 50%, transparent)";
 		} else if (points === 0) {
 			myPointsEl.classList.add("zero");
-			myPointsEl.style.color = "#ffff00";
-			myPointsEl.style.textShadow = "0 0 10px rgba(255, 255, 0, 0.5)";
+			myPointsEl.style.color = "var(--color-warning)";
+			myPointsEl.style.textShadow =
+				"0 0 10px color-mix(in srgb, var(--color-warning) 50%, transparent)";
 		} else {
 			myPointsEl.classList.add("positive");
-			myPointsEl.style.color = "#00ff00";
-			myPointsEl.style.textShadow = "0 0 10px rgba(0, 255, 0, 0.5)";
+			myPointsEl.style.color = "var(--color-success)";
+			myPointsEl.style.textShadow =
+				"0 0 10px color-mix(in srgb, var(--color-success) 50%, transparent)";
 		}
 	}
 };
@@ -380,7 +391,9 @@ window.renderDashboard = function () {
 	if (userStatusEl) {
 		if (window.selectedPig) {
 			userStatusEl.textContent = isUserOnline ? "Online" : "Offline";
-			userStatusEl.style.color = isUserOnline ? "#059669" : "#dc2626";
+			userStatusEl.style.color = isUserOnline
+				? "var(--color-success)"
+				: "var(--color-danger)";
 		} else {
 			var onlineCount = 0;
 			window.getSlaves().forEach(function(pig) {
@@ -388,7 +401,8 @@ window.renderDashboard = function () {
 				if (pigActivity[0] && pigActivity[0].action === "login") onlineCount++;
 			});
 			userStatusEl.textContent = onlineCount + "/" + window.getSlaves().length + " Online";
-			userStatusEl.style.color = onlineCount > 0 ? "#059669" : "#dc2626";
+			userStatusEl.style.color =
+				onlineCount > 0 ? "var(--color-success)" : "var(--color-danger)";
 		}
 	}
 	if (activeTasksEl) activeTasksEl.textContent = activeTasks.length;
@@ -496,7 +510,7 @@ window.updateInvoiceStatCards = function (
 
 	paidStatCard.innerHTML = `
 		<h3>💰 Invoices Paid</h3>
-		<div class="stat-number" style="color: #00ff00;">${currency}${totalPaid.toFixed(
+		<div class="stat-number" style="color: var(--color-success);">${currency}${totalPaid.toFixed(
 		2
 	)}</div>
 		<div class="stat-meta" style="font-size: 12px; color: var(--terminal-gray-light); margin-top: 5px;">
@@ -514,7 +528,7 @@ window.updateInvoiceStatCards = function (
 
 	pendingStatCard.innerHTML = `
 		<h3>⏳ Invoices Pending</h3>
-		<div class="stat-number" style="color: #ffff00;">${currency}${totalPending.toFixed(
+		<div class="stat-number" style="color: var(--color-warning);">${currency}${totalPending.toFixed(
 		2
 	)}</div>
 		<div class="stat-meta" style="font-size: 12px; color: var(--terminal-gray-light); margin-top: 5px;">
@@ -532,7 +546,7 @@ window.updateInvoiceStatCards = function (
 
 	deniedStatCard.innerHTML = `
 		<h3>❌ Invoices Denied</h3>
-		<div class="stat-number" style="color: #ff6b6b;">${currency}${totalDenied.toFixed(
+		<div class="stat-number" style="color: var(--color-danger);">${currency}${totalDenied.toFixed(
 		2
 	)}</div>
 		<div class="stat-meta" style="font-size: 12px; color: var(--terminal-gray-light); margin-top: 5px;">
@@ -543,7 +557,7 @@ window.updateInvoiceStatCards = function (
 	// Add hover effects for the new cards
 	[paidStatCard, pendingStatCard, deniedStatCard].forEach((card) => {
 		card.addEventListener("mouseenter", function () {
-			this.style.boxShadow = "0 0 15px rgba(0, 255, 0, 0.3)";
+			this.style.boxShadow = "0 0 15px color-mix(in srgb, var(--color-success) 30%, transparent)";
 		});
 		card.addEventListener("mouseleave", function () {
 			this.style.boxShadow = "";
@@ -725,7 +739,7 @@ window.updateInvoiceStatCards = function (
 
 	paidStatCard.innerHTML = `
 		<h3>💰 Invoices Paid</h3>
-		<div class="stat-number" style="color: #00ff00;">${currency}${totalPaid.toFixed(
+		<div class="stat-number" style="color: var(--color-success);">${currency}${totalPaid.toFixed(
 		2
 	)}</div>
 		<div class="stat-meta" style="font-size: 12px; color: var(--terminal-gray-light); margin-top: 5px;">
@@ -747,7 +761,7 @@ window.updateInvoiceStatCards = function (
 
 	pendingStatCard.innerHTML = `
 		<h3>⏳ Invoices Pending</h3>
-		<div class="stat-number" style="color: #ffff00;">${currency}${totalPending.toFixed(
+		<div class="stat-number" style="color: var(--color-warning);">${currency}${totalPending.toFixed(
 		2
 	)}</div>
 		<div class="stat-meta" style="font-size: 12px; color: var(--terminal-gray-light); margin-top: 5px;">
@@ -769,7 +783,7 @@ window.updateInvoiceStatCards = function (
 
 	deniedStatCard.innerHTML = `
 		<h3>❌ Invoices Denied</h3>
-		<div class="stat-number" style="color: #ff6b6b;">${currency}${totalDenied.toFixed(
+		<div class="stat-number" style="color: var(--color-danger);">${currency}${totalDenied.toFixed(
 		2
 	)}</div>
 		<div class="stat-meta" style="font-size: 12px; color: var(--terminal-gray-light); margin-top: 5px;">
@@ -790,7 +804,7 @@ window.updateInvoiceStatCards = function (
 	[paidStatCard, pendingStatCard, deniedStatCard].forEach((card) => {
 		card.addEventListener("mouseenter", function () {
 			this.style.transform = "scale(1.02)";
-			this.style.boxShadow = "0 0 15px rgba(0, 255, 0, 0.3)";
+			this.style.boxShadow = "0 0 15px color-mix(in srgb, var(--color-success) 30%, transparent)";
 		});
 		card.addEventListener("mouseleave", function () {
 			this.style.transform = "scale(1)";
@@ -814,22 +828,22 @@ window.showInvoiceDetailsModal = function (filterStatus) {
 	switch (filterStatus) {
 		case "completed":
 			statusTitle = "Paid Invoices";
-			statusColor = "#00ff00";
+			statusColor = "var(--color-success)";
 			statusIcon = "💰";
 			break;
 		case "pending_approval":
 			statusTitle = "Pending Invoices";
-			statusColor = "#ffff00";
+			statusColor = "var(--color-warning)";
 			statusIcon = "⏳";
 			break;
 		case "failed":
 			statusTitle = "Denied Invoices";
-			statusColor = "#ff6b6b";
+			statusColor = "var(--color-danger)";
 			statusIcon = "❌";
 			break;
 		default:
 			statusTitle = "All Invoices";
-			statusColor = "#00ff00";
+			statusColor = "var(--color-success)";
 			statusIcon = "📄";
 	}
 
@@ -865,7 +879,7 @@ window.showInvoiceDetailsModal = function (filterStatus) {
 
 				return `
 				<div class="invoice-detail-item" ${
-					isOverdue ? 'style="border-left: 3px solid #ff6b6b;"' : ""
+					isOverdue ? 'style="border-left: 3px solid var(--color-danger);"' : ""
 				}>
 					<div class="invoice-detail-header">
 						<span class="invoice-amount" style="color: ${statusColor}; font-weight: bold;">${amount}</span>

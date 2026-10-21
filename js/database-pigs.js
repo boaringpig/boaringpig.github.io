@@ -499,10 +499,12 @@ window.renderPigList = async function () {
 };
 
 /**
- * Renders pig checkboxes in the task creation form.
+ * Renders pig checkboxes into any container (task creation form, cost
+ * tracker modal, ...). `containerId` defaults to the task form's container
+ * so existing callers keep working unchanged.
  */
-window.renderPigCheckboxes = function () {
-	var container = document.getElementById("pigCheckboxes");
+window.renderPigCheckboxes = function (containerId) {
+	var container = document.getElementById(containerId || "pigCheckboxes");
 	if (!container) return;
 
 	var slaves = window.getSlaves();
@@ -532,10 +534,15 @@ window.renderPigCheckboxes = function () {
 };
 
 /**
- * Gets the list of selected pigs from the task creation form checkboxes.
+ * Gets the list of selected pigs from a container's checkboxes, scoped to
+ * that container so two pig-assignment widgets (task form, cost tracker
+ * modal) can both exist in the DOM at once without reading each other's
+ * selections. `containerId` defaults to the task form's container.
  */
-window.getSelectedPigs = function () {
-	var checkboxes = document.querySelectorAll(".pig-assign-checkbox:checked");
+window.getSelectedPigs = function (containerId) {
+	var container = document.getElementById(containerId || "pigCheckboxes");
+	if (!container) return [];
+	var checkboxes = container.querySelectorAll(".pig-assign-checkbox:checked");
 	var selected = [];
 	checkboxes.forEach(function (cb) {
 		selected.push(cb.value);
