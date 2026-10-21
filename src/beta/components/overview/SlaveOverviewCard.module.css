@@ -1,0 +1,78 @@
+.card {
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.card:hover {
+	background: var(--color-elevated);
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: var(--space-2);
+}
+
+.name {
+	font-weight: 600;
+}
+
+.onlineDot,
+.offlineDot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.onlineDot {
+	background: var(--color-success);
+}
+
+.offlineDot {
+	background: var(--color-text-secondary);
+	opacity: 0.5;
+}
+
+.points {
+	font-size: 20px;
+	font-weight: 700;
+	margin-bottom: var(--space-2);
+}
+
+.negative {
+	color: var(--color-danger);
+}
+
+.zero {
+	color: var(--color-warning);
+}
+
+.positive {
+	color: var(--color-success);
+}
+
+.metaRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-size: 13px;
+	color: var(--color-text-secondary);
+}
+
+.pendingBadge {
+	background: var(--color-warning);
+	color: var(--color-warning-text);
+	border-radius: var(--radius-sm);
+	padding: 2px 8px;
+	font-weight: 600;
+	font-size: 12px;
+}
+
+.trackerBadge {
+	margin-top: var(--space-2);
+	font-size: 13px;
+	color: var(--color-accent);
+	font-weight: 600;
+}

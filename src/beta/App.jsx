@@ -17,6 +17,7 @@ import { AdminPage } from "./components/admin/AdminPage";
 import { MastersPage } from "./components/admin/MastersPage";
 import { ChatPage } from "./components/chat/ChatPage";
 import { ToolsPage } from "./components/tools/ToolsPage";
+import { MasterOverviewPage } from "./components/overview/MasterOverviewPage";
 import { LiveTrackerBanner } from "./components/costTrackers/LiveTrackerBanner";
 import { MotdBanner } from "./components/motd/MotdBanner";
 import "./styles/tokens.css";
@@ -29,6 +30,8 @@ function PageSwitch({ activeTab }) {
 			return <TasksPage />;
 		case "calendar":
 			return <CalendarPage />;
+		case "overview":
+			return app.isMaster ? <MasterOverviewPage /> : null;
 		case "dashboard":
 			return app.isMaster ? <DashboardPage /> : null;
 		case "tools":
