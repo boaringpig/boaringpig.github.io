@@ -42,7 +42,7 @@ window.enterBetaMode = async function () {
 			link.href = "beta-dist/beta-bundle.css";
 			document.head.appendChild(link);
 		}
-		var mod = await import("../beta-dist/beta-bundle.js");
+		var mod = await import("../../beta-dist/beta-bundle.js");
 		betaMountFn = mod.mountBetaApp;
 		betaUnmountFn = mod.unmountBetaApp;
 	}
