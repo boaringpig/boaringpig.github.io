@@ -1,11 +1,35 @@
 // database-chat.js
 // Per-master-group chatroom: message history + sending. Realtime delivery of
-// new messages is wired up in database.js's loadData() (chat_channel).
+// new messages is wired up in database.js's loadData() (chat_channel), but
+// that depends on the chat_messages table actually being added to the
+// Supabase project's `supabase_realtime` publication (a dashboard setting,
+// not something a migration sets up on its own) -- if it isn't, no client
+// ever receives a postgres_changes event for a message someone else sent,
+// realtime or not. window.startChatPolling() below is a cheap fallback so
+// chat works regardless: while the Chat tab is open, re-fetch every few
+// seconds on top of whatever the realtime channel manages to deliver.
 
 window.chatMessages = [];
 window.chatHasMoreOlder = false;
 
 const CHAT_PAGE_SIZE = 100;
+const CHAT_POLL_INTERVAL_MS = 5000;
+
+/**
+ * Polls for new messages while the Chat tab is open, as a fallback in case
+ * realtime delivery isn't working (see note above). Safe to call more than
+ * once -- clears any previous interval first.
+ */
+window.startChatPolling = function () {
+	if (window.chatPollIntervalId) {
+		clearInterval(window.chatPollIntervalId);
+	}
+	window.chatPollIntervalId = setInterval(function () {
+		if (window.activeTab === "chat" && window.activeMasterContext) {
+			window.fetchChatMessagesInitial();
+		}
+	}, CHAT_POLL_INTERVAL_MS);
+};
 
 /**
  * Fetches the most recent page of chat messages for the active group.

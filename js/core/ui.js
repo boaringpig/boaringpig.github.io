@@ -332,6 +332,9 @@ window.showMainApp = async function () {
 						window.OVERDUE_CHECK_INTERVAL
 					);
 				}
+				if (window.startChatPolling) {
+					window.startChatPolling();
+				}
 				if (
 					window.isMaster() &&
 					window.hasPermission("manage_rewards")

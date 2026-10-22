@@ -13,24 +13,6 @@ var betaUnmountFn = null;
 var betaMounted = false;
 
 /**
- * Shows/hides the classic-side "Try Beta Dashboard" button. Beta is the
- * default UI for everyone now, so this only matters while classic is
- * actually the UI currently on screen (checked directly off #betaRoot's
- * display state, not a tracked flag, since this can be re-invoked -- e.g.
- * from loadGroupTerms after an admin edits group settings from *within*
- * the beta Masters page -- while beta is already mounted, and the button
- * must stay hidden then) and the group hasn't been locked to classic.
- */
-window.renderBetaToggleButton = function () {
-	var button = document.getElementById("betaToggleButton");
-	if (!button) return;
-	var betaRoot = document.getElementById("betaRoot");
-	var classicVisible = !betaRoot || betaRoot.style.display !== "block";
-	var allowed = !window.groupTheme.classicUiForced;
-	button.style.display = allowed && classicVisible ? "inline-block" : "none";
-};
-
-/**
  * Switches the page over to the React beta dashboard. Lazily loads the
  * React bundle on first use.
  */
