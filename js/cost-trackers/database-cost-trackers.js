@@ -70,56 +70,6 @@ window.stopAllActiveCostTrackers = async function () {
 };
 
 /**
- * Creates an invoice task assigned to one or more pigs. Mirrors the
- * shared-task pattern in js/database-tasks.js: a single assignee gets a
- * normal `assignedTo` task, multiple assignees get one shared task row plus
- * a task_assignments entry per pig (so any of them can pay it, same as a
- * shared regular task).
- */
-window.createCostTrackerInvoiceTask = async function (taskBase, assignedTo) {
-	var pigs = (
-		Array.isArray(assignedTo) && assignedTo.length > 0
-			? assignedTo
-			: [window.getSlaves()[0] || window.currentUser]
-	).filter(Boolean);
-
-	if (pigs.length <= 1) {
-		var task = Object.assign({}, taskBase, {
-			assignedTo: pigs[0] || window.currentUser,
-		});
-		var { error } = await window.supabase.from("tasks").insert([task]);
-		return { error: error };
-	}
-
-	var sharedTask = Object.assign({}, taskBase, {
-		assignedTo: null,
-		assignment_mode: "shared",
-	});
-	var { data: insertedTask, error: sharedError } = await window.supabase
-		.from("tasks")
-		.insert([sharedTask])
-		.select();
-
-	if (sharedError || !insertedTask || !insertedTask[0]) {
-		return { error: sharedError };
-	}
-
-	var assignments = pigs.map(function (pig) {
-		return {
-			task_id: insertedTask[0].id,
-			assigned_to: pig,
-			status: "todo",
-			master_username: window.activeMasterContext,
-		};
-	});
-	var { error: assignError } = await window.supabase
-		.from("task_assignments")
-		.insert(assignments);
-
-	return { error: assignError };
-};
-
-/**
  * Starts a new live cost tracker (Admin only) - ensures single tracker.
  * `assignedTo` must be a non-empty array of slave usernames: a tracker is
  * only ever visible to (and later invoiced to) the pig(s) it names here, so
@@ -357,7 +307,7 @@ Time-based Cost: ${timeText} @ ${tracker.currency}${tracker.rate.toFixed(
 				repeatInterval: null,
 			};
 
-			const { error: taskError } = await window.createCostTrackerInvoiceTask(
+			const { error: taskError } = await window.createTaskForPigs(
 				taskBase,
 				tracker.assigned_to
 			);

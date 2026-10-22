@@ -1,6 +1,6 @@
 // contrast.js
 // Plain JS WCAG contrast-ratio math, with no framework dependency, so both
-// the classic admin UI (js/ui-admin.js) and the React beta UI
+// the classic admin UI (js/admin/ui-admin.js) and the React beta UI
 // (src/beta/components/admin/MasterEditForm.jsx) can share one
 // implementation instead of two copies that could drift apart.
 //

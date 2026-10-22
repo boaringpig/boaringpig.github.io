@@ -1,6 +1,6 @@
 // database-invites.js
 // Master-side invite generation/management. Redemption (the anonymous,
-// pre-login side) lives in js/invites.js instead, since it has to run before
+// pre-login side) lives in js/invites/invites.js instead, since it has to run before
 // any of the logged-in app state here exists.
 
 window.invites = [];

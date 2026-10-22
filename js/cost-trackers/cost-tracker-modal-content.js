@@ -1,4 +1,4 @@
-// js/cost-tracker-modal-content.js
+// js/cost-trackers/cost-tracker-modal-content.js
 // This file creates the cost tracker modal content dynamically
 
 /**

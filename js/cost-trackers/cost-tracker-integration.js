@@ -1,4 +1,4 @@
-// js/cost-tracker-integration-fixed.js
+// js/cost-trackers/cost-tracker-integration.js
 // Fixed version that prevents multiple instances and state conflicts
 
 window.costTracker = (function () {
@@ -753,7 +753,7 @@ Time-based Cost: ${costDetails.timeBasedCost.description} = ${costDetails.timeBa
 			};
 
 			try {
-				const { error: taskError } = await window.createCostTrackerInvoiceTask(
+				const { error: taskError } = await window.createTaskForPigs(
 					taskBase,
 					assignedTo
 				);

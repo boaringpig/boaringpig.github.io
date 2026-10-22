@@ -13,6 +13,7 @@ export function NavTabs({ activeTab, onChange }) {
 	];
 
 	if (app.isMaster) {
+		tabs.push({ key: "overview", label: "Overview" });
 		tabs.push({ key: "dashboard", label: "Dashboard" });
 		tabs.push({ key: "tools", label: "Tools" });
 	}

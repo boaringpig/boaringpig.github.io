@@ -100,7 +100,7 @@ window.sendChatMessage = async function (overrides) {
 	if (inputEl) inputEl.value = "";
 
 	// Push the sent message locally immediately rather than waiting on the
-	// chat_channel realtime round-trip (js/database.js) to echo it back --
+	// chat_channel realtime round-trip (js/core/database.js) to echo it back --
 	// that round-trip is what used to make a sender's own message not show
 	// up until a reload. Dedupe against the channel's own INSERT handler,
 	// which also guards against double-adding this same row.

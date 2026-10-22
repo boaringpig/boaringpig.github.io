@@ -561,7 +561,7 @@ window.renderUserView = function () {
 	}, 0);
 };
 
-// js/ui-tasks.js - Enhanced spiral task viewing
+// js/tasks/ui-tasks.js - Enhanced spiral task viewing
 // Replace the viewSpiralTask function with this enhanced version
 
 window.viewSpiralTask = function (taskId) {

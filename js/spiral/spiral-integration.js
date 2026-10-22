@@ -1,4 +1,4 @@
-// js/spiral-integration.js - Corrected and Enhanced Version
+// js/spiral/spiral-integration.js - Corrected and Enhanced Version
 // This file manages the spiral canvas and its integration with the task system.
 
 // We wrap the entire module in an Immediately Invoked Function Expression (IIFE)
@@ -737,6 +737,15 @@ The possibilities are infinite`;
 					</select>
 				</div>
 
+				<div class="form-group">
+					<label class="form-label">Assign To</label>
+					<div
+						id="spiralTaskPigCheckboxes"
+						class="pig-checkboxes"
+						style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px;"
+					></div>
+				</div>
+
 				<div class="modal-actions">
 					<button id="createSpiralTask" class="action-btn approve-btn">Create Task</button>
 					<button id="cancelSpiralTask" class="action-btn delete-btn">Cancel</button>
@@ -745,6 +754,7 @@ The possibilities are infinite`;
 		`;
 
 		document.body.appendChild(modal);
+		window.renderPigCheckboxes("spiralTaskPigCheckboxes");
 
 		// Initialize date picker for the spiral task due date
 		const dueDateInput = document.getElementById("spiralTaskDueDate");
@@ -800,6 +810,17 @@ The possibilities are infinite`;
 					return;
 				}
 
+				const assignedTo = window.getSelectedPigs(
+					"spiralTaskPigCheckboxes"
+				);
+				if (assignedTo.length === 0) {
+					window.showNotification(
+						`Select at least one ${window.termCap("slave")} to assign this to`,
+						"error"
+					);
+					return;
+				}
+
 				// Validate due date if provided
 				if (dueDate) {
 					const selectedDate = new Date(dueDate);
@@ -823,14 +844,13 @@ The possibilities are infinite`;
 				}
 
 				// Create the task with all required fields
-				const task = {
+				const taskBase = {
 					text: description,
 					status: "todo",
 					type: "spiral",
 					createdAt: new Date().toISOString(),
 					createdBy: window.currentUser,
 					master_username: window.activeMasterContext,
-					assignedTo: window.getSlaves()[0] || window.currentUser,
 					points: points,
 					penaltyPoints: penaltyPoints,
 					dueDate: dueDate || null,
@@ -855,9 +875,10 @@ The possibilities are infinite`;
 				};
 
 				try {
-					const { error: taskError } = await window.supabase
-						.from("tasks")
-						.insert([task]);
+					const { error: taskError } = await window.createTaskForPigs(
+						taskBase,
+						assignedTo
+					);
 
 					if (taskError) {
 						console.error("Error creating spiral task:", taskError);

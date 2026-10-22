@@ -3,7 +3,7 @@
 // which is shown on slave dashboards at a time. Advances to the next
 // message (looping) once per calendar day, checked on page load -- the same
 // "day passed, check on load" approach already used for reward-limit resets
-// (see js/database-rewards.js's checkForRewardLimitReset), since this app
+// (see js/rewards/database-rewards.js's checkForRewardLimitReset), since this app
 // has no backend/cron to drive it any other way.
 
 window.motdMessages = [];
