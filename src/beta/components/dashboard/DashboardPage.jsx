@@ -19,6 +19,7 @@ export function DashboardPage() {
 	var activityState = useActivity();
 
 	var tasks = tasksState.tasks;
+	var slaveUsernames = slavesState.slaves.map(function (s) { return s.username; });
 	var stats = [
 		{ label: "Total Tasks", value: tasks.length },
 		{
@@ -31,6 +32,12 @@ export function DashboardPage() {
 			label: "Completed",
 			value: tasks.filter(function (t) {
 				return t.status === "completed";
+			}).length,
+		},
+		{
+			label: "Demerits Issued",
+			value: tasks.filter(function (t) {
+				return t.type === "demerit" && slaveUsernames.indexOf(t.assignedTo) !== -1;
 			}).length,
 		},
 		{ label: app.groupTerms.slaveLabelPlural, value: slavesState.slaves.length },

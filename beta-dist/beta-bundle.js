@@ -13211,7 +13211,7 @@ function op() {
     ] })
   ] });
 }
-const fp = "_calendarContainer_hdo8l_1", dp = "_detail_hdo8l_7", vp = "_detailRow_hdo8l_13", Tt = {
+const fp = "_calendarContainer_1n2ar_1", dp = "_detail_1n2ar_13", vp = "_detailRow_1n2ar_25", Tt = {
   calendarContainer: fp,
   detail: dp,
   detailRow: vp
@@ -13505,24 +13505,32 @@ const Yp = "_grid_69ji7_1", Gp = "_section_69ji7_8", Qp = "_heading_69ji7_12", Y
   heading: Qp
 };
 function Xp() {
-  var c = pe(), r = Hc(), d = Gn(), o = Ah(), v = r.tasks, h = [
+  var c = pe(), r = Hc(), d = Gn(), o = Ah(), v = r.tasks, h = d.slaves.map(function(C) {
+    return C.username;
+  }), x = [
     { label: "Total Tasks", value: v.length },
     {
       label: "Pending",
-      value: v.filter(function(x) {
-        return x.status === "pending_approval";
+      value: v.filter(function(C) {
+        return C.status === "pending_approval";
       }).length
     },
     {
       label: "Completed",
-      value: v.filter(function(x) {
-        return x.status === "completed";
+      value: v.filter(function(C) {
+        return C.status === "completed";
+      }).length
+    },
+    {
+      label: "Demerits Issued",
+      value: v.filter(function(C) {
+        return C.type === "demerit" && h.indexOf(C.assignedTo) !== -1;
       }).length
     },
     { label: c.groupTerms.slaveLabelPlural, value: d.slaves.length }
   ];
   return /* @__PURE__ */ i.jsxs("div", { children: [
-    /* @__PURE__ */ i.jsx(xp, { stats: h }),
+    /* @__PURE__ */ i.jsx(xp, { stats: x }),
     /* @__PURE__ */ i.jsxs("div", { className: Yu.grid, children: [
       /* @__PURE__ */ i.jsxs(ye, { className: Yu.section, children: [
         /* @__PURE__ */ i.jsxs("h2", { className: Yu.heading, children: [
