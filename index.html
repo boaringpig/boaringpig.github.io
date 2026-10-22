@@ -176,15 +176,12 @@
 					</div>
 					<div class="user-info">
 						<span id="groupContextSwitcher" style="display: none"></span>
-						<button
-							id="betaToggleButton"
-							class="nav-tab"
-							style="display: none"
-							onclick="window.enterBetaMode()"
-						>
-							Try Beta Dashboard
-						</button>
 						<div id="userBadge" class="user-badge"></div>
+						<span
+							id="connectionStatus"
+							class="connection-dot status-online"
+							title="Connected"
+						></span>
 						<button
 							id="editStatusBtn"
 							class="nav-tab"
@@ -202,12 +199,6 @@
 						<button class="logout-btn" onclick="logout()">
 							Logout
 						</button>
-						<div
-							id="connectionStatus"
-							class="connection-status status-online"
-						>
-							Connected
-						</div>
 					</div>
 				</div>
 

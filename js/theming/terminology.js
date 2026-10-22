@@ -102,9 +102,6 @@ window.loadGroupTerms = async function () {
 	if (window.applyThemeColors) {
 		window.applyThemeColors();
 	}
-	if (window.renderBetaToggleButton) {
-		window.renderBetaToggleButton();
-	}
 };
 
 /**

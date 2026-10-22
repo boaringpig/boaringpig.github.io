@@ -125,8 +125,17 @@ export function useChat() {
 				)
 				.subscribe();
 
+			// Fallback alongside the channel above: if chat_messages was never
+			// added to the Supabase project's realtime publication (a
+			// dashboard setting, not something any migration sets up), no
+			// client ever gets a postgres_changes event for someone else's
+			// message, realtime "working" or not. Poll while this hook is
+			// mounted (i.e. the Chat tab is open) so chat works regardless.
+			var pollId = window.setInterval(load, 5000);
+
 			return function () {
 				window.supabase.removeChannel(channel);
+				window.clearInterval(pollId);
 			};
 		},
 		[masterUsername, load]

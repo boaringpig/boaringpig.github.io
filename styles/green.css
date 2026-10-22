@@ -161,7 +161,6 @@ button {
 .status-badge,
 .points-badge-small,
 .stat-label,
-.connection-status,
 .demo-credentials p,
 .appeal-warning div,
 .modal-content p,
@@ -994,24 +993,23 @@ button {
 	font-weight: var(--font-weight-bold);
 }
 
-/* Connection status */
-.connection-status {
-	font-size: var(--font-size-sm);
-	padding: 4px 8px;
-	border: 1px solid;
-	font-weight: var(--font-weight-bold);
+/* Connection status -- a small dot next to the Status button (matching
+   src/beta's SlaveOverviewCard online/offline dot convention) instead of a
+   bordered text badge. */
+.connection-dot {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	flex-shrink: 0;
 }
 
 .status-online {
-	border-color: var(--status-success);
-	color: var(--status-success);
-	background: var(--terminal-bg);
+	background: var(--status-success);
 }
 
 .status-offline {
-	border-color: var(--status-error);
-	color: var(--status-error);
-	background: var(--terminal-bg);
+	background: var(--status-error);
 }
 
 /* Responsive adjustments */
