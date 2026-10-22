@@ -183,12 +183,15 @@ horizontally rather than wrapping awkwardly on narrow phones.
   read than configuring a router. If deep links become a requirement later,
   swap `activeTab` state for a router of your choice - `PageSwitch` is
   already structured as the thing a router would replace.
-- **Why an agenda list, not a calendar grid**: the classic app pulls in the
-  FullCalendar library (several CSS/JS CDN scripts) for the Calendar tab.
-  Adding that to the React bundle too would mean two copies of a heavy
-  calendar dependency for one small feature, so the beta Calendar tab is a
-  simple date-grouped list of tasks with due dates instead
-  (`components/calendar/CalendarPage.jsx`).
+- **Why the Calendar tab uses `window.FullCalendar`/`window.rrule` instead of
+  an npm package**: those libraries are already loaded once as global
+  `<script>` tags in `index.html` (FullCalendar core + daygrid/timegrid/list
+  plugins, RRule). `CalendarPage.jsx` references the globals directly
+  (`new window.FullCalendar.Calendar(...)`) rather than adding
+  `@fullcalendar/react` as a bundle dependency, so there's only ever one
+  copy of a fairly heavy calendar library on the page. Note the rrule CDN
+  script's UMD global is `window.rrule` (lowercase) with `RRule` as a
+  property on it, not a bare `window.RRule`.
 - **The decorative Spiral Generator tool** (`js/spiral-integration.js`) is a
   novelty animation unrelated to the task/reward/admin domain and isn't
   ported here.
