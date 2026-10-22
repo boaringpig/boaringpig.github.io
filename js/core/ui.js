@@ -1,9 +1,13 @@
 // ui.js
-// This file contains core application-level UI logic, such as tab switching and app state management.
+// Bootstraps the app after login/auto-login: loads this group's terminology
+// and data, then hands off to the React beta dashboard (the only UI now --
+// see js/beta-bridge/beta-toggle.js).
 
-// Global FullCalendar instance
-window.fullCalendarInstance = null;
-// Global object to manage refresh button cooldown states
+// Global object to manage refresh button cooldown states. setupRefreshButton
+// itself is still called by js/tasks/ui-tasks.js's classic render functions
+// (which run as a side effect of loadData(), even with no classic view
+// markup left to render into -- see that file's own null-checks). Remove
+// this once ui-tasks.js is deleted.
 window.refreshButtonStates = {};
 
 /**
@@ -14,7 +18,6 @@ window.refreshButtonStates = {};
 window.setupRefreshButton = function (buttonId, cooldownSeconds) {
 	var button = document.getElementById(buttonId);
 	if (!button) {
-		console.warn("Refresh button with ID '" + buttonId + "' not found.");
 		return;
 	}
 	if (!window.refreshButtonStates[buttonId]) {
@@ -54,127 +57,23 @@ window.setupRefreshButton = function (buttonId, cooldownSeconds) {
 		var now = Date.now();
 		var elapsedTime = now - state.lastClickTime;
 		if (elapsedTime < cooldownSeconds * 1000) {
-			window.showNotification(
-				"Please wait " +
-					Math.ceil((cooldownSeconds * 1000 - elapsedTime) / 1000) +
-					" seconds before refreshing again.",
-				"warning"
-			);
 			return;
 		}
 		state.lastClickTime = now;
 		button.disabled = true;
 		button.textContent = "Refreshing...";
-		window.showNotification("Refreshing data...", "info");
 
 		if (window.loadData && typeof window.loadData === "function") {
 			window
 				.loadData()
 				.then(function () {
-					window.showNotification(
-						"Data refreshed successfully!",
-						"success"
-					);
 					updateButtonState();
 				})
-				.catch(function (error) {
-					console.error("Error refreshing data:", error);
-					window.showNotification("Failed to refresh data.", "error");
+				.catch(function () {
 					updateButtonState();
 				});
-		} else {
-			window.showNotification(
-				"Refresh function not available.",
-				"warning"
-			);
-			updateButtonState();
 		}
 	};
-};
-
-/**
- * Switches between different application tabs.
- * @param {string} tabName - The name of the tab to switch to.
- */
-window.switchTab = function (tabName) {
-	// Hide all tool modals first
-	window.hideSpiralGenerator();
-	window.hideCostTracker();
-
-	var tabs = document.querySelectorAll(".nav-tab");
-	for (var i = 0; i < tabs.length; i++) {
-		tabs[i].classList.remove("active");
-	}
-	var allTabs = Array.from(document.querySelectorAll(".nav-tab"));
-	var clickedTab = allTabs.find(function (tab) {
-		return (
-			tab.textContent.toLowerCase().indexOf(tabName.toLowerCase()) !== -1
-		);
-	});
-	if (clickedTab) {
-		clickedTab.classList.add("active");
-	}
-
-	var contents = document.querySelectorAll(".tab-content");
-	for (var i = 0; i < contents.length; i++) {
-		contents[i].classList.remove("active");
-	}
-	var targetView = document.getElementById(tabName + "View");
-	if (targetView) {
-		targetView.classList.add("active");
-	} else {
-		console.warn(`Element with ID '${tabName}View' not found.`);
-	}
-
-	window.activeTab = tabName;
-
-	// Clear live cost tracker intervals when switching tabs (except for schinken user)
-	if (!window.isSlave()) {
-		window.clearLiveCostTrackerIntervals();
-	}
-
-	if (tabName === "calendar") {
-		window.renderCalendar();
-	} else if (
-		tabName === "dashboard" &&
-		window.hasPermission("view_dashboard")
-	) {
-		window.renderDashboard();
-	} else if (tabName === "suggest") {
-		window.renderMySuggestions();
-	} else if (tabName === "shop") {
-		window.renderRewards();
-		window.renderUserRewardPurchases();
-	} else if (tabName === "adminSettings") {
-		if (
-			window.isMaster() &&
-			window.hasPermission("manage_rewards")
-		) {
-			window.renderAdminRewardManagement();
-			window.renderPendingAuthorizations();
-			window.renderAdminRewardSettings();
-			if (window.renderPigList) window.renderPigList();
-			if (window.renderInvitesList) window.renderInvitesList();
-			if (window.renderMotdManageList) window.renderMotdManageList();
-		} else {
-			const adminRewardManagement = document.getElementById(
-				"adminRewardManagement"
-			);
-			if (adminRewardManagement)
-				adminRewardManagement.style.display = "none";
-		}
-	} else if (tabName === "tasks") {
-		// For the 'tasks' tab, fetch and render all data for the admin
-		if (window.isMaster()) {
-			window.renderTasks();
-		}
-	} else if (tabName === "masters") {
-		if (window.isAdmin()) {
-			window.renderMastersList();
-		}
-	} else if (tabName === "chat") {
-		window.renderChatMessages();
-	}
 };
 
 /**
@@ -182,144 +81,29 @@ window.switchTab = function (tabName) {
  */
 window.showLogin = function () {
 	document.getElementById("loginScreen").style.display = "block";
-	document.getElementById("mainApp").style.display = "none";
 };
 
 /**
- * Displays the main application interface.
+ * Runs once right after a successful login/auto-login: loads this group's
+ * terminology/theme and data, starts the periodic overdue-task check, then
+ * mounts the React beta dashboard.
  */
 window.showMainApp = async function () {
 	document.getElementById("loginScreen").style.display = "none";
-	document.getElementById("mainApp").style.display = "block";
-	var user = window.users[window.currentUser];
-	document.getElementById("userBadge").textContent = user.displayName;
-	var userPointsBadge = document.getElementById("userPoints");
-	if (userPointsBadge) {
-		userPointsBadge.style.display =
-			user.role === "master" ? "none" : "inline-block";
-	}
 	window.logUserActivity("login");
-
-	var dashboardTab = document.getElementById("dashboardTab");
-	var suggestTab = document.getElementById("suggestTab");
-	var shopTab = document.getElementById("shopTab");
-	var adminSettingsTab = document.getElementById("adminSettingsTab");
-	var mastersTab = document.getElementById("mastersTab");
-	var adminView = document.getElementById("adminView");
-	var userView = document.getElementById("userView");
-
-	if (mastersTab) mastersTab.style.display = window.isAdmin() ? "block" : "none";
 
 	if (window.loadGroupTerms) {
 		await window.loadGroupTerms();
 	}
-	if (window.renderGroupContextSwitcher) {
-		window.renderGroupContextSwitcher();
-	}
+
 	if (window.maybeAutoEnterBetaMode) {
 		await window.maybeAutoEnterBetaMode();
-	}
-	var adminRewardManagement = document.getElementById(
-		"adminRewardManagement"
-	);
-
-	var managePigsSection = document.getElementById("managePigsSection");
-	var manageInvitesSection = document.getElementById("manageInvitesSection");
-	var manageMotdSection = document.getElementById("manageMotdSection");
-	var pigAssignmentRow = document.getElementById("pigAssignmentRow");
-
-	if (window.isMaster()) {
-		if (dashboardTab) dashboardTab.style.display = "block";
-		if (suggestTab) suggestTab.style.display = "none";
-		if (shopTab) shopTab.style.display = "none";
-		if (adminSettingsTab)
-			adminSettingsTab.style.display = window.hasPermission(
-				"manage_rewards"
-			)
-				? "block"
-				: "none";
-		if (adminView) adminView.style.display = "block";
-		if (userView) userView.style.display = "none";
-		if (adminRewardManagement)
-			adminRewardManagement.style.display = window.hasPermission(
-				"manage_rewards"
-			)
-				? "block"
-				: "none";
-		if (managePigsSection) managePigsSection.style.display = "block";
-		if (manageInvitesSection) manageInvitesSection.style.display = "block";
-		if (manageMotdSection) manageMotdSection.style.display = "block";
-		if (pigAssignmentRow) pigAssignmentRow.style.display = "flex";
-		window.renderPigCheckboxes();
-	} else {
-		if (dashboardTab) dashboardTab.style.display = "none";
-		if (suggestTab) suggestTab.style.display = "block";
-		if (shopTab) shopTab.style.display = "block";
-		if (adminSettingsTab) adminSettingsTab.style.display = "none";
-		if (adminView) adminView.style.display = "none";
-		if (userView) userView.style.display = "block";
-		if (adminRewardManagement) adminRewardManagement.style.display = "none";
-		if (managePigsSection) managePigsSection.style.display = "none";
-		if (manageInvitesSection) manageInvitesSection.style.display = "none";
-		if (manageMotdSection) manageMotdSection.style.display = "none";
-		if (pigAssignmentRow) pigAssignmentRow.style.display = "none";
-	}
-
-	// Initialize the tool buttons here
-	window.initializeToolButtons();
-
-	var isRepeatingCheckbox = document.getElementById("isRepeating");
-	if (isRepeatingCheckbox) {
-		isRepeatingCheckbox.addEventListener("change", function () {
-			var repeatOptions = document.getElementById("repeatOptions");
-			if (repeatOptions) {
-				repeatOptions.style.display = this.checked ? "block" : "none";
-			}
-		});
-	}
-
-	var isDemeritCheckbox = document.getElementById("isDemerit");
-	if (isDemeritCheckbox) {
-		isDemeritCheckbox.addEventListener("change", function () {
-			var demeritWarning = document.getElementById("demeritWarning");
-			if (demeritWarning) {
-				demeritWarning.style.display = this.checked ? "block" : "none";
-			}
-			var taskPointsEl = document.getElementById("taskPoints");
-			var penaltyPointsEl = document.getElementById("penaltyPoints");
-			var taskDueDateEl = document.getElementById("taskDueDate");
-			if (this.checked) {
-				if (taskPointsEl)
-					taskPointsEl.closest(".form-group").style.display = "none";
-				if (taskDueDateEl)
-					taskDueDateEl.closest(".form-group").style.display = "none";
-				if (penaltyPointsEl)
-					penaltyPointsEl.closest(".form-group").style.display =
-						"block";
-			} else {
-				if (taskPointsEl)
-					taskPointsEl.closest(".form-group").style.display = "block";
-				if (taskDueDateEl)
-					taskDueDateEl.closest(".form-group").style.display =
-						"block";
-				if (penaltyPointsEl)
-					penaltyPointsEl.closest(".form-group").style.display =
-						"block";
-			}
-		});
 	}
 
 	if (window.loadData && typeof window.loadData === "function") {
 		await window
 			.loadData()
 			.then(function () {
-				if (
-					window.updateUserPoints &&
-					typeof window.updateUserPoints === "function"
-				) {
-					window.updateUserPoints();
-				}
-				window.renderCalendar();
 				if (window.overdueCheckIntervalId) {
 					clearInterval(window.overdueCheckIntervalId);
 				}
@@ -332,25 +116,6 @@ window.showMainApp = async function () {
 						window.OVERDUE_CHECK_INTERVAL
 					);
 				}
-				if (window.startChatPolling) {
-					window.startChatPolling();
-				}
-				if (
-					window.isMaster() &&
-					window.hasPermission("manage_rewards")
-				) {
-					window.renderAdminRewardManagement();
-					window.renderPendingAuthorizations();
-					window.renderAdminRewardSettings();
-				} else if (!window.isMaster()) {
-					window.renderRewards();
-					window.renderUserRewardPurchases();
-				}
-				// FIX: For the admin, explicitly render tasks after data is loaded on initial page load
-				if (window.isMaster()) {
-					window.renderTasks();
-				}
-				if (window.renderMotdBanner) window.renderMotdBanner();
 			})
 			.catch(function (error) {
 				console.error("Error loading data:", error);
@@ -358,6 +123,5 @@ window.showMainApp = async function () {
 			});
 	} else {
 		console.warn("loadData function not available, skipping data loading");
-		window.renderCalendar();
 	}
 };

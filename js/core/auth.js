@@ -149,5 +149,6 @@ window.logout = function () {
 	document.getElementById("username").value = "";
 	document.getElementById("password").value = "";
 	window.hideError(); // Hide any error messages
+	if (window.exitBetaMode) window.exitBetaMode(); // Tear down the React tree
 	window.showLogin(); // Show the login screen
 };
