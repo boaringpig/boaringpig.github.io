@@ -36,27 +36,57 @@ export function useCostTrackers() {
 		error: list.error,
 		reload: list.reload,
 
+		// Every mutation below reloads the list itself afterward rather than
+		// waiting on the realtime subscription: this Supabase project's
+		// active_cost_trackers table isn't in the realtime publication (a
+		// dashboard setting, not something client code can fix), so without
+		// this a just-stopped tracker would stay in `running` -- and its
+		// TrackerCard's live-ticking timer would keep counting up -- until
+		// something else happened to trigger a refetch.
 		startTracker: function (description, rate, currency, incrementInterval, initialPenalties, assignedTo) {
-			return window.startLiveCostTracker(
-				description,
-				rate,
-				currency,
-				incrementInterval,
-				initialPenalties,
-				assignedTo
-			);
+			return window
+				.startLiveCostTracker(
+					description,
+					rate,
+					currency,
+					incrementInterval,
+					initialPenalties,
+					assignedTo
+				)
+				.then(function (result) {
+					list.reload();
+					return result;
+				});
 		},
 		stopTracker: function (trackerId, createInvoice) {
-			return window.stopLiveCostTracker(trackerId, createInvoice !== false);
+			return window
+				.stopLiveCostTracker(trackerId, createInvoice !== false)
+				.then(function (result) {
+					list.reload();
+					return result;
+				});
 		},
 		deleteTracker: function (trackerId) {
-			return window.deleteCostTracker(trackerId);
+			return window.deleteCostTracker(trackerId).then(function (result) {
+				list.reload();
+				return result;
+			});
 		},
 		addPenalty: function (trackerId, description, amount) {
-			return window.addPenaltyToLiveTracker(trackerId, description, amount);
+			return window
+				.addPenaltyToLiveTracker(trackerId, description, amount)
+				.then(function (result) {
+					list.reload();
+					return result;
+				});
 		},
 		removePenalty: function (trackerId, penaltyId) {
-			return window.removePenaltyFromLiveTracker(trackerId, penaltyId);
+			return window
+				.removePenaltyFromLiveTracker(trackerId, penaltyId)
+				.then(function (result) {
+					list.reload();
+					return result;
+				});
 		},
 	};
 }
