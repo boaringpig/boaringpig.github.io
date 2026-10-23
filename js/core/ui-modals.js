@@ -1,29 +1,8 @@
 // ui.modals.js
-// This file contains all the modal-related UI functions.
-
-/**
- * Displays a generic modal with custom content.
- * @param {string} htmlContent - HTML content to display in the modal.
- */
-window.showModal = function (htmlContent) {
-	var modal = document.getElementById("eventModal");
-	var modalContent = document.getElementById("modalContent");
-	var closeButton = document.getElementById("closeModal");
-	if (modal && modalContent) {
-		modalContent.innerHTML = htmlContent;
-		modal.classList.remove("hidden");
-		if (closeButton) {
-			closeButton.onclick = function () {
-				modal.classList.add("hidden");
-			};
-		}
-		modal.onclick = function (e) {
-			if (e.target === modal) {
-				modal.classList.add("hidden");
-			}
-		};
-	}
-};
+// This file contains the modal-related UI functions that still have a
+// caller -- each builds its own document.body-appended markup, so it works
+// unchanged from the React beta UI (hybrid data-flow pattern, see
+// src/beta/README.md).
 
 /**
  * Displays a generic confirmation modal with "Confirm" and "Cancel" buttons.

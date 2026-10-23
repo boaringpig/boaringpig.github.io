@@ -87,13 +87,6 @@ window.fetchTasksInitial = async function () {
 			}
 		}
 
-		window.renderTasks();
-		window.updateStats();
-		if (window.activeTab === "calendar" && window.fullCalendarInstance) {
-			window.fullCalendarInstance.refetchEvents();
-		} else if (window.activeTab === "calendar") {
-			window.renderCalendar();
-		}
 	}
 };
 
@@ -791,4 +784,94 @@ window.createRepeatingTask = async function (originalTask) {
 	if (taskError) {
 		console.error("Error creating repeating task:", taskError);
 	}
+};
+
+/**
+ * User marks an invoice as paid (sets to pending_approval for admin review).
+ * Rescued from js/tasks/ui-tasks.js (deleted) -- beta's useTasks.js calls
+ * this by name directly (hybrid data-flow pattern, see src/beta/README.md).
+ */
+window.markInvoiceAsPaid = function (taskId) {
+	const task = window.tasks.find((t) => t.id === taskId);
+	if (!task || task.type !== "cost-tracker") {
+		window.showNotification("This is not an invoice.", "error");
+		return;
+	}
+
+	const totalAmount = window.extractTotalFromTaskText(task.text) || "Unknown";
+
+	window.showConfirmModal(
+		`Mark this invoice as paid?\n\nAmount: ${totalAmount}\n\nThis will notify the admin that you have made the payment and request approval.`,
+		async (confirmed) => {
+			if (!confirmed) return;
+
+			const updates = {
+				status: "pending_approval",
+				completedAt: new Date().toISOString(),
+				completedBy: window.currentUser,
+			};
+
+			const { error: taskError } = await window.supabase
+				.from("tasks")
+				.update(updates)
+				.eq("id", taskId);
+
+			if (taskError) {
+				console.error("Error marking invoice as paid:", taskError);
+				window.showNotification(
+					"Failed to mark invoice as paid",
+					"error"
+				);
+				return;
+			}
+
+			window.showNotification(
+				`Invoice marked as paid! Awaiting admin approval. Amount: ${totalAmount}`
+			);
+			await window.fetchTasksInitial();
+		}
+	);
+};
+
+/**
+ * Admin approves an invoice payment. Rescued from js/tasks/ui-tasks.js
+ * (deleted) -- beta's useTasks.js calls this by name directly.
+ */
+window.approveInvoice = function (taskId) {
+	const task = window.tasks.find((t) => t.id === taskId);
+	if (!task || task.type !== "cost-tracker") {
+		window.showNotification("This is not an invoice.", "error");
+		return;
+	}
+
+	const totalAmount = window.extractTotalFromTaskText(task.text) || "Unknown";
+
+	window.showConfirmModal(
+		`Approve this invoice payment?\n\nAmount: ${totalAmount}\n\nThis confirms the payment has been received.`,
+		async (confirmed) => {
+			if (!confirmed) return;
+
+			const updates = {
+				status: "completed",
+				approvedAt: new Date().toISOString(),
+				approvedBy: window.currentUser,
+			};
+
+			const { error: taskError } = await window.supabase
+				.from("tasks")
+				.update(updates)
+				.eq("id", taskId);
+
+			if (taskError) {
+				console.error("Error approving invoice:", taskError);
+				window.showNotification("Failed to approve invoice", "error");
+				return;
+			}
+
+			window.showNotification(
+				`Invoice payment approved! Amount: ${totalAmount}`
+			);
+			await window.fetchTasksInitial();
+		}
+	);
 };

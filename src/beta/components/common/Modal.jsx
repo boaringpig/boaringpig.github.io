@@ -1,7 +1,8 @@
 // Modal.jsx - a simple dialog overlay. Closes on backdrop click or Escape.
-// (This is separate from the classic app's window.showModal/showConfirmModal
-// - those still work fine from React for one-off confirms, see the README -
-// but a React form inside a dialog is clearer written as a real component.)
+// (This is separate from the classic app's window.showConfirmModal/
+// showAppealModal/showEditStatusModal/showEditSuggestionModal - those still
+// work fine from React for one-off confirms, see the README - but a React
+// form inside a dialog is clearer written as a real component.)
 import { useEffect } from "react";
 import styles from "./Modal.module.css";
 

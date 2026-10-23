@@ -127,11 +127,6 @@ window.loadData = async function () {
 					window.tasks.sort(
 						(a, b) => new Date(b.createdAt) - new Date(a.createdAt)
 					);
-					window.renderTasks();
-					window.updateStats();
-					if (window.activeTab === "calendar") {
-						window.renderCalendar();
-					}
 				} catch (error) {
 					console.error("Error in tasksChannel listener:", error);
 					window.showNotification(
@@ -175,13 +170,6 @@ window.loadData = async function () {
 					window.suggestions.sort(
 						(a, b) => new Date(b.createdAt) - new Date(a.createdAt)
 					);
-
-					// Re-render the correct UI based on the current user and tab
-					if (window.isMaster()) {
-						window.renderTasks();
-					} else {
-						window.renderSuggestions();
-					}
 				} catch (error) {
 					console.error(
 						"Error in suggestionsChannel listener:",
@@ -230,7 +218,6 @@ window.loadData = async function () {
 					window.userActivityLog.sort(
 						(a, b) => new Date(b.timestamp) - new Date(a.timestamp)
 					);
-					window.renderDashboard();
 				} catch (error) {
 					console.error("Error in activityChannel listener:", error);
 					window.showNotification(
@@ -267,7 +254,6 @@ window.loadData = async function () {
 						}
 					}
 					window.updateUserPoints();
-					window.renderUserProgress();
 				} catch (error) {
 					console.error(
 						"Error in userProfilesChannel listener:",
@@ -307,15 +293,6 @@ window.loadData = async function () {
 					);
 				}
 				window.rewards.sort((a, b) => a.title.localeCompare(b.title));
-				if (
-					window.activeTab === "shop" ||
-					window.isMaster()
-				) {
-					window.renderRewards();
-					if (window.isMaster()) {
-						window.renderAdminRewardManagement();
-					}
-				}
 			}
 		)
 		.subscribe();
@@ -333,13 +310,6 @@ window.loadData = async function () {
 			async (payload) => {
 				console.log("User reward purchase change received!", payload);
 				await window.fetchUserRewardPurchasesInitial();
-				if (
-					window.isMaster() ||
-					window.activeTab === "shop"
-				) {
-					window.renderUserRewardPurchases();
-					window.renderPendingAuthorizations();
-				}
 			}
 		)
 		.subscribe();
@@ -362,22 +332,18 @@ window.loadData = async function () {
 				) {
 					window.rewardSystemSettings = payload.new;
 					window.checkForRewardLimitReset();
-					if (
-						window.isMaster() &&
-						(window.activeTab === "dashboard" ||
-							window.activeTab === "adminSettings")
-					) {
-						window.renderDashboard();
-						window.renderAdminRewardSettings();
-					}
 				}
 			}
 		)
 		.subscribe();
 
-	// Fixed real-time listener for active_cost_trackers
-	// Replace the existing listener in database.js with this version
-
+	// Classic's live-cost-tracker floating banner (#liveCostTracker) is gone
+	// -- beta's TrackerCard/LiveTrackerPill own their own refresh (see
+	// useCostTrackers.js's reload-after-every-mutation fix) and don't read
+	// window.activeCostTrackers at all. This listener now just keeps that
+	// classic-side cache in sync for anything still reading it; the
+	// previous version also added an artificial 5-second delay before
+	// refreshing and manipulated the now-deleted banner DOM, both removed.
 	const activeCostTrackersChannel = supabase
 		.channel("active_cost_trackers_channel")
 		.on(
@@ -389,99 +355,7 @@ window.loadData = async function () {
 				filter: "master_username=eq." + window.activeMasterContext,
 			},
 			async (payload) => {
-				console.log("Active cost tracker change received!", payload);
-				console.log("Event type:", payload.eventType);
-				console.log("Old data:", payload.old);
-				console.log("New data:", payload.new);
-
-				// Always refresh data first
-				await new Promise((resolve) => setTimeout(resolve, 5000));
 				await window.fetchActiveCostTrackersInitial();
-
-				// Handle tracker stopping - IMPROVED LOGIC
-				if (
-					payload.eventType === "UPDATE" &&
-					payload.new.status === "stopped"
-				) {
-					console.log("Tracker stopped - clearing user display");
-					const stoppedTrackerId = payload.new.id;
-
-					// Clear the display ONLY if the stopped tracker was the one being displayed
-					if (window.isSlave()) {
-						const liveCostTracker =
-							document.getElementById("liveCostTracker");
-
-						// Check if the stopped tracker is the one currently displayed
-						const wasDisplayingThisTracker =
-							window.currentLiveTracker &&
-							window.currentLiveTracker.id === stoppedTrackerId;
-
-						console.log("Stopped tracker ID:", stoppedTrackerId);
-						console.log(
-							"Currently displayed tracker ID:",
-							window.currentLiveTracker?.id
-						);
-						console.log(
-							"Was displaying this tracker:",
-							wasDisplayingThisTracker
-						);
-
-						if (wasDisplayingThisTracker) {
-							console.log(
-								"Hiding live tracker display for stopped tracker"
-							);
-							if (liveCostTracker) {
-								liveCostTracker.classList.add("hidden");
-							}
-							window.clearLiveCostTrackerIntervals();
-							window.currentLiveTracker = null;
-							window.activeLiveTrackerId = null;
-
-							// Add a flag to prevent auto-showing other trackers
-							window.userManuallyStoppedTracker = true;
-							setTimeout(() => {
-								// Clear the flag after 5 seconds to allow showing new trackers
-								window.userManuallyStoppedTracker = false;
-							}, 5000);
-
-							console.log(
-								"Set userManuallyStoppedTracker flag to prevent auto-restart"
-							);
-						} else {
-							console.log(
-								"Stopped tracker was not the displayed one, no action needed"
-							);
-						}
-					}
-				}
-
-				// Handle new tracker starting
-				else if (
-					payload.eventType === "INSERT" &&
-					payload.new.status === "running"
-				) {
-					console.log("New tracker started:", payload.new.id);
-					// Clear the manual stop flag when a new tracker is explicitly started
-					window.userManuallyStoppedTracker = false;
-				}
-
-				// Update UI for both admin and user views
-				if (window.isMaster()) {
-					window.renderActiveCostTrackersAdmin();
-					window.updateActiveCostTrackersCount();
-				} else if (window.isSlave()) {
-					// IMPROVED: Don't auto-show trackers if user just manually stopped one
-					if (!window.userManuallyStoppedTracker) {
-						// Use setTimeout to ensure UI update happens after data refresh
-						setTimeout(() => {
-							window.updateLiveCostTracker();
-						}, 100);
-					} else {
-						console.log(
-							"Skipping updateLiveCostTracker due to manual stop flag"
-						);
-					}
-				}
 			}
 		)
 		.subscribe();

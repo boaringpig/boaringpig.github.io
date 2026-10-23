@@ -35,7 +35,6 @@ function initialState(master) {
 		masterLabelPlural: master ? master.masterLabelPlural : "Masters",
 		slaveLabel: master ? master.slaveLabel : "pig",
 		slaveLabelPlural: master ? master.slaveLabelPlural : "pigs",
-		classicUiForced: master ? master.classicUiForced : false,
 		theme: master ? master.theme : DEFAULT_THEME,
 		themeLight: master ? master.themeLight : DEFAULT_THEME_LIGHT,
 	};
@@ -164,17 +163,6 @@ export function MasterEditForm({ master, onCreate, onSaveExisting, onCancel }) {
 				/>
 
 				<hr className={styles.divider} />
-
-				<label className={styles.checkboxRow}>
-					<input
-						type="checkbox"
-						checked={form.classicUiForced}
-						onChange={function (e) {
-							update("classicUiForced", e.target.checked);
-						}}
-					/>
-					Force classic styling for this group (disable beta)
-				</label>
 
 				<p className={styles.colorGroupLabel}>Dark mode colors</p>
 				<div className={styles.colorRow}>

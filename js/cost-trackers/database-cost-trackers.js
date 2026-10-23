@@ -18,14 +18,6 @@ window.fetchActiveCostTrackersInitial = async function () {
 		window.activeCostTrackers = data.sort(
 			(a, b) => new Date(b.started_at) - new Date(a.started_at)
 		);
-
-		// Update UI for both admin and user views
-		if (window.isMaster()) {
-			window.renderActiveCostTrackersAdmin();
-			window.updateActiveCostTrackersCount();
-		} else if (window.isSlave()) {
-			window.updateLiveCostTracker();
-		}
 	}
 };
 
