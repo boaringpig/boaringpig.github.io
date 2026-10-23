@@ -4,8 +4,12 @@
 // directly (bypassing window.createTask), matching how classic
 // (js/spiral-integration.js's showSpiralTaskConfigModal) and this
 // codebase's other special task types (demerit, cost-tracker) already do
-// it -- not a new pattern. No spiral config is ever persisted, same as
-// classic.
+// it -- not a new pattern. `config` (the spirals/textSettings/
+// globalSettings the master was just editing, passed down from
+// SpiralGeneratorModal) is stored on the task's spiralConfig column so the
+// assigned pig can actually play it back (see SpiralViewerModal, opened
+// from TaskItem) -- previously no config was persisted at all, same as
+// classic, so an assigned spiral task had nothing to view.
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { useSlaves } from "../../hooks/useSlaves";
@@ -14,7 +18,7 @@ import { Button } from "../common/Button";
 import { TextInput } from "../common/TextInput";
 import styles from "./SpiralTaskModal.module.css";
 
-export function SpiralTaskModal({ onClose, onSent }) {
+export function SpiralTaskModal({ config, onClose, onSent }) {
 	var app = useApp();
 	var slavesState = useSlaves();
 	var [description, setDescription] = useState("Experience the Spiral Animation");
@@ -90,6 +94,7 @@ export function SpiralTaskModal({ onClose, onSent }) {
 				appealText: null,
 				rejectedAt: null,
 				rejectedBy: null,
+				spiralConfig: config || null,
 			};
 
 			var { error } = await window.createTaskForPigs(taskBase, assignedTo);

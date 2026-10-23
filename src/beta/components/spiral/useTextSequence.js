@@ -41,13 +41,18 @@ function parseScript(script) {
 		.filter(Boolean);
 }
 
-export function useTextSequence() {
-	var [script, setScript] = useState(DEFAULT_SCRIPT);
-	var [interval, setInterval_] = useState(2000);
-	var [holdDuration, setHoldDuration] = useState(3000);
-	var [animSpeed, setAnimSpeed] = useState(0.5);
-	var [fontSize, setFontSize] = useState(2.5);
-	var [color, setColor] = useState("#ffffff");
+/**
+ * @param {object} [initial] - seeds state from a previously-saved config
+ *   (SpiralViewerModal's playback-only use) instead of the defaults.
+ */
+export function useTextSequence(initial) {
+	var init = initial || {};
+	var [script, setScript] = useState(init.script || DEFAULT_SCRIPT);
+	var [interval, setInterval_] = useState(init.interval || 2000);
+	var [holdDuration, setHoldDuration] = useState(init.holdDuration || 3000);
+	var [animSpeed, setAnimSpeed] = useState(init.animSpeed || 0.5);
+	var [fontSize, setFontSize] = useState(init.fontSize || 2.5);
+	var [color, setColor] = useState(init.color || "#ffffff");
 	var [isRunning, setIsRunning] = useState(false);
 	var [display, setDisplay] = useState({ text: "Start the text loop!", shown: false, instant: false });
 

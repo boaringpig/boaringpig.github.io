@@ -226,6 +226,23 @@ export function SpiralGeneratorModal({ onClose, initialConfig, initialName, init
 
 			{showTaskModal ? (
 				<SpiralTaskModal
+					config={{
+						spirals: spiralsRef.current.map(function (s) {
+							return Object.assign({}, s);
+						}),
+						textSettings: {
+							script: textSequence.script,
+							interval: textSequence.interval,
+							holdDuration: textSequence.holdDuration,
+							animSpeed: textSequence.animSpeed,
+							fontSize: textSequence.fontSize,
+							color: textSequence.color,
+						},
+						globalSettings: {
+							backgroundColor: backgroundColor,
+							selectedSpiralIndex: activeIndex,
+						},
+					}}
 					onClose={function () { setShowTaskModal(false); }}
 					onSent={function () {
 						setShowTaskModal(false);
