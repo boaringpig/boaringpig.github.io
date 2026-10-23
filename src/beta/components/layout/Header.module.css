@@ -46,6 +46,13 @@
 	font-size: 13px;
 }
 
+.statusBtn {
+	max-width: 220px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 @media (max-width: 640px) {
 	.header {
 		flex-direction: column;

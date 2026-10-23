@@ -35,6 +35,15 @@
 	opacity: 0.5;
 }
 
+.status {
+	font-size: 13px;
+	color: var(--color-text-secondary);
+	margin-bottom: var(--space-2);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 .points {
 	font-size: 20px;
 	font-weight: 700;
