@@ -9,6 +9,13 @@ window.groupTerms = {
 	masterLabelPlural: "Masters",
 	slaveLabel: "pig",
 	slaveLabelPlural: "pigs",
+	// Not a terminology word like the rest of this object, but the same
+	// per-group row (group_settings) and the same "no group context yet"
+	// non-issue as the others, so it lives here rather than its own global.
+	// Shown under the group label in this group's header
+	// (src/beta/components/layout/Header.jsx) -- edited alongside the
+	// labels above in MasterEditForm.jsx.
+	appSubtitle: "Management Tool",
 };
 
 // The React beta dashboard's theme for the active group -- beta is the
@@ -83,6 +90,7 @@ window.loadGroupTerms = async function () {
 			masterLabelPlural: data[0].master_label_plural || "Masters",
 			slaveLabel: data[0].slave_label || "pig",
 			slaveLabelPlural: data[0].slave_label_plural || "pigs",
+			appSubtitle: data[0].app_subtitle || "Management Tool",
 		};
 		window.groupTheme = {
 			classicUiForced: !!data[0].classic_ui_forced,

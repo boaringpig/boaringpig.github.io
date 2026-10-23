@@ -1,16 +1,16 @@
 // site-settings.js
-// Site-wide branding strings (browser tab title, login screen heading, the
-// app header's subtitle) -- unlike group_settings, these show before any
-// user is logged in (no group context exists yet), so they're a single
-// shared row any Master or Admin can edit (see
-// src/beta/components/admin/SiteSettingsForm.jsx). Defaults here match
-// index.html's static <title>/#loginTitle text, so there's no flash of
-// different text before loadSiteSettings() resolves.
+// Site-wide branding strings (browser tab title, login screen heading) --
+// unlike group_settings, these show before any user is logged in (no group
+// context exists yet), so they're a single shared row, admin-only to edit
+// (see src/beta/components/admin/SiteSettingsForm.jsx, mounted on the
+// admin-only Masters tab). The app header subtitle is a separate, per-group
+// setting -- see js/theming/terminology.js's groupTerms.appSubtitle.
+// Defaults here match index.html's static <title>/#loginTitle text, so
+// there's no flash of different text before loadSiteSettings() resolves.
 
 var SITE_SETTINGS_DEFAULTS = {
 	pageTitle: "TPF - Management Tool",
 	loginHeading: "Management Tool Login",
-	appSubtitle: "Management Tool",
 };
 
 window.siteSettings = Object.assign({}, SITE_SETTINGS_DEFAULTS);
@@ -43,8 +43,6 @@ window.loadSiteSettings = async function () {
 			pageTitle: data[0].page_title || SITE_SETTINGS_DEFAULTS.pageTitle,
 			loginHeading:
 				data[0].login_heading || SITE_SETTINGS_DEFAULTS.loginHeading,
-			appSubtitle:
-				data[0].app_subtitle || SITE_SETTINGS_DEFAULTS.appSubtitle,
 		};
 	}
 
@@ -52,16 +50,13 @@ window.loadSiteSettings = async function () {
 };
 
 /**
- * Saves new site-wide branding strings (Master/Admin only, enforced by the
- * caller's UI -- there's no per-row ownership to check since this is a
- * single shared row). Updates window.siteSettings and the DOM immediately
- * so the current tab reflects the change without a reload.
+ * Saves new site-wide branding strings. Updates window.siteSettings and the
+ * DOM immediately so the current tab reflects the change without a reload.
  */
 window.updateSiteSettings = async function (updates) {
 	var next = {
 		pageTitle: updates.pageTitle || SITE_SETTINGS_DEFAULTS.pageTitle,
 		loginHeading: updates.loginHeading || SITE_SETTINGS_DEFAULTS.loginHeading,
-		appSubtitle: updates.appSubtitle || SITE_SETTINGS_DEFAULTS.appSubtitle,
 	};
 
 	var { error } = await window.supabase.from("site_settings").upsert(
@@ -70,7 +65,6 @@ window.updateSiteSettings = async function (updates) {
 				id: 1,
 				page_title: next.pageTitle,
 				login_heading: next.loginHeading,
-				app_subtitle: next.appSubtitle,
 				updated_at: new Date().toISOString(),
 				updated_by: window.currentUser,
 			},

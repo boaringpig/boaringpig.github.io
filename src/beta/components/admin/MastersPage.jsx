@@ -1,10 +1,14 @@
 // MastersPage.jsx - the admin-only "Masters" tab: create new master
 // accounts, edit existing ones (account + terminology + beta/theme),
 // deactivate/reactivate. Backed by js/database-admin.js, same as the
-// classic "Masters" tab (js/ui-admin.js) - see useAllMasters.js.
+// classic "Masters" tab (js/ui-admin.js) - see useAllMasters.js. Also
+// hosts SiteSettingsForm (the site-wide title/login heading) -- admin-only
+// since it affects every group, unlike the rest of this page's per-group
+// settings.
 import { useState } from "react";
 import { useAllMasters } from "../../hooks/useAllMasters";
 import { MasterEditForm } from "./MasterEditForm";
+import { SiteSettingsForm } from "./SiteSettingsForm";
 import { Card } from "../common/Card";
 import { Badge } from "../common/Badge";
 import { Button } from "../common/Button";
@@ -46,6 +50,8 @@ export function MastersPage() {
 
 	return (
 		<div>
+			<SiteSettingsForm />
+
 			<MasterEditForm onCreate={handleCreate} />
 
 			<h2 className={styles.heading}>All Masters</h2>

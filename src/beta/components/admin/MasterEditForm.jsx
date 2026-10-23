@@ -35,6 +35,7 @@ function initialState(master) {
 		masterLabelPlural: master ? master.masterLabelPlural : "Masters",
 		slaveLabel: master ? master.slaveLabel : "pig",
 		slaveLabelPlural: master ? master.slaveLabelPlural : "pigs",
+		appSubtitle: master ? master.appSubtitle : "Management Tool",
 		theme: master ? master.theme : DEFAULT_THEME,
 		themeLight: master ? master.themeLight : DEFAULT_THEME_LIGHT,
 	};
@@ -160,6 +161,15 @@ export function MasterEditForm({ master, onCreate, onSaveExisting, onCancel }) {
 					onChange={function (e) {
 						update("slaveLabelPlural", e.target.value);
 					}}
+				/>
+				<TextInput
+					label="App header subtitle"
+					placeholder="Shown under the group label in this group's header"
+					value={form.appSubtitle}
+					onChange={function (e) {
+						update("appSubtitle", e.target.value);
+					}}
+					maxLength={60}
 				/>
 
 				<hr className={styles.divider} />

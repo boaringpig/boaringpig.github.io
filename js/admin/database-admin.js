@@ -47,6 +47,7 @@ window.fetchAllMasters = async function () {
 			masterLabelPlural: s.master_label_plural || "Masters",
 			slaveLabel: s.slave_label || "pig",
 			slaveLabelPlural: s.slave_label_plural || "pigs",
+			appSubtitle: s.app_subtitle || "Management Tool",
 			classicUiForced: !!s.classic_ui_forced,
 			theme: {
 				bg: s.theme_bg || "#09090b",
@@ -133,6 +134,7 @@ window.createMaster = async function (details) {
 				master_label_plural: details.masterLabelPlural || "Masters",
 				slave_label: details.slaveLabel || "pig",
 				slave_label_plural: details.slaveLabelPlural || "pigs",
+				app_subtitle: details.appSubtitle || "Management Tool",
 				classic_ui_forced: !!details.classicUiForced,
 				theme_bg: (details.theme && details.theme.bg) || "#09090b",
 				theme_card: (details.theme && details.theme.card) || "#131316",
@@ -177,6 +179,7 @@ window.updateMasterTerminology = async function (masterUsername, terms) {
 			master_label_plural: terms.masterLabelPlural || "Masters",
 			slave_label: terms.slaveLabel || "pig",
 			slave_label_plural: terms.slaveLabelPlural || "pigs",
+			app_subtitle: terms.appSubtitle || "Management Tool",
 			classic_ui_forced: !!terms.classicUiForced,
 			theme_bg: (terms.theme && terms.theme.bg) || "#09090b",
 			theme_card: (terms.theme && terms.theme.card) || "#131316",

@@ -37,26 +37,38 @@ export function useMotd() {
 	var currentMessage =
 		messages.length > 0 ? messages[currentIndex % messages.length] : null;
 
+	function reload() {
+		messagesList.reload();
+		stateList.reload();
+	}
+
 	return {
 		messages: messages,
 		currentMessage: currentMessage,
 		status: messagesList.status,
 		error: messagesList.error,
-		reload: function () {
-			messagesList.reload();
-			stateList.reload();
-		},
+		reload: reload,
+		// Each mutation reloads afterward rather than waiting on the realtime
+		// subscription: this Supabase project's motd_messages/motd_state
+		// tables aren't in the realtime publication (confirmed empty, a
+		// dashboard setting -- see src/beta/README.md's "Hybrid data flow"
+		// section), so without this an admin's own edit never showed up in
+		// their own list until something else triggered a refetch.
 		addMessage: async function (body) {
 			await window.addMotdMessage({ body: body });
+			reload();
 		},
 		deleteMessage: async function (id) {
 			await window.deleteMotdMessage(id);
+			reload();
 		},
 		moveUp: async function (id) {
 			await window.moveMotdMessageUp(id);
+			reload();
 		},
 		moveDown: async function (id) {
 			await window.moveMotdMessageDown(id);
+			reload();
 		},
 	};
 }
