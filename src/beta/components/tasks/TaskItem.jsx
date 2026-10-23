@@ -1,16 +1,20 @@
 // TaskItem.jsx - one row in the task list. Which action buttons show up
 // depends on role + the task's status/type, mirroring js/ui-tasks.js.
+import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../common/Card";
 import { Badge } from "../common/Badge";
 import { Button } from "../common/Button";
+import { SpiralViewerModal } from "../spiral/SpiralViewerModal";
 import { taskStatusLabel, taskStatusTone } from "../../utils/taskStatus";
 import styles from "./TaskItem.module.css";
 
 export function TaskItem({ task, actions }) {
 	var app = useApp();
+	var [viewingSpiral, setViewingSpiral] = useState(false);
 	var assignee = window.users[task.assignedTo];
 	var isCostTracker = task.type === "cost-tracker";
+	var isSpiral = task.type === "spiral";
 	var totalAmount = isCostTracker
 		? window.extractTotalFromTaskText(task.text)
 		: null;
@@ -71,6 +75,12 @@ export function TaskItem({ task, actions }) {
 			) : null}
 
 			<div className={styles.actions}>
+				{isSpiral && task.spiralConfig ? (
+					<Button variant="secondary" onClick={function () { setViewingSpiral(true); }}>
+						▶️ View Spiral
+					</Button>
+				) : null}
+
 				{/* Slave actions */}
 				{app.isSlave && !isCostTracker && task.type !== "demerit" &&
 				task.assignedTo === app.currentUser &&
@@ -137,6 +147,13 @@ export function TaskItem({ task, actions }) {
 					</Button>
 				) : null}
 			</div>
+
+			{viewingSpiral ? (
+				<SpiralViewerModal
+					config={task.spiralConfig}
+					onClose={function () { setViewingSpiral(false); }}
+				/>
+			) : null}
 		</Card>
 	);
 }
