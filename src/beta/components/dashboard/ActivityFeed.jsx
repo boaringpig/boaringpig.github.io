@@ -1,10 +1,14 @@
 // ActivityFeed.jsx - recent activity across the whole group (tasks,
-// suggestions, rewards, cost trackers, logins/logouts, ...), with filters
-// by action type and by user so a long history stays usable.
+// suggestions, rewards, cost trackers, logins/logouts, ...). Defaults to
+// just today's events (a long full history was unreadable), with type/user
+// filters narrowing further within the selected day, and a day-by-day
+// pager (ActivityDayNav) at the bottom to step to any other day that has
+// activity logged on it.
 import { useMemo, useState } from "react";
 import { EmptyState } from "../common/EmptyState";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { ErrorState } from "../common/ErrorState";
+import { ActivityDayNav, dateKey, todayKey } from "./ActivityDayNav";
 import styles from "./ActivityFeed.module.css";
 
 var CATEGORIES = [
@@ -30,6 +34,7 @@ function categorize(action) {
 export function ActivityFeed({ activity, status, error, onRetry }) {
 	var [userFilter, setUserFilter] = useState("");
 	var [categoryFilter, setCategoryFilter] = useState("");
+	var [selectedDate, setSelectedDate] = useState(todayKey);
 
 	var userOptions = useMemo(
 		function () {
@@ -49,15 +54,35 @@ export function ActivityFeed({ activity, status, error, onRetry }) {
 		[activity]
 	);
 
-	var filtered = useMemo(
+	var activityDays = useMemo(
+		function () {
+			var days = new Set();
+			activity.forEach(function (a) {
+				days.add(dateKey(new Date(a.timestamp)));
+			});
+			return days;
+		},
+		[activity]
+	);
+
+	var dayActivity = useMemo(
 		function () {
 			return activity.filter(function (a) {
+				return dateKey(new Date(a.timestamp)) === selectedDate;
+			});
+		},
+		[activity, selectedDate]
+	);
+
+	var filtered = useMemo(
+		function () {
+			return dayActivity.filter(function (a) {
 				if (userFilter && a.user !== userFilter) return false;
 				if (categoryFilter && categorize(a.action) !== categoryFilter) return false;
 				return true;
 			});
 		},
-		[activity, userFilter, categoryFilter]
+		[dayActivity, userFilter, categoryFilter]
 	);
 
 	if (status === "loading") return <LoadingSpinner label="Loading activity..." />;
@@ -99,6 +124,14 @@ export function ActivityFeed({ activity, status, error, onRetry }) {
 			</div>
 			{activity.length === 0 ? (
 				<EmptyState title="No recent activity" />
+			) : dayActivity.length === 0 ? (
+				<EmptyState
+					title={
+						selectedDate === todayKey()
+							? "No activity yet today"
+							: "No activity on this day"
+					}
+				/>
 			) : filtered.length === 0 ? (
 				<EmptyState title="No activity matches those filters" />
 			) : (
@@ -116,6 +149,12 @@ export function ActivityFeed({ activity, status, error, onRetry }) {
 					})}
 				</ul>
 			)}
+
+			<ActivityDayNav
+				selectedDate={selectedDate}
+				onSelectDate={setSelectedDate}
+				activityDays={activityDays}
+			/>
 		</div>
 	);
 }
