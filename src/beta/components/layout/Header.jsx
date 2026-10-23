@@ -48,7 +48,7 @@ export function Header() {
 		<header className={styles.header}>
 			<div className={styles.left}>
 				<h1 className={styles.title}>{app.groupTerms.groupLabel}</h1>
-				<p className={styles.subtitle}>Beta dashboard</p>
+				<p className={styles.subtitle}>{app.siteSettings.appSubtitle}</p>
 			</div>
 			<div className={styles.right}>
 				{app.myMasterOptions.length > 1 ? (

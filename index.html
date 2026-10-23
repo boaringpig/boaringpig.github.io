@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>TPF - Pig Management Tool</title>
+		<title>TPF - Management Tool</title>
 		<!-- Tailwind CSS CDN for utility classes -->
 		<script src="https://cdn.tailwindcss.com"></script>
 		<!-- Shared design tokens (both classic and beta read these) -->
@@ -16,6 +16,7 @@
 			rel="stylesheet"
 		/>
 		<script type="module" src="js/core/config.js"></script>
+		<script type="module" src="js/core/site-settings.js"></script>
 		<script type="module" src="js/theming/apply-theme.js"></script>
 	</head>
 	<body>
@@ -29,7 +30,7 @@
 						class="theme-toggle-btn"
 						onclick="window.toggleThemeMode()"
 					></button>
-					<h1 class="login-title">Pig Management Tool Login</h1>
+					<h1 class="login-title" id="loginTitle">Management Tool Login</h1>
 
 					<div
 						id="errorMessage"

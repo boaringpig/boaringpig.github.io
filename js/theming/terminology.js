@@ -99,17 +99,7 @@ window.loadGroupTerms = async function () {
 		};
 	}
 
-	window.applyTerminology();
 	if (window.applyThemeColors) {
 		window.applyThemeColors();
 	}
-};
-
-/**
- * Updates the browser tab title for the active group's terminology. Used to
- * patch the rest of the classic UI chrome too, back when that markup
- * existed (src/beta/components/layout/Header.jsx now owns all of it).
- */
-window.applyTerminology = function () {
-	document.title = window.termCap("slavePlural") + " Management Tool";
 };

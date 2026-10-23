@@ -33,6 +33,7 @@ function snapshotFromWindow() {
 		activeMasterContext: window.activeMasterContext,
 		myMasterOptions: (window.myMasterOptions || []).slice(),
 		groupTerms: Object.assign({}, window.groupTerms),
+		siteSettings: Object.assign({}, window.siteSettings),
 		themeMode: window.themeMode || "dark",
 		theme: {
 			bg: isLight ? groupTheme.bgLight : groupTheme.bg,
