@@ -18,7 +18,6 @@ import { MastersPage } from "./components/admin/MastersPage";
 import { ChatPage } from "./components/chat/ChatPage";
 import { ToolsPage } from "./components/tools/ToolsPage";
 import { MasterOverviewPage } from "./components/overview/MasterOverviewPage";
-import { MotdBanner } from "./components/motd/MotdBanner";
 import "./styles/tokens.css";
 import "./styles/global.css";
 
@@ -67,7 +66,6 @@ function AppShell() {
 			<Header />
 			<NavTabs activeTab={activeTab} onChange={setActiveTab} />
 			<main className="betaContainer">
-				<MotdBanner />
 				<PageSwitch activeTab={activeTab} />
 			</main>
 		</div>

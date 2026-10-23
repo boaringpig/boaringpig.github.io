@@ -7,6 +7,7 @@ import { Button } from "../common/Button";
 import { Modal } from "../common/Modal";
 import { TextInput } from "../common/TextInput";
 import { LiveTrackerPill } from "../costTrackers/LiveTrackerPill";
+import { MotdBanner } from "../motd/MotdBanner";
 import styles from "./Header.module.css";
 
 export function Header() {
@@ -72,8 +73,13 @@ export function Header() {
 				) : null}
 				<span className={styles.userBadge}>{app.displayName}</span>
 				<LiveTrackerPill />
-				<Button variant="secondary" onClick={openStatusEditor}>
-					✏️ Status
+				<Button
+					variant="secondary"
+					className={styles.statusBtn}
+					onClick={openStatusEditor}
+					title={app.statusMessage || "Set a status message"}
+				>
+					✏️ {app.statusMessage || "Status"}
 				</Button>
 				<Button variant="secondary" onClick={toggleThemeMode}>
 					{app.themeMode === "light" ? "🌙 Dark mode" : "☀️ Light mode"}
@@ -85,6 +91,8 @@ export function Header() {
 					Logout
 				</Button>
 			</div>
+
+			<MotdBanner />
 
 			{editingStatus ? (
 				<Modal title="Set Status Message" onClose={function () { setEditingStatus(false); }}>

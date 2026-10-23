@@ -1,6 +1,7 @@
 // MotdBanner.jsx - slave-facing, always-visible (any tab) Message of the Day
-// banner, mirroring the classic app's #motdBanner placement under the nav
-// tabs. Mounted once near the top of App.jsx's shell.
+// banner. Mounted inside Header.jsx (as a full-width row under the title/
+// controls) so it's part of the top bar itself, not a separate block
+// pushed down into the page content below the nav tabs.
 import { useApp } from "../../context/AppContext";
 import { useMotd } from "../../hooks/useMotd";
 import styles from "./MotdBanner.module.css";

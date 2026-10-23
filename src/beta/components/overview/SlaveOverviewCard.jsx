@@ -36,6 +36,9 @@ export function SlaveOverviewCard({
 					title={online ? "Online" : "Offline"}
 				/>
 			</div>
+			{slave.statusMessage ? (
+				<div className={styles.status}>{slave.statusMessage}</div>
+			) : null}
 			<div className={[styles.points, pointsClass(slave.points)].join(" ")}>
 				{slave.points} pts
 			</div>
