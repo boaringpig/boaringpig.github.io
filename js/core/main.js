@@ -57,13 +57,20 @@ window.OVERDUE_CHECK_INTERVAL = OVERDUE_CHECK_INTERVAL;
 window.activeTab = activeTab;
 
 // Initialize Supabase client and attempt auto-login on page load
-window.addEventListener("load", function () {
+window.addEventListener("load", async function () {
 	// Initialize Supabase client first
 	// This function is defined in database.js
 	window.initializeSupabaseClient(
 		window.supabaseConfig.supabaseUrl,
 		window.supabaseConfig.supabaseAnonKey
 	);
+
+	// Site-wide branding (page title, login heading) -- applies to the
+	// login screen itself, so it must run before anything else.
+	if (window.loadSiteSettings) {
+		await window.loadSiteSettings();
+	}
+
 	// If this page load carries an invite code, show the join form instead of
 	// attempting auto-login -- otherwise a remembered session on a shared
 	// device would silently skip the invite flow.

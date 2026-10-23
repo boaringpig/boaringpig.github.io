@@ -5,6 +5,7 @@
 import { ManagePigs } from "./ManagePigs";
 import { InvitesPanel } from "./InvitesPanel";
 import { MotdManageList } from "../motd/MotdManageList";
+import { SiteSettingsForm } from "./SiteSettingsForm";
 
 export function AdminPage() {
 	return (
@@ -12,6 +13,7 @@ export function AdminPage() {
 			<ManagePigs />
 			<InvitesPanel />
 			<MotdManageList />
+			<SiteSettingsForm />
 		</div>
 	);
 }
