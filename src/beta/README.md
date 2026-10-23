@@ -1,10 +1,13 @@
 # Beta Dashboard (React)
 
-This is a from-scratch React rebuild of the authenticated app, running
-**side by side** with the original vanilla-JS app in `../../js/`. It's an
-opt-in beta: a master group only sees it if an admin has turned it on for
-their group (see "Turning it on" below). Nothing here replaces or deletes
-the classic UI - someone can always click "Exit beta" and go back.
+This is a from-scratch React rebuild of the authenticated app, and is now
+the **only** authenticated UI - classic's view markup (every tab, the two
+tool modals) was removed once this had full feature parity. `../../js/`
+still exists and still runs, but only for: the login/invite-signup screen
+(before this app ever mounts), bootstrapping/auth/realtime-sync
+(`js/core/`), and as the home for every mutation this app's hooks call by
+name (see "Hybrid data flow" below) - there's no classic rendering left
+for any of it to feed.
 
 This doc assumes you have **never used React before**. Read it top to
 bottom once; after that you should be able to find your way around.
@@ -40,7 +43,7 @@ src/beta/
     common/            Button, Card, TextInput, Modal, Badge, EmptyState,
                         ErrorState, LoadingSpinner - the shared design system
     tasks/ suggestions/ rewards/ costTrackers/ dashboard/ admin/ calendar/
-                        one folder per feature area, mirrors ../../js/ui-*.js
+                        one folder per feature area
   styles/
     tokens.css          CSS variables (colors, spacing) - the theme lives here
     global.css          resets + mobile-first responsive base rules
@@ -62,7 +65,7 @@ anything.
 **Reads** (fetching a list, subscribing to live updates) happen entirely in
 this React app's hooks (see `hooks/useRealtimeList.js`). They talk straight
 to Supabase via `window.supabase` (the same client instance the classic app
-already created in `js/database.js`).
+already created in `js/core/database.js`).
 
 **Writes** (create a task, approve a purchase, start a cost tracker, ...) go
 through the *existing* functions in `js/database-*.js` - e.g.
@@ -73,26 +76,36 @@ permission checks) and have been in production use. Re-implementing that
 math here, separately, would mean two copies that will eventually disagree
 with each other - a classic "two sources of truth" bug.
 
-The loop closes itself: a write updates a row in Supabase -> every open tab
-(classic or beta, master or slave) has a realtime subscription on that table
--> React's hook sees the change and re-renders. You never need to manually
-refresh state after calling a mutation.
+The loop is *meant* to close itself: a write updates a row in Supabase ->
+every open tab has a realtime subscription on that table -> React's hook
+sees the change and re-renders. In practice, this Supabase project's
+`supabase_realtime` publication is empty (confirmed via
+`SELECT tablename FROM pg_publication_tables WHERE pubname = 'supabase_realtime'`
+returning zero rows) - a project/dashboard setting, not something any
+migration or client code sets up - so no table's `postgres_changes` events
+ever reach any client. Until that's fixed server-side, don't rely on the
+subscription alone: either have the mutation's own hook call `reload()`
+after it resolves (see `useCostTrackers.js`), or add a polling fallback
+alongside the subscription (see `useChat.js`'s `setInterval`).
 
-Three functions used to read straight from the classic HTML form's
-`<input>` elements instead of taking parameters (`window.createTask`,
-`window.submitTaskSuggestion`, `window.addNewPig` in
-`js/database-tasks.js` / `js/database-suggestions.js` / `js/database-pigs.js`).
-Those got a small, backward-compatible change: they now accept an optional
-object of overrides that's used instead of the DOM read when provided.
-Calling them with no arguments at all (the classic app's own call sites)
-behaves exactly as before. If you add a new mutation and it also reads
-straight from a DOM id, follow the same pattern rather than duplicating its
-logic here.
+Three functions were originally written to read straight from the classic
+HTML form's `<input>` elements instead of taking parameters
+(`window.createTask`, `window.submitTaskSuggestion`, `window.addNewPig` in
+`js/tasks/database-tasks.js` / `js/suggestions/database-suggestions.js` /
+`js/admin/database-pigs.js`). Each accepts an optional object of overrides
+used instead of the DOM read when provided - this React app is now the
+only caller of all three, always passing one. The DOM-read branch is dead
+code at this point (nothing left calls these with no arguments), kept only
+because removing it is a separate, lower-value cleanup from retiring the
+view markup that used to call it. If you add a new mutation and it reads
+straight from a DOM id, don't follow that old pattern - just take
+parameters.
 
 A few things that "just work" from React with zero changes, because they
-already operate on `document.body` rather than inside `#mainApp`:
-`window.showNotification(...)`, `window.showConfirmModal(...)`,
-`window.showAppealModal(...)`, `window.showEditSuggestionModal(...)`.
+build their own `document.body`-appended markup rather than depending on
+any classic view markup: `window.showNotification(...)`,
+`window.showConfirmModal(...)`, `window.showAppealModal(...)`,
+`window.showEditSuggestionModal(...)`.
 
 ## Theming: per-group colors
 
@@ -100,8 +113,8 @@ Each master group has five admin-configurable colors, stored on the
 `group_settings` table (`theme_bg`, `theme_card`, `theme_elevated`,
 `theme_text_primary`, `theme_text_secondary` - see
 `supabase-migration-beta-theme.sql`). `AppContext` reads them (via
-`window.groupTheme`, loaded by `js/terminology.js`'s `loadGroupTerms`) and
-`App.jsx` applies them as inline CSS variables on the root `.betaApp`
+`window.groupTheme`, loaded by `js/theming/terminology.js`'s `loadGroupTerms`)
+and `App.jsx` applies them as inline CSS variables on the root `.betaApp`
 element:
 
 ```jsx
@@ -113,17 +126,15 @@ Every component's `.module.css` reads colors through `var(--color-bg)` etc.
 hex value. That's the entire mechanism - no theming library, no CSS-in-JS.
 
 Admins edit these colors from the "Masters" tab
-(`components/admin/MasterEditForm.jsx`, admin-only) or, in the classic UI,
-from the same "Edit Master" modal in `js/ui-admin.js`. Both call the same
-underlying functions in `js/database-admin.js`, so there's one
-implementation of "how a master's theme gets saved."
+(`components/admin/MasterEditForm.jsx`, admin-only), which calls the
+underlying save functions in `js/admin/database-admin.js`.
 
 ### WCAG contrast checklist
 
-`js/contrast.js` implements the WCAG relative-luminance/contrast-ratio
-formulas in plain JS (no framework dependency), used by both the classic and
-React theme editors to show a live pass/fail readout
-(`components/admin/ContrastChecklist.jsx`) as an admin picks colors.
+`js/theming/contrast.js` implements the WCAG relative-luminance/contrast-ratio
+formulas in plain JS (no framework dependency), used by the theme editor to
+show a live pass/fail readout (`components/admin/ContrastChecklist.jsx`) as
+an admin picks colors.
 
 Pre-computed for the built-in default palette:
 
@@ -192,23 +203,8 @@ horizontally rather than wrapping awkwardly on narrow phones.
   copy of a fairly heavy calendar library on the page. Note the rrule CDN
   script's UMD global is `window.rrule` (lowercase) with `RRule` as a
   property on it, not a bare `window.RRule`.
-- **The decorative Spiral Generator tool** (`js/spiral-integration.js`) is a
-  novelty animation unrelated to the task/reward/admin domain and isn't
-  ported here.
 - **Browser support note**: a few `.module.css` files use the CSS
   `color-mix()` function for hover-state color tints (e.g.
   `Button.module.css`). It's supported in current Chrome/Firefox/Safari but
   not in older browsers - acceptable for an internal beta tool, but worth
   knowing if you ever need to support something older.
-
-## Turning the beta on for a group (as an admin)
-
-1. Run `supabase-migration-beta-theme.sql` (adds the theme/beta columns -
-   see the repo root for this and the other pending migration).
-2. Log in as an admin account, go to the "Masters" tab (classic or beta -
-   both work), edit the group you want to opt in, tick "Enable React beta
-   dashboard for this group", pick colors if you want something custom, and
-   save.
-3. Everyone in that group will see a "Try Beta Dashboard" button appear next
-   to their user badge after their next login (or next page load if already
-   logged in and the page re-runs `loadGroupTerms`).

@@ -7,13 +7,13 @@
 // small global store that any component can read with `useApp()` below.
 //
 // WHERE THE DATA COMES FROM: this app does NOT have its own login screen.
-// The classic app (see js/auth.js) already logged the user in and set a
+// The classic login/invite-signup form (see js/core/auth.js) is the only
+// classic view markup left in index.html; it logs the user in and sets a
 // handful of `window.*` globals (window.currentUser, window.activeMasterContext,
-// window.groupTerms, window.groupTheme - all defined in js/database-pigs.js
-// and js/terminology.js) before the "Try Beta Dashboard" button was even
-// shown. This context just reads those globals once on mount and re-reads
-// them whenever something changes them (e.g. switching which group a shared
-// slave is viewing).
+// window.groupTerms, window.groupTheme - all defined in js/admin/database-pigs.js
+// and js/theming/terminology.js) before beta mounts. This context just reads
+// those globals once on mount and re-reads them whenever something changes
+// them (e.g. switching which group a shared slave is viewing).
 
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 
@@ -62,10 +62,6 @@ export function AppProvider({ children }) {
 		[refresh]
 	);
 
-	const exitBeta = useCallback(function () {
-		window.exitBetaMode();
-	}, []);
-
 	const setThemeMode = useCallback(
 		function (mode) {
 			window.setThemeMode(mode);
@@ -92,11 +88,10 @@ export function AppProvider({ children }) {
 			return Object.assign({}, snapshot, {
 				refresh: refresh,
 				switchGroup: switchGroup,
-				exitBeta: exitBeta,
 				setThemeMode: setThemeMode,
 			});
 		},
-		[snapshot, refresh, switchGroup, exitBeta, setThemeMode]
+		[snapshot, refresh, switchGroup, setThemeMode]
 	);
 
 	return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

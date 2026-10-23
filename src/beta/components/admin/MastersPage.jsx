@@ -64,7 +64,6 @@ export function MastersPage() {
 										{isActive ? "Active" : "Inactive"}
 									</Badge>
 									{master.isAdmin ? <Badge tone="warning">Admin</Badge> : null}
-									{master.classicUiForced ? <Badge tone="warning">Classic Only</Badge> : null}
 								</div>
 								<strong>{master.displayName}</strong> ({master.username})
 								<div className={styles.meta}>

@@ -410,12 +410,6 @@ window.fetchRewardsInitial = async function () {
 		window.showError("Failed to load rewards.");
 	} else {
 		window.rewards = data.sort((a, b) => a.title.localeCompare(b.title));
-		if (window.activeTab === "shop" || window.isMaster()) {
-			window.renderRewards();
-			if (window.isMaster()) {
-				window.renderAdminRewardManagement();
-			}
-		}
 	}
 };
 
@@ -443,12 +437,6 @@ window.fetchUserRewardPurchasesInitial = async function () {
 		window.showError("Failed to load purchase history.");
 	} else {
 		window.userRewardPurchases = data;
-		if (window.activeTab === "shop" || window.isMaster()) {
-			window.renderUserRewardPurchases();
-			if (window.isMaster()) {
-				window.renderPendingAuthorizations();
-			}
-		}
 	}
 };
 
@@ -489,13 +477,5 @@ window.fetchRewardSystemSettingsInitial = async function () {
 		await window.supabase
 			.from("rewardSystemSettings")
 			.upsert([window.rewardSystemSettings], { onConflict: "master_username" });
-	}
-	if (
-		window.isMaster() &&
-		(window.activeTab === "dashboard" ||
-			window.activeTab === "adminSettings")
-	) {
-		window.renderDashboard();
-		window.renderAdminRewardSettings();
 	}
 };

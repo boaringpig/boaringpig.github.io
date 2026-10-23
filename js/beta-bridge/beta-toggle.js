@@ -1,31 +1,20 @@
 // beta-toggle.js
-// Glue between the classic vanilla-JS app and the React beta dashboard
-// (src/beta/). Classic code never imports React directly - it only knows
-// about two DOM containers (#mainApp, #betaRoot) and two functions
-// (enterBetaMode/exitBetaMode). The React bundle is downloaded via a
-// dynamic import() the first time enterBetaMode runs -- which, since beta
-// is the default UI, is normally right after login -- so a group locked to
-// classic (classicUiForced) or a user who's switched back to classic
-// styling never pays for it.
+// Mounts/unmounts the React beta dashboard (src/beta/) into #betaRoot.
+// Classic code never imports React directly - it only knows about one DOM
+// container (#betaRoot) and two functions (enterBetaMode/exitBetaMode).
+// Beta is the only UI now (classic's own view markup was removed); these
+// two functions exist purely to lazy-load the bundle on first login and to
+// tear the React tree down again on logout.
 
 var betaMountFn = null;
 var betaUnmountFn = null;
 var betaMounted = false;
 
 /**
- * Switches the page over to the React beta dashboard. Lazily loads the
- * React bundle on first use.
+ * Mounts the React beta dashboard into #betaRoot. Lazily loads the React
+ * bundle on first use.
  */
 window.enterBetaMode = async function () {
-	if (window.groupTheme.classicUiForced) {
-		window.showNotification(
-			"This group is set to classic styling only.",
-			"error"
-		);
-		return;
-	}
-
-	var mainApp = document.getElementById("mainApp");
 	var betaRoot = document.getElementById("betaRoot");
 	if (!betaRoot) return;
 
@@ -47,24 +36,18 @@ window.enterBetaMode = async function () {
 		betaUnmountFn = mod.unmountBetaApp;
 	}
 
-	if (mainApp) mainApp.style.display = "none";
 	betaRoot.style.display = "block";
 	betaMountFn(betaRoot);
 	betaMounted = true;
-
-	try {
-		localStorage.setItem("preferBetaUi", "1");
-	} catch (e) {
-		// Ignore storage errors (private browsing, etc.) - this is just a
-		// convenience default for next login, not required for correctness.
-	}
 };
 
 /**
- * Switches back to the classic UI.
+ * Tears down the React tree and hides #betaRoot. Called from
+ * window.logout() before the login screen is shown again -- not a
+ * user-facing "switch to classic" action (there's no classic UI left to
+ * switch to).
  */
 window.exitBetaMode = function () {
-	var mainApp = document.getElementById("mainApp");
 	var betaRoot = document.getElementById("betaRoot");
 
 	if (betaMounted && betaUnmountFn) {
@@ -72,32 +55,12 @@ window.exitBetaMode = function () {
 		betaMounted = false;
 	}
 	if (betaRoot) betaRoot.style.display = "none";
-	if (mainApp) mainApp.style.display = "block";
-
-	try {
-		localStorage.setItem("preferBetaUi", "0");
-	} catch (e) {
-		// See note in enterBetaMode.
-	}
 };
 
 /**
- * Called once after login/showMainApp has finished setting up the classic
- * UI. Beta is the default now: jumps straight into it unless this group is
- * locked to classic, or this browser previously chose classic explicitly
- * (exitBetaMode sets preferBetaUi="0", which is the only opt-out signal --
- * anything else, including no preference at all, means "use beta").
+ * Called once after login/showMainApp has finished. Beta is the only UI,
+ * so this always mounts it.
  */
 window.maybeAutoEnterBetaMode = async function () {
-	if (window.groupTheme.classicUiForced) return;
-
-	var preferred = null;
-	try {
-		preferred = localStorage.getItem("preferBetaUi");
-	} catch (e) {
-		preferred = null;
-	}
-	if (preferred === "0") return;
-
 	await window.enterBetaMode();
 };

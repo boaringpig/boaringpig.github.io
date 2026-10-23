@@ -60,7 +60,6 @@ window.fetchUserActivityInitial = async function () {
 		console.error("Error fetching user activity:", error);
 	} else {
 		window.userActivityLog = data;
-		window.renderDashboard();
 	}
 };
 
@@ -82,7 +81,6 @@ window.fetchUserProfilesInitial = async function () {
 			}
 		});
 		window.updateUserPoints();
-		window.renderUserProgress();
 	}
 };
 

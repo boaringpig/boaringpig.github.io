@@ -1,6 +1,6 @@
 // Header.jsx - top bar: group name, group switcher (only shown for a slave
 // shared across more than one master's group), status message editor,
-// points, exit-beta, logout.
+// points, logout.
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { Button } from "../common/Button";
@@ -16,18 +16,14 @@ export function Header() {
 	var [statusDraft, setStatusDraft] = useState(app.statusMessage);
 	var [savingStatus, setSavingStatus] = useState(false);
 
-	function handleExitBeta() {
-		app.exitBeta();
-	}
-
 	function toggleThemeMode() {
 		app.setThemeMode(app.themeMode === "light" ? "dark" : "light");
 	}
 
 	function handleLogout() {
-		// Hide the beta root first, then run the classic logout (which
-		// unsubscribes realtime channels and shows the login screen).
-		app.exitBeta();
+		// window.logout() (js/core/auth.js) unsubscribes realtime channels,
+		// tears down the React tree via window.exitBetaMode(), and shows the
+		// login screen again.
 		window.logout();
 	}
 
@@ -85,9 +81,6 @@ export function Header() {
 				{!app.isMaster ? (
 					<span className={styles.points}>{user.points || 0} points</span>
 				) : null}
-				<Button variant="secondary" onClick={handleExitBeta}>
-					Switch to classic styling
-				</Button>
 				<Button variant="secondary" onClick={handleLogout}>
 					Logout
 				</Button>

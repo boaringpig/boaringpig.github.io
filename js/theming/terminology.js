@@ -11,12 +11,13 @@ window.groupTerms = {
 	slaveLabelPlural: "pigs",
 };
 
-// The React beta dashboard's theme for the active group. Beta is the
-// default UI for everyone; classicUiForced is an admin kill-switch that
-// locks a group to the classic UI only. The
+// The React beta dashboard's theme for the active group -- beta is the
+// only UI now. classicUiForced is read here for backward compatibility
+// with the group_settings row shape but is no longer acted on anywhere
+// (there's no classic UI left to force). The
 // bg/card/elevated/textPrimary/textSecondary colors are admin-set per group
-// (see js/admin/ui-admin.js's edit-master modal) and consumed by src/beta's
-// AppContext.
+// (see src/beta/components/admin/MasterEditForm.jsx) and consumed by
+// src/beta's AppContext.
 window.groupTheme = {
 	classicUiForced: false,
 	bg: "#09090b",
@@ -105,68 +106,10 @@ window.loadGroupTerms = async function () {
 };
 
 /**
- * Patches the static, post-login UI chrome with the active group's
- * terminology. The login screen is intentionally left generic, since no
- * group context is known before a user authenticates.
+ * Updates the browser tab title for the active group's terminology. Used to
+ * patch the rest of the classic UI chrome too, back when that markup
+ * existed (src/beta/components/layout/Header.jsx now owns all of it).
  */
 window.applyTerminology = function () {
-	var appTitleHeading = document.getElementById("appTitleHeading");
-	if (appTitleHeading) appTitleHeading.textContent = window.term("group");
-
-	var appTagline = document.getElementById("appTagline");
-	if (appTagline)
-		appTagline.textContent =
-			"A " + window.term("slave") + " management tool.";
-
-	var managePigsHeading = document.getElementById("managePigsHeading");
-	if (managePigsHeading)
-		managePigsHeading.textContent = "Manage " + window.termCap("slavePlural");
-
-	var addPigBtn = document.getElementById("addPigBtn");
-	if (addPigBtn) addPigBtn.textContent = "Add " + window.termCap("slave");
-
-	var currentPigsHeading = document.getElementById("currentPigsHeading");
-	if (currentPigsHeading)
-		currentPigsHeading.textContent =
-			"Current " + window.termCap("slavePlural");
-
-	var mastersTab = document.getElementById("mastersTab");
-	if (mastersTab) mastersTab.textContent = "Masters";
-
 	document.title = window.termCap("slavePlural") + " Management Tool";
-};
-
-/**
- * Renders a small "viewing: <group>" switcher in the header for a slave who
- * belongs to more than one master's group. No-op for everyone else.
- */
-window.renderGroupContextSwitcher = function () {
-	var container = document.getElementById("groupContextSwitcher");
-	if (!container) return;
-
-	if (!window.isSlave() || window.myMasterOptions.length <= 1) {
-		container.style.display = "none";
-		container.innerHTML = "";
-		return;
-	}
-
-	container.style.display = "inline-block";
-	container.innerHTML =
-		'<select id="groupContextSelect" class="form-input" style="width:auto;display:inline-block;"></select>';
-	var select = document.getElementById("groupContextSelect");
-	window.myMasterOptions.forEach(function (masterUsername) {
-		var option = document.createElement("option");
-		option.value = masterUsername;
-		var label = window.users[masterUsername]
-			? window.users[masterUsername].displayName
-			: masterUsername;
-		option.textContent = "Viewing: " + label;
-		if (masterUsername === window.activeMasterContext) {
-			option.selected = true;
-		}
-		select.appendChild(option);
-	});
-	select.onchange = function () {
-		window.setActiveMasterContext(select.value);
-	};
 };
