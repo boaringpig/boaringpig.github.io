@@ -119,6 +119,7 @@ window.startLiveCostTracker = async function (
 		window.showNotification("Failed to start cost tracker.", "error");
 	} else {
 		window.showNotification("Live cost tracker started successfully!");
+		window.logUserActivity("started cost tracker: " + tracker.description);
 		window.activeLiveTrackerId = data.id;
 		await window.fetchActiveCostTrackersInitial();
 		return data.id;
@@ -329,6 +330,7 @@ Time-based Cost: ${timeText} @ ${tracker.currency}${tracker.rate.toFixed(
 	} else {
 		window.showNotification("Cost tracker stopped.");
 	}
+	window.logUserActivity("stopped cost tracker: " + tracker.description);
 
 	// Clear active tracker ID
 	if (window.activeLiveTrackerId === trackerId) {

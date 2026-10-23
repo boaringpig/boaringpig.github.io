@@ -37,6 +37,7 @@ window.rejectSuggestion = function (suggestionId) {
 			if (!confirmed) {
 				return;
 			}
+			const suggestion = window.suggestions.find((s) => s.id === suggestionId);
 			const suggestionUpdates = {
 				status: "rejected",
 				reviewedBy: window.currentUser,
@@ -51,6 +52,9 @@ window.rejectSuggestion = function (suggestionId) {
 				window.showNotification("Failed to reject suggestion", "error");
 			} else {
 				window.showNotification("Suggestion rejected");
+				window.logUserActivity(
+					"rejected suggestion: " + (suggestion ? suggestion.description : "#" + suggestionId)
+				);
 				await window.fetchSuggestionsInitial();
 			}
 		}
@@ -125,6 +129,7 @@ window.submitTaskSuggestion = async function (overrides) {
 		const form = document.getElementById("suggestForm");
 		if (form) form.reset();
 		window.showNotification("Task suggestion submitted successfully!");
+		window.logUserActivity("suggested task: " + suggestion.description);
 		await window.fetchSuggestionsInitial();
 	}
 };
@@ -208,6 +213,7 @@ window.approveSuggestion = async function (suggestionId) {
 		window.showNotification(
 			`Suggestion approved and converted to task! Original suggestion removed.`
 		);
+		window.logUserActivity("approved suggestion: " + suggestion.description);
 
 		await window.fetchTasksInitial();
 		await window.fetchSuggestionsInitial();
@@ -649,6 +655,7 @@ window.approveEditedSuggestion = async function (suggestionId) {
 				isRepeating ? " (Repeating)" : ""
 			}. Original suggestion removed.`
 		);
+		window.logUserActivity("approved edited suggestion: " + description);
 
 		// Refresh data
 		await window.fetchTasksInitial();

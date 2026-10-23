@@ -206,6 +206,10 @@ window.purchaseReward = async function (rewardId) {
 						: "purchased instantly!"
 				}`
 			);
+			window.logUserActivity(
+				(requiresAuth ? "requested purchase: " : "purchased: ") +
+					reward.title + " (" + reward.cost + " pts)"
+			);
 			await window.fetchRewardsInitial();
 			await window.fetchUserRewardPurchasesInitial();
 			await window.fetchRewardSystemSettingsInitial();
@@ -244,6 +248,10 @@ window.authorizePurchase = async function (purchaseId) {
 	} else {
 		window.showNotification(
 			`Purchase of "${purchase.rewards.title}" authorized for ${purchase.userId}.`
+		);
+		window.logUserActivity(
+			"authorized purchase: " + purchase.rewards.title + " for " +
+				(window.users[purchase.userId]?.displayName || purchase.userId)
 		);
 		await window.fetchUserRewardPurchasesInitial();
 	}
@@ -289,6 +297,10 @@ window.denyPurchase = function (purchaseId) {
 				window.showNotification(
 					`Purchase denied. ${purchase.purchaseCost} points refunded to ${purchase.userId}.`,
 					"warning"
+				);
+				window.logUserActivity(
+					"denied purchase: " + purchase.rewards.title + " for " +
+						(window.users[purchase.userId]?.displayName || purchase.userId)
 				);
 				await window.fetchUserRewardPurchasesInitial();
 			}
