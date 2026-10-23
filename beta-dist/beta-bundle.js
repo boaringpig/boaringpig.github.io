@@ -12269,6 +12269,13 @@ function Mo() {
     status: r.status,
     error: r.error,
     reload: r.reload,
+    // Every mutation below reloads the list itself afterward rather than
+    // waiting on the realtime subscription: this Supabase project's
+    // active_cost_trackers table isn't in the realtime publication (a
+    // dashboard setting, not something client code can fix), so without
+    // this a just-stopped tracker would stay in `running` -- and its
+    // TrackerCard's live-ticking timer would keep counting up -- until
+    // something else happened to trigger a refetch.
     startTracker: function(v, h, x, C, T, R) {
       return window.startLiveCostTracker(
         v,
@@ -12277,19 +12284,29 @@ function Mo() {
         C,
         T,
         R
-      );
+      ).then(function(w) {
+        return r.reload(), w;
+      });
     },
     stopTracker: function(v, h) {
-      return window.stopLiveCostTracker(v, h !== !1);
+      return window.stopLiveCostTracker(v, h !== !1).then(function(x) {
+        return r.reload(), x;
+      });
     },
     deleteTracker: function(v) {
-      return window.deleteCostTracker(v);
+      return window.deleteCostTracker(v).then(function(h) {
+        return r.reload(), h;
+      });
     },
     addPenalty: function(v, h, x) {
-      return window.addPenaltyToLiveTracker(v, h, x);
+      return window.addPenaltyToLiveTracker(v, h, x).then(function(C) {
+        return r.reload(), C;
+      });
     },
     removePenalty: function(v, h) {
-      return window.removePenaltyFromLiveTracker(v, h);
+      return window.removePenaltyFromLiveTracker(v, h).then(function(x) {
+        return r.reload(), x;
+      });
     }
   };
 }
