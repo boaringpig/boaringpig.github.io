@@ -371,11 +371,15 @@ window.createTask = async function (overrides) {
 					"Demerit issued to " + selectedPigs.length + " " + window.term("slave") + "(s). " + finalPenaltyPoints + " points deducted each.",
 					"warning"
 				);
+				window.logUserActivity(
+					"issued demerit: " + taskText.split("\n")[0] + " (-" + finalPenaltyPoints + " pts)"
+				);
 			} else {
 				window.showNotification(
 					"Task created for " + selectedPigs.length + " " + window.term("slave") + "(s)!" +
 					(assignmentMode === "shared" && selectedPigs.length > 1 ? " (Shared)" : "")
 				);
+				window.logUserActivity("created task: " + taskText.split("\n")[0]);
 			}
 			await window.fetchTasksInitial();
 		}
@@ -427,6 +431,7 @@ window.checkOffTask = async function (taskId) {
 		window.showNotification("Failed to update task", "error");
 	} else {
 		window.showNotification("Task marked as complete! Awaiting approval.");
+		window.logUserActivity("completed task: " + task.text.split("\n")[0]);
 		await window.fetchTasksInitial();
 	}
 };
@@ -471,6 +476,7 @@ window.approveTask = async function (taskId) {
 		window.showNotification(
 			`Invoice approved and marked as paid! Amount: ${totalAmount}`
 		);
+		window.logUserActivity("approved invoice payment: " + totalAmount);
 	} else {
 		// Regular tasks award points
 		await window.updateUserPoints(task.completedBy, task.points, "add");
@@ -478,6 +484,11 @@ window.approveTask = async function (taskId) {
 			`Task approved! ${task.points} points awarded to ${
 				window.users[task.completedBy]?.displayName
 			}`
+		);
+		window.logUserActivity(
+			"approved task: " + task.text.split("\n")[0] +
+				" (+" + task.points + " pts to " +
+				(window.users[task.completedBy]?.displayName || task.completedBy) + ")"
 		);
 
 		// Handle repeating tasks
@@ -546,6 +557,12 @@ window.rejectTask = function (taskId) {
 			`${actionText}! ${task.penaltyPoints} penalty points applied to ${window.users[targetUser]?.displayName}`,
 			"warning"
 		);
+		window.logUserActivity(
+			(isInvoice ? "denied invoice payment: " : "rejected task: ") +
+				task.text.split("\n")[0] +
+				" (-" + task.penaltyPoints + " pts to " +
+				(window.users[targetUser]?.displayName || targetUser) + ")"
+		);
 		await window.fetchTasksInitial();
 	});
 };
@@ -605,6 +622,7 @@ window.acceptDemerit = async function (taskId) {
 		window.showNotification(
 			"Demerit accepted. You can still appeal if you believe this is unfair."
 		);
+		window.logUserActivity("accepted demerit: " + task.text.split("\n")[0]);
 		await window.fetchTasksInitial();
 	}
 };
@@ -641,6 +659,7 @@ window.appealDemerit = function (taskId) {
 				"Appeal submitted. Awaiting admin review.",
 				"warning"
 			);
+			window.logUserActivity("appealed demerit: " + task.text.split("\n")[0]);
 			await window.fetchTasksInitial();
 		}
 	});
@@ -679,6 +698,11 @@ window.approveAppeal = async function (taskId) {
 		`Appeal approved! ${task.penaltyPoints} points restored to ${
 			window.users[task.assignedTo]?.displayName
 		}`
+	);
+	window.logUserActivity(
+		"approved appeal: " + task.text.split("\n")[0] +
+			" (+" + task.penaltyPoints + " pts restored to " +
+			(window.users[task.assignedTo]?.displayName || task.assignedTo) + ")"
 	);
 	await window.fetchTasksInitial();
 };
@@ -732,6 +756,11 @@ window.denyAppeal = function (taskId) {
 					task.assignedTo,
 					task.penaltyPoints * 2,
 					"subtract"
+				);
+				window.logUserActivity(
+					"denied appeal: " + task.text.split("\n")[0] +
+						" (-" + task.penaltyPoints * 2 + " pts to " +
+						(window.users[task.assignedTo]?.displayName || task.assignedTo) + ")"
 				);
 				await window.fetchTasksInitial();
 			}
@@ -828,6 +857,7 @@ window.markInvoiceAsPaid = function (taskId) {
 			window.showNotification(
 				`Invoice marked as paid! Awaiting admin approval. Amount: ${totalAmount}`
 			);
+			window.logUserActivity("marked invoice as paid: " + totalAmount);
 			await window.fetchTasksInitial();
 		}
 	);
@@ -871,6 +901,7 @@ window.approveInvoice = function (taskId) {
 			window.showNotification(
 				`Invoice payment approved! Amount: ${totalAmount}`
 			);
+			window.logUserActivity("approved invoice payment: " + totalAmount);
 			await window.fetchTasksInitial();
 		}
 	);
