@@ -511,10 +511,10 @@ window.rejectTask = function (taskId) {
 			"You do not have permission to reject tasks",
 			"error"
 		);
-		return;
+		return Promise.resolve();
 	}
 	const task = window.tasks.find((t) => t.id === taskId);
-	if (!task) return;
+	if (!task) return Promise.resolve();
 
 	const isInvoice = task.type === "cost-tracker";
 	const confirmMessage = isInvoice
@@ -525,45 +525,53 @@ window.rejectTask = function (taskId) {
 				task.penaltyPoints
 		  } point penalty to ${window.users[task.completedBy]?.displayName}.`;
 
-	window.showConfirmModal(confirmMessage, async (confirmed) => {
-		if (!confirmed) {
-			return;
-		}
-		const updates = {
-			status: "failed",
-			rejectedAt: new Date().toISOString(),
-			rejectedBy: window.currentUser,
-		};
-		const { error: taskError } = await window.supabase
-			.from("tasks")
-			.update(updates)
-			.eq("id", taskId);
-		if (taskError) {
-			console.error("Error rejecting task:", taskError);
-			window.showNotification("Failed to reject task", "error");
-			return;
-		}
+	// Resolves once the confirm modal's own async work finishes (or right
+	// away if the user cancels), so callers -- notably the React beta UI --
+	// can await it and know when it's safe to refresh their own state.
+	return new Promise((resolve) => {
+		window.showConfirmModal(confirmMessage, async (confirmed) => {
+			if (!confirmed) {
+				resolve();
+				return;
+			}
+			const updates = {
+				status: "failed",
+				rejectedAt: new Date().toISOString(),
+				rejectedBy: window.currentUser,
+			};
+			const { error: taskError } = await window.supabase
+				.from("tasks")
+				.update(updates)
+				.eq("id", taskId);
+			if (taskError) {
+				console.error("Error rejecting task:", taskError);
+				window.showNotification("Failed to reject task", "error");
+				resolve();
+				return;
+			}
 
-		// Apply penalty points
-		const targetUser = isInvoice ? task.assignedTo : task.completedBy;
-		await window.updateUserPoints(
-			targetUser,
-			task.penaltyPoints,
-			"subtract"
-		);
+			// Apply penalty points
+			const targetUser = isInvoice ? task.assignedTo : task.completedBy;
+			await window.updateUserPoints(
+				targetUser,
+				task.penaltyPoints,
+				"subtract"
+			);
 
-		const actionText = isInvoice ? "Payment denied" : "Task rejected";
-		window.showNotification(
-			`${actionText}! ${task.penaltyPoints} penalty points applied to ${window.users[targetUser]?.displayName}`,
-			"warning"
-		);
-		window.logUserActivity(
-			(isInvoice ? "denied invoice payment: " : "rejected task: ") +
-				task.text.split("\n")[0] +
-				" (-" + task.penaltyPoints + " pts to " +
-				(window.users[targetUser]?.displayName || targetUser) + ")"
-		);
-		await window.fetchTasksInitial();
+			const actionText = isInvoice ? "Payment denied" : "Task rejected";
+			window.showNotification(
+				`${actionText}! ${task.penaltyPoints} penalty points applied to ${window.users[targetUser]?.displayName}`,
+				"warning"
+			);
+			window.logUserActivity(
+				(isInvoice ? "denied invoice payment: " : "rejected task: ") +
+					task.text.split("\n")[0] +
+					" (-" + task.penaltyPoints + " pts to " +
+					(window.users[targetUser]?.displayName || targetUser) + ")"
+			);
+			await window.fetchTasksInitial();
+			resolve();
+		});
 	});
 };
 
@@ -577,27 +585,34 @@ window.deleteTask = function (taskId) {
 			"You do not have permission to delete tasks",
 			"error"
 		);
-		return;
+		return Promise.resolve();
 	}
-	window.showConfirmModal(
-		"Are you sure you want to delete this task?",
-		async (confirmed) => {
-			if (!confirmed) {
-				return;
+	// Resolves once the confirm modal's own async work finishes (or right
+	// away if the user cancels), so callers -- notably the React beta UI --
+	// can await it and know when it's safe to refresh their own state.
+	return new Promise((resolve) => {
+		window.showConfirmModal(
+			"Are you sure you want to delete this task?",
+			async (confirmed) => {
+				if (!confirmed) {
+					resolve();
+					return;
+				}
+				const { error } = await window.supabase
+					.from("tasks")
+					.delete()
+					.eq("id", taskId);
+				if (error) {
+					console.error("Error deleting task:", error);
+					window.showNotification("Failed to delete task", "error");
+				} else {
+					window.showNotification("Task deleted successfully");
+					await window.fetchTasksInitial();
+				}
+				resolve();
 			}
-			const { error } = await window.supabase
-				.from("tasks")
-				.delete()
-				.eq("id", taskId);
-			if (error) {
-				console.error("Error deleting task:", error);
-				window.showNotification("Failed to delete task", "error");
-			} else {
-				window.showNotification("Task deleted successfully");
-				await window.fetchTasksInitial();
-			}
-		}
-	);
+		);
+	});
 };
 
 /**
@@ -633,35 +648,43 @@ window.acceptDemerit = async function (taskId) {
  */
 window.appealDemerit = function (taskId) {
 	const task = window.tasks.find((t) => t.id === taskId);
-	if (!task || task.type !== "demerit") return;
+	if (!task || task.type !== "demerit") return Promise.resolve();
 	if (task.acceptedAt) {
 		window.showNotification(
 			"This demerit has already been accepted and cannot be appealed.",
 			"error"
 		);
-		return;
+		return Promise.resolve();
 	}
-	window.showAppealModal(task, async (appealText) => {
-		const updates = {
-			appealStatus: "pending",
-			appealedAt: new Date().toISOString(),
-			appealText: appealText,
-		};
-		const { error } = await window.supabase
-			.from("tasks")
-			.update(updates)
-			.eq("id", taskId);
-		if (error) {
-			console.error("Error submitting appeal:", error);
-			window.showNotification("Failed to submit appeal", "error");
-		} else {
-			window.showNotification(
-				"Appeal submitted. Awaiting admin review.",
-				"warning"
-			);
-			window.logUserActivity("appealed demerit: " + task.text.split("\n")[0]);
-			await window.fetchTasksInitial();
-		}
+	// Resolves once the appeal modal's own async work finishes, so callers --
+	// notably the React beta UI -- can await it and know when it's safe to
+	// refresh their own state. There's no "cancelled" path to resolve early
+	// on since the modal's Cancel button just removes itself without
+	// calling back.
+	return new Promise((resolve) => {
+		window.showAppealModal(task, async (appealText) => {
+			const updates = {
+				appealStatus: "pending",
+				appealedAt: new Date().toISOString(),
+				appealText: appealText,
+			};
+			const { error } = await window.supabase
+				.from("tasks")
+				.update(updates)
+				.eq("id", taskId);
+			if (error) {
+				console.error("Error submitting appeal:", error);
+				window.showNotification("Failed to submit appeal", "error");
+			} else {
+				window.showNotification(
+					"Appeal submitted. Awaiting admin review.",
+					"warning"
+				);
+				window.logUserActivity("appealed demerit: " + task.text.split("\n")[0]);
+				await window.fetchTasksInitial();
+			}
+			resolve();
+		});
 	});
 };
 
@@ -717,55 +740,62 @@ window.denyAppeal = function (taskId) {
 			"You do not have permission to review appeals",
 			"error"
 		);
-		return;
+		return Promise.resolve();
 	}
 	const task = window.tasks.find((t) => t.id === taskId);
-	if (!task) return;
-	window.showConfirmModal(
-		`Are you sure you want to deny this appeal? This will apply an additional ${
-			task.penaltyPoints
-		} point penalty to ${
-			window.users[task.assignedTo]?.displayName
-		} (double penalty).`,
-		async (confirmed) => {
-			if (!confirmed) {
-				return;
+	if (!task) return Promise.resolve();
+	// Resolves once the confirm modal's own async work finishes (or right
+	// away if the user cancels), so callers -- notably the React beta UI --
+	// can await it and know when it's safe to refresh their own state.
+	return new Promise((resolve) => {
+		window.showConfirmModal(
+			`Are you sure you want to deny this appeal? This will apply an additional ${
+				task.penaltyPoints
+			} point penalty to ${
+				window.users[task.assignedTo]?.displayName
+			} (double penalty).`,
+			async (confirmed) => {
+				if (!confirmed) {
+					resolve();
+					return;
+				}
+				const updates = {
+					appealStatus: "denied",
+					appealReviewedAt: new Date().toISOString(),
+					appealReviewedBy: window.currentUser,
+				};
+				const { error: taskError } = await window.supabase
+					.from("tasks")
+					.update(updates)
+					.eq("id", taskId);
+				if (taskError) {
+					console.error("Error denying appeal:", taskError);
+					window.showNotification("Failed to deny appeal", "error");
+				} else {
+					window.showNotification(
+						`Appeal denied! Additional ${
+							task.penaltyPoints
+						} point penalty applied to ${
+							window.users[task.assignedTo]?.displayName
+						}`,
+						"warning"
+					);
+					await window.updateUserPoints(
+						task.assignedTo,
+						task.penaltyPoints * 2,
+						"subtract"
+					);
+					window.logUserActivity(
+						"denied appeal: " + task.text.split("\n")[0] +
+							" (-" + task.penaltyPoints * 2 + " pts to " +
+							(window.users[task.assignedTo]?.displayName || task.assignedTo) + ")"
+					);
+					await window.fetchTasksInitial();
+				}
+				resolve();
 			}
-			const updates = {
-				appealStatus: "denied",
-				appealReviewedAt: new Date().toISOString(),
-				appealReviewedBy: window.currentUser,
-			};
-			const { error: taskError } = await window.supabase
-				.from("tasks")
-				.update(updates)
-				.eq("id", taskId);
-			if (taskError) {
-				console.error("Error denying appeal:", taskError);
-				window.showNotification("Failed to deny appeal", "error");
-			} else {
-				window.showNotification(
-					`Appeal denied! Additional ${
-						task.penaltyPoints
-					} point penalty applied to ${
-						window.users[task.assignedTo]?.displayName
-					}`,
-					"warning"
-				);
-				await window.updateUserPoints(
-					task.assignedTo,
-					task.penaltyPoints * 2,
-					"subtract"
-				);
-				window.logUserActivity(
-					"denied appeal: " + task.text.split("\n")[0] +
-						" (-" + task.penaltyPoints * 2 + " pts to " +
-						(window.users[task.assignedTo]?.displayName || task.assignedTo) + ")"
-				);
-				await window.fetchTasksInitial();
-			}
-		}
-	);
+		);
+	});
 };
 
 /**
@@ -824,43 +854,53 @@ window.markInvoiceAsPaid = function (taskId) {
 	const task = window.tasks.find((t) => t.id === taskId);
 	if (!task || task.type !== "cost-tracker") {
 		window.showNotification("This is not an invoice.", "error");
-		return;
+		return Promise.resolve();
 	}
 
 	const totalAmount = window.extractTotalFromTaskText(task.text) || "Unknown";
 
-	window.showConfirmModal(
-		`Mark this invoice as paid?\n\nAmount: ${totalAmount}\n\nThis will notify the admin that you have made the payment and request approval.`,
-		async (confirmed) => {
-			if (!confirmed) return;
+	// Resolves once the confirm modal's own async work finishes (or right
+	// away if the user cancels), so callers -- notably the React beta UI --
+	// can await it and know when it's safe to refresh their own state.
+	return new Promise((resolve) => {
+		window.showConfirmModal(
+			`Mark this invoice as paid?\n\nAmount: ${totalAmount}\n\nThis will notify the admin that you have made the payment and request approval.`,
+			async (confirmed) => {
+				if (!confirmed) {
+					resolve();
+					return;
+				}
 
-			const updates = {
-				status: "pending_approval",
-				completedAt: new Date().toISOString(),
-				completedBy: window.currentUser,
-			};
+				const updates = {
+					status: "pending_approval",
+					completedAt: new Date().toISOString(),
+					completedBy: window.currentUser,
+				};
 
-			const { error: taskError } = await window.supabase
-				.from("tasks")
-				.update(updates)
-				.eq("id", taskId);
+				const { error: taskError } = await window.supabase
+					.from("tasks")
+					.update(updates)
+					.eq("id", taskId);
 
-			if (taskError) {
-				console.error("Error marking invoice as paid:", taskError);
+				if (taskError) {
+					console.error("Error marking invoice as paid:", taskError);
+					window.showNotification(
+						"Failed to mark invoice as paid",
+						"error"
+					);
+					resolve();
+					return;
+				}
+
 				window.showNotification(
-					"Failed to mark invoice as paid",
-					"error"
+					`Invoice marked as paid! Awaiting admin approval. Amount: ${totalAmount}`
 				);
-				return;
+				window.logUserActivity("marked invoice as paid: " + totalAmount);
+				await window.fetchTasksInitial();
+				resolve();
 			}
-
-			window.showNotification(
-				`Invoice marked as paid! Awaiting admin approval. Amount: ${totalAmount}`
-			);
-			window.logUserActivity("marked invoice as paid: " + totalAmount);
-			await window.fetchTasksInitial();
-		}
-	);
+		);
+	});
 };
 
 /**
@@ -871,38 +911,48 @@ window.approveInvoice = function (taskId) {
 	const task = window.tasks.find((t) => t.id === taskId);
 	if (!task || task.type !== "cost-tracker") {
 		window.showNotification("This is not an invoice.", "error");
-		return;
+		return Promise.resolve();
 	}
 
 	const totalAmount = window.extractTotalFromTaskText(task.text) || "Unknown";
 
-	window.showConfirmModal(
-		`Approve this invoice payment?\n\nAmount: ${totalAmount}\n\nThis confirms the payment has been received.`,
-		async (confirmed) => {
-			if (!confirmed) return;
+	// Resolves once the confirm modal's own async work finishes (or right
+	// away if the user cancels), so callers -- notably the React beta UI --
+	// can await it and know when it's safe to refresh their own state.
+	return new Promise((resolve) => {
+		window.showConfirmModal(
+			`Approve this invoice payment?\n\nAmount: ${totalAmount}\n\nThis confirms the payment has been received.`,
+			async (confirmed) => {
+				if (!confirmed) {
+					resolve();
+					return;
+				}
 
-			const updates = {
-				status: "completed",
-				approvedAt: new Date().toISOString(),
-				approvedBy: window.currentUser,
-			};
+				const updates = {
+					status: "completed",
+					approvedAt: new Date().toISOString(),
+					approvedBy: window.currentUser,
+				};
 
-			const { error: taskError } = await window.supabase
-				.from("tasks")
-				.update(updates)
-				.eq("id", taskId);
+				const { error: taskError } = await window.supabase
+					.from("tasks")
+					.update(updates)
+					.eq("id", taskId);
 
-			if (taskError) {
-				console.error("Error approving invoice:", taskError);
-				window.showNotification("Failed to approve invoice", "error");
-				return;
+				if (taskError) {
+					console.error("Error approving invoice:", taskError);
+					window.showNotification("Failed to approve invoice", "error");
+					resolve();
+					return;
+				}
+
+				window.showNotification(
+					`Invoice payment approved! Amount: ${totalAmount}`
+				);
+				window.logUserActivity("approved invoice payment: " + totalAmount);
+				await window.fetchTasksInitial();
+				resolve();
 			}
-
-			window.showNotification(
-				`Invoice payment approved! Amount: ${totalAmount}`
-			);
-			window.logUserActivity("approved invoice payment: " + totalAmount);
-			await window.fetchTasksInitial();
-		}
-	);
+		);
+	});
 };
