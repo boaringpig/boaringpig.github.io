@@ -12712,43 +12712,70 @@ function Gs() {
     status: r.status,
     error: r.error,
     reload: r.reload,
+    // Every mutation below reloads the list itself afterward rather than
+    // waiting on the realtime subscription: this Supabase project's tasks
+    // table isn't in the realtime publication (a dashboard setting, not
+    // something client code can fix), so without this a just-completed
+    // task would stay showing its old status until something else
+    // triggered a refetch (e.g. a full page reload) - see useCostTrackers.js
+    // for the same pattern.
+    //
     // `fields` matches the shape window.createTask's optional overrides
     // argument expects - see js/database-tasks.js.
     createTask: function(d) {
-      return window.createTask(d);
+      return window.createTask(d).then(function(o) {
+        return r.reload(), o;
+      });
     },
     checkOffTask: function(d) {
-      return window.checkOffTask(d);
+      return window.checkOffTask(d).then(function(o) {
+        return r.reload(), o;
+      });
     },
     approveTask: function(d) {
-      return window.approveTask(d);
+      return window.approveTask(d).then(function(o) {
+        return r.reload(), o;
+      });
     },
     rejectTask: function(d) {
-      return window.rejectTask(d);
+      return window.rejectTask(d).then(function(o) {
+        return r.reload(), o;
+      });
     },
     deleteTask: function(d) {
-      return window.deleteTask(d);
+      return window.deleteTask(d).then(function(o) {
+        return r.reload(), o;
+      });
     },
     acceptDemerit: function(d) {
-      return window.acceptDemerit(d);
+      return window.acceptDemerit(d).then(function(o) {
+        return r.reload(), o;
+      });
     },
     appealDemerit: function(d) {
-      var o = r.items.find(function(v) {
-        return v.id === d;
+      return window.appealDemerit(d).then(function(o) {
+        return r.reload(), o;
       });
-      o && window.appealDemerit(d);
     },
     approveAppeal: function(d) {
-      return window.approveAppeal(d);
+      return window.approveAppeal(d).then(function(o) {
+        return r.reload(), o;
+      });
     },
     denyAppeal: function(d) {
-      return window.denyAppeal(d);
+      return window.denyAppeal(d).then(function(o) {
+        return r.reload(), o;
+      });
     },
     markInvoiceAsPaid: function(d) {
-      return window.markInvoiceAsPaid(d);
+      return window.markInvoiceAsPaid(d).then(function(o) {
+        return r.reload(), o;
+      });
     },
     approveInvoice: function(d) {
-      return window.approveInvoice(d);
+      return window.approveInvoice(d).then(function(o) {
+        return r.reload(), o;
+      });
     }
   };
 }
@@ -13775,7 +13802,7 @@ function i_({ slaves: s }) {
     ] })
   ] });
 }
-const s_ = "_nav_lszcx_1", c_ = "_pickerWrap_lszcx_12", r_ = "_pickerBtn_lszcx_16", o_ = "_popover_lszcx_32", f_ = "_popoverHeader_lszcx_46", d_ = "_monthNavBtn_lszcx_55", v_ = "_weekdayRow_lszcx_70", m_ = "_grid_lszcx_79", h_ = "_cellEmpty_lszcx_85", g_ = "_cell_lszcx_85", y_ = "_cellHasActivity_lszcx_100", p_ = "_cellSelected_lszcx_112", __ = "_cellToday_lszcx_117", Nt = {
+const s_ = "_nav_1ckgk_1", c_ = "_pickerWrap_1ckgk_23", r_ = "_pickerBtn_1ckgk_31", o_ = "_popover_1ckgk_63", f_ = "_popoverHeader_1ckgk_91", d_ = "_monthNavBtn_1ckgk_109", v_ = "_weekdayRow_1ckgk_139", m_ = "_grid_1ckgk_157", h_ = "_cellEmpty_1ckgk_169", g_ = "_cell_1ckgk_169", y_ = "_cellHasActivity_1ckgk_199", p_ = "_cellSelected_1ckgk_223", __ = "_cellToday_1ckgk_233", Nt = {
   nav: s_,
   pickerWrap: c_,
   pickerBtn: r_,
